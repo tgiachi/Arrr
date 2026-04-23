@@ -20,8 +20,12 @@ SIGNING_KEY_FILE=$(mktemp)
 trap 'rm -f "$SIGNING_KEY_FILE"' EXIT
 gpg --batch --export-secret-keys --armor FE67774DF63A2BB6 > "$SIGNING_KEY_FILE"
 
+read -rsp "GPG passphrase: " GPG_PASSPHRASE
+echo
+
 export VERSION
 export NFPM_SIGNING_KEY_FILE="$SIGNING_KEY_FILE"
+export NFPM_DEB_SIGNING_KEY_PASSPHRASE="$GPG_PASSPHRASE"
 cd "$ROOT_DIR"
 
 nfpm package --packager deb       --target "dist/arrr_${VERSION}_amd64.deb"
