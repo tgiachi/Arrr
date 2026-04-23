@@ -1,6 +1,8 @@
 using System.Threading.Channels;
-using Arrr.Core.Data;
 using Arrr.Core.Data.Notifications;
+using Arrr.Core.Directories;
+using Arrr.Core.Interfaces;
+using Arrr.Core.Types;
 using Arrr.Service.Internal;
 
 namespace Arrr.Service;
@@ -12,12 +14,12 @@ public class Worker : BackgroundService
     private readonly string _pluginsPath;
     private readonly string _socketPath;
 
-    public Worker(ILogger<Worker> logger, ILoggerFactory loggerFactory, IConfiguration configuration)
+    public Worker(ILogger<Worker> logger, ILoggerFactory loggerFactory, IConfigService configService, DirectoriesConfig directoriesConfig)
     {
         _logger = logger;
         _loggerFactory = loggerFactory;
-        _pluginsPath = configuration["Arrr:PluginsPath"] ?? Path.Combine(AppContext.BaseDirectory, "plugins");
-        _socketPath = configuration["Arrr:SocketPath"] ?? "/tmp/arrr.sock";
+        _pluginsPath = directoriesConfig[DirectoryType.Plugins];
+        _socketPath = configService.Config.SocketPath;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

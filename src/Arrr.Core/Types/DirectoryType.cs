@@ -6,9 +6,6 @@ namespace Arrr.Core.Types;
 public enum DirectoryType
 {
     Scripts,
-    Data,
     Logs,
-    Cache,
-    Certs,
     Plugins
 }
