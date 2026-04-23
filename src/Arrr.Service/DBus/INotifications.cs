@@ -3,7 +3,7 @@ using Tmds.DBus;
 namespace Arrr.Service.DBus;
 
 [DBusInterface("org.freedesktop.Notifications")]
-internal interface INotifications : IDBusObject
+public interface INotifications : IDBusObject
 {
     Task<uint> NotifyAsync(
         string appName,
