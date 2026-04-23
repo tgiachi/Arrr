@@ -11,6 +11,11 @@ deb:
     key_file: ${NFPM_SIGNING_KEY_FILE}
     key_id: FE67774DF63A2BB6
 
+rpm:
+  signature:
+    key_file: ${NFPM_SIGNING_KEY_FILE}
+    key_id: FE67774DF63A2BB6
+
 contents:
   - src: publish/Arrr.Service
     dst: /usr/local/bin/arrr

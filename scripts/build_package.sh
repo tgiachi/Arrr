@@ -30,9 +30,11 @@ gpg --batch --yes \
 export VERSION
 export NFPM_SIGNING_KEY_FILE="$SIGNING_KEY_FILE"
 export NFPM_DEB_PASSPHRASE="$GPG_PASSPHRASE"
+export NFPM_RPM_PASSPHRASE="$GPG_PASSPHRASE"
 cd "$ROOT_DIR"
 
 nfpm package --packager deb       --target "dist/arrr_${VERSION}_amd64.deb"
+nfpm package --packager rpm       --target "dist/arrr-${VERSION}-1.x86_64.rpm"
 nfpm package --packager archlinux --target "dist/arrr-${VERSION}-1-x86_64.pkg.tar.zst"
 
 echo "==> Signing Arch package"
