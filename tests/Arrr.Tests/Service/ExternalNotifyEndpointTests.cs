@@ -15,22 +15,79 @@ namespace Arrr.Tests.Service;
 [TestFixture]
 public class ExternalNotifyEndpointTests
 {
-    private async Task<(HttpClient client, WebApplication app, EventBusService bus)> CreateHostAsync(
-        string apiKey)
+    [Test]
+    public async Task Notify_WhenPublished_EventBusReceivesNotification()
     {
-        var bus = new EventBusService();
-        await bus.StartAsync(CancellationToken.None);
+        var (client, app, bus) = await CreateHostAsync("secret");
+        await using var _ = app;
 
-        var builder = WebApplication.CreateBuilder();
-        builder.WebHost.UseTestServer();
-        builder.Services.AddSingleton<IConfigService>(new FakeConfigService(apiKey));
-        builder.Services.AddSingleton<IEventBus>(bus);
+        var received = new TaskCompletionSource<Notification>();
+        bus.Subscribe<Notification>(
+            (n, ct) =>
+            {
+                received.TrySetResult(n);
 
-        var app = builder.Build();
-        app.MapExternalApi();
-        await app.StartAsync();
+                return Task.CompletedTask;
+            }
+        );
 
-        return (app.GetTestClient(), app, bus);
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/notify");
+        request.Headers.Add("X-Api-Key", "secret");
+        request.Content = JsonContent.Create(
+            new ExternalNotifyRequest("my-bot", "Hello", "World", "https://example.com/icon.png")
+        );
+
+        await client.SendAsync(request);
+
+        var notification = await received.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        Assert.That(notification.Source, Is.EqualTo("my-bot"));
+        Assert.That(notification.Title, Is.EqualTo("Hello"));
+        Assert.That(notification.Body, Is.EqualTo("World"));
+        Assert.That(notification.IconUrl, Is.EqualTo("https://example.com/icon.png"));
+    }
+
+    [Test]
+    public async Task Notify_WithEmptyApiKeyConfig_Returns503()
+    {
+        var (client, app, _) = await CreateHostAsync("");
+        await using var _ = app;
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/notify");
+        request.Headers.Add("X-Api-Key", "anything");
+        request.Content = JsonContent.Create(new ExternalNotifyRequest("bot", "T", "B", null));
+
+        var response = await client.SendAsync(request);
+
+        Assert.That((int)response.StatusCode, Is.EqualTo(503));
+    }
+
+    [Test]
+    public async Task Notify_WithMissingKey_Returns401()
+    {
+        var (client, app, _) = await CreateHostAsync("secret");
+        await using var _ = app;
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/notify");
+        request.Content = JsonContent.Create(new ExternalNotifyRequest("bot", "T", "B", null));
+
+        var response = await client.SendAsync(request);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
+    public async Task Notify_WithMissingTitle_Returns400()
+    {
+        var (client, app, _) = await CreateHostAsync("secret");
+        await using var _ = app;
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/notify");
+        request.Headers.Add("X-Api-Key", "secret");
+        request.Content = JsonContent.Create(new ExternalNotifyRequest("bot", "", "Body", null));
+
+        var response = await client.SendAsync(request);
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
     }
 
     [Test]
@@ -63,77 +120,20 @@ public class ExternalNotifyEndpointTests
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
-    [Test]
-    public async Task Notify_WithMissingKey_Returns401()
+    private async Task<(HttpClient client, WebApplication app, EventBusService bus)> CreateHostAsync(string apiKey)
     {
-        var (client, app, _) = await CreateHostAsync("secret");
-        await using var _ = app;
+        var bus = new EventBusService();
+        await bus.StartAsync(CancellationToken.None);
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/notify");
-        request.Content = JsonContent.Create(new ExternalNotifyRequest("bot", "T", "B", null));
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Services.AddSingleton<IConfigService>(new FakeConfigService(apiKey));
+        builder.Services.AddSingleton<IEventBus>(bus);
 
-        var response = await client.SendAsync(request);
+        var app = builder.Build();
+        app.MapExternalApi();
+        await app.StartAsync();
 
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
-    }
-
-    [Test]
-    public async Task Notify_WithEmptyApiKeyConfig_Returns503()
-    {
-        var (client, app, _) = await CreateHostAsync("");
-        await using var _ = app;
-
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/notify");
-        request.Headers.Add("X-Api-Key", "anything");
-        request.Content = JsonContent.Create(new ExternalNotifyRequest("bot", "T", "B", null));
-
-        var response = await client.SendAsync(request);
-
-        Assert.That((int)response.StatusCode, Is.EqualTo(503));
-    }
-
-    [Test]
-    public async Task Notify_WithMissingTitle_Returns400()
-    {
-        var (client, app, _) = await CreateHostAsync("secret");
-        await using var _ = app;
-
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/notify");
-        request.Headers.Add("X-Api-Key", "secret");
-        request.Content = JsonContent.Create(new ExternalNotifyRequest("bot", "", "Body", null));
-
-        var response = await client.SendAsync(request);
-
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-    }
-
-    [Test]
-    public async Task Notify_WhenPublished_EventBusReceivesNotification()
-    {
-        var (client, app, bus) = await CreateHostAsync("secret");
-        await using var _ = app;
-
-        var received = new TaskCompletionSource<Notification>();
-        bus.Subscribe<Notification>(
-            (n, ct) =>
-            {
-                received.TrySetResult(n);
-                return Task.CompletedTask;
-            }
-        );
-
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/notify");
-        request.Headers.Add("X-Api-Key", "secret");
-        request.Content = JsonContent.Create(
-            new ExternalNotifyRequest("my-bot", "Hello", "World", "https://example.com/icon.png")
-        );
-
-        await client.SendAsync(request);
-
-        var notification = await received.Task.WaitAsync(TimeSpan.FromSeconds(3));
-        Assert.That(notification.Source, Is.EqualTo("my-bot"));
-        Assert.That(notification.Title, Is.EqualTo("Hello"));
-        Assert.That(notification.Body, Is.EqualTo("World"));
-        Assert.That(notification.IconUrl, Is.EqualTo("https://example.com/icon.png"));
+        return (app.GetTestClient(), app, bus);
     }
 }

@@ -9,11 +9,9 @@ internal class FakeConfigService : IConfigService
 
     public FakeConfigService(string apiKey = "")
     {
-        Config = new ArrrConfig { ApiKey = apiKey };
+        Config = new() { ApiKey = apiKey };
     }
 
     public Task LoadAsync(CancellationToken ct = default)
-    {
-        return Task.CompletedTask;
-    }
+        => Task.CompletedTask;
 }
