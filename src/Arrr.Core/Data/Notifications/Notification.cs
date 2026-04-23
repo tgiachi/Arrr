@@ -1,3 +1,5 @@
+using Arrr.Core.Interfaces;
+
 namespace Arrr.Core.Data.Notifications;
 
 public record Notification(
@@ -7,4 +9,4 @@ public record Notification(
     string Body,
     DateTimeOffset Timestamp,
     string? IconUrl
-);
+) : IArrrEvent;
