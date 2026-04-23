@@ -5,6 +5,10 @@ using Arrr.Core.Interfaces;
 using Arrr.Core.Json;
 using Arrr.Core.Services;
 using Arrr.Core.Types;
+using Arrr.Service.Internal;
+using Arrr.Service.Interfaces;
+using Arrr.Service.Services;
+using Arrr.Service.Subscribers;
 using ConsoleAppFramework;
 using Serilog;
 
@@ -17,18 +21,15 @@ await ConsoleApp.RunAsync(
             LogLevelType logLevelType = LogLevelType.Information,
             bool logToFile = true,
             CancellationToken ct = default
-        )
-        =>
+        ) =>
     {
         rootDirectory ??= Environment.CurrentDirectory;
 
-
         var directoriesConfig = new DirectoriesConfig(rootDirectory, Enum.GetNames<DirectoryType>());
 
-        var loggerConfiguration = new LoggerConfiguration().MinimumLevel
-                                                           .Is(logLevelType.ToSerilogLogLevel())
-                                                           .WriteTo
-                                                           .Console();
+        var loggerConfiguration = new LoggerConfiguration()
+            .MinimumLevel.Is(logLevelType.ToSerilogLogLevel())
+            .WriteTo.Console();
 
         if (logToFile)
         {
@@ -39,22 +40,65 @@ await ConsoleApp.RunAsync(
         }
 
         Log.Logger = loggerConfiguration.CreateLogger();
-
         Log.Logger.Information("Root directory: {RootDirectory}", rootDirectory);
 
-        var builder = Host.CreateApplicationBuilder(args);
+        var builder = WebApplication.CreateBuilder(args);
 
         builder.Services.AddSingleton(directoriesConfig);
         builder.Services.AddSingleton<IConfigService, ConfigService>();
+        builder.Services.AddSingleton<EventBusService>();
+        builder.Services.AddSingleton<IEventBus>(sp => sp.GetRequiredService<EventBusService>());
+        builder.Services.AddSingleton<IPluginRegistry, PluginRegistryService>();
+        builder.Services.AddSingleton<UnixSocketServer>(sp =>
+        {
+            var config = sp.GetRequiredService<IConfigService>().Config;
+            var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+            return new UnixSocketServer(loggerFactory.CreateLogger<UnixSocketServer>(), config.SocketPath);
+        });
+        builder.Services.AddSingleton<SocketBroadcastSubscriber>();
+        builder.Services.AddSingleton<PluginContextFactory>();
+        builder.Services.AddHostedService<EventBusHostedService>();
+        builder.Services.AddHostedService<PluginOrchestrator>();
 
         builder.Logging.ClearProviders().AddSerilog();
 
+        var app = builder.Build();
 
-        var host = builder.Build();
-
-        var configService = host.Services.GetRequiredService<IConfigService>();
+        var configService = app.Services.GetRequiredService<IConfigService>();
         await configService.LoadAsync(ct);
 
-        await host.RunAsync(ct);
+        app.Services.GetRequiredService<SocketBroadcastSubscriber>();
+
+        app.MapGet("/callback/{pluginName}", async (string pluginName, HttpContext ctx, IPluginRegistry registry) =>
+        {
+            var plugin = registry.GetAll()
+                .OfType<IHttpCallbackPlugin>()
+                .FirstOrDefault(p => p.Name.Equals(pluginName, StringComparison.OrdinalIgnoreCase));
+
+            if (plugin is null)
+            {
+                ctx.Response.StatusCode = 404;
+                return;
+            }
+
+            await plugin.HandleCallbackAsync(ctx, ct);
+        });
+
+        app.MapPost("/callback/{pluginName}", async (string pluginName, HttpContext ctx, IPluginRegistry registry) =>
+        {
+            var plugin = registry.GetAll()
+                .OfType<IHttpCallbackPlugin>()
+                .FirstOrDefault(p => p.Name.Equals(pluginName, StringComparison.OrdinalIgnoreCase));
+
+            if (plugin is null)
+            {
+                ctx.Response.StatusCode = 404;
+                return;
+            }
+
+            await plugin.HandleCallbackAsync(ctx, ct);
+        });
+
+        await app.RunAsync(ct);
     }
 );
