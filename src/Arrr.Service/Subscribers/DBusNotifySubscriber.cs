@@ -22,13 +22,14 @@ internal class DBusNotifySubscriber : IHostedService
     {
         try
         {
-            _connection = new Connection(Address.Session);
+            _connection = new(Address.Session);
             await _connection.ConnectAsync();
         }
         catch (Exception ex)
         {
             _logger.Warning(ex, "D-Bus session bus unavailable — desktop notifications disabled");
             _connection = null;
+
             return;
         }
 
@@ -37,32 +38,35 @@ internal class DBusNotifySubscriber : IHostedService
             "/org/freedesktop/Notifications"
         );
 
-        _eventBus.Subscribe<Notification>(async (notification, ct) =>
-        {
-            try
+        _eventBus.Subscribe<Notification>(
+            async (notification, ct) =>
             {
-                await proxy.NotifyAsync(
-                    notification.Source,
-                    0,
-                    notification.IconUrl ?? "",
-                    notification.Title,
-                    notification.Body,
-                    [],
-                    new Dictionary<string, object>(),
-                    -1
-                );
+                try
+                {
+                    await proxy.NotifyAsync(
+                        notification.Source,
+                        0,
+                        notification.IconUrl ?? "",
+                        notification.Title,
+                        notification.Body,
+                        [],
+                        new Dictionary<string, object>(),
+                        -1
+                    );
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "Failed to send D-Bus notification: {Title}", notification.Title);
+                }
             }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Failed to send D-Bus notification: {Title}", notification.Title);
-            }
-        });
+        );
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
         _connection?.Dispose();
         _connection = null;
+
         return Task.CompletedTask;
     }
 }

@@ -50,11 +50,33 @@ internal class UnixSocketServer : IAsyncDisposable
         _clientsLock.Release();
     }
 
+    /// <summary>Closes all client connections, disposes the listener socket and removes the socket file.</summary>
+    public async ValueTask DisposeAsync()
+    {
+        await _clientsLock.WaitAsync();
+
+        foreach (var client in _clients)
+        {
+            client.Dispose();
+        }
+        _clients.Clear();
+        _clientsLock.Release();
+
+        _listener?.Dispose();
+
+        if (File.Exists(_socketPath))
+        {
+            File.Delete(_socketPath);
+        }
+    }
+
     /// <summary>Starts accepting clients until cancellation is requested.</summary>
     public async Task RunAsync(CancellationToken ct)
     {
         if (File.Exists(_socketPath))
+        {
             File.Delete(_socketPath);
+        }
 
         _listener = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
         _listener.Bind(new UnixDomainSocketEndPoint(_socketPath));
@@ -83,21 +105,5 @@ internal class UnixSocketServer : IAsyncDisposable
             catch (OperationCanceledException) { break; }
             catch (Exception ex) { _logger.Error(ex, "Error accepting client"); }
         }
-    }
-
-    /// <summary>Closes all client connections, disposes the listener socket and removes the socket file.</summary>
-    public async ValueTask DisposeAsync()
-    {
-        await _clientsLock.WaitAsync();
-
-        foreach (var client in _clients)
-            client.Dispose();
-        _clients.Clear();
-        _clientsLock.Release();
-
-        _listener?.Dispose();
-
-        if (File.Exists(_socketPath))
-            File.Delete(_socketPath);
     }
 }

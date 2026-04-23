@@ -13,5 +13,6 @@ public interface INotifications : IDBusObject
         string body,
         string[] actions,
         IDictionary<string, object> hints,
-        int expireTimeout);
+        int expireTimeout
+    );
 }
