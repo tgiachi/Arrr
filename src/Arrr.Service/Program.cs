@@ -6,6 +6,7 @@ using Arrr.Core.Json;
 using Arrr.Core.Services;
 using Arrr.Core.Types;
 using Arrr.Service.Api;
+using Scalar.AspNetCore;
 using Arrr.Service.Interfaces;
 using Arrr.Service.Internal;
 using Arrr.Service.Services;
@@ -61,6 +62,7 @@ await ConsoleApp.RunAsync(
         builder.Services.AddHostedService<PluginOrchestrator>();
         builder.Services.AddHostedService<DBusNotifySubscriber>();
 
+        builder.Services.AddOpenApi();
         builder.Logging.ClearProviders().AddSerilog();
 
         var app = builder.Build();
@@ -72,6 +74,13 @@ await ConsoleApp.RunAsync(
 
         app.Services.GetRequiredService<SocketBroadcastSubscriber>();
         app.MapExternalApi();
+
+        if (configService.Config.IsDebug)
+        {
+            app.MapOpenApi();
+            app.MapScalarApiReference();
+            Log.Logger.Information("Debug mode: OpenAPI at /openapi/v1.json — Scalar UI at /scalar/v1");
+        }
 
         app.MapGet(
             "/callback/{pluginName}",
