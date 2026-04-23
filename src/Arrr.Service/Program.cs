@@ -8,6 +8,7 @@ using Arrr.Core.Types;
 using Arrr.Service.Interfaces;
 using Arrr.Service.Internal;
 using Arrr.Service.Services;
+using Arrr.Service.Api;
 using Arrr.Service.Subscribers;
 using ConsoleAppFramework;
 using Serilog;
@@ -70,6 +71,7 @@ await ConsoleApp.RunAsync(
         app.Urls.Add($"http://0.0.0.0:{configService.Config.Web.Port}");
 
         app.Services.GetRequiredService<SocketBroadcastSubscriber>();
+        app.MapExternalApi();
 
         app.MapGet(
             "/callback/{pluginName}",
