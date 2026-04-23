@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION=${1:-0.1.0}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+VERSION=${1:-$(grep -oP '(?<=<Version>)[^<]+' "$ROOT_DIR/src/Arrr.Service/Arrr.Service.csproj")}
 
 echo "==> Building Arrr v$VERSION (linux-x64)"
 
@@ -15,7 +16,12 @@ echo "==> Packaging"
 
 mkdir -p "$ROOT_DIR/dist"
 
+SIGNING_KEY_FILE=$(mktemp)
+trap 'rm -f "$SIGNING_KEY_FILE"' EXIT
+gpg --batch --export-secret-keys --armor FE67774DF63A2BB6 > "$SIGNING_KEY_FILE"
+
 export VERSION
+export NFPM_SIGNING_KEY_FILE="$SIGNING_KEY_FILE"
 cd "$ROOT_DIR"
 
 nfpm package --packager deb       --target "dist/arrr_${VERSION}_amd64.deb"

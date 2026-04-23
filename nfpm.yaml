@@ -8,7 +8,7 @@ license: MIT
 
 deb:
   signature:
-    key_file: ${GNUPGHOME:-~/.gnupg}/private-key.gpg
+    key_file: ${NFPM_SIGNING_KEY_FILE}
     key_id: FE67774DF63A2BB6
 
 contents:
