@@ -5,8 +5,8 @@ using Arrr.Core.Interfaces;
 using Arrr.Core.Json;
 using Arrr.Core.Services;
 using Arrr.Core.Types;
-using Arrr.Service.Internal;
 using Arrr.Service.Interfaces;
+using Arrr.Service.Internal;
 using Arrr.Service.Services;
 using Arrr.Service.Subscribers;
 using ConsoleAppFramework;
@@ -17,19 +17,21 @@ JsonUtils.RegisterJsonContext(ArrrConfigJsonContext.Default);
 await ConsoleApp.RunAsync(
     args,
     async (
-            string? rootDirectory = null,
-            LogLevelType logLevelType = LogLevelType.Information,
-            bool logToFile = true,
-            CancellationToken ct = default
-        ) =>
+        string? rootDirectory = null,
+        LogLevelType logLevelType = LogLevelType.Information,
+        bool logToFile = true,
+        CancellationToken ct = default
+    ) =>
     {
         rootDirectory ??= Environment.CurrentDirectory;
 
         var directoriesConfig = new DirectoriesConfig(rootDirectory, Enum.GetNames<DirectoryType>());
 
         var loggerConfiguration = new LoggerConfiguration()
-            .MinimumLevel.Is(logLevelType.ToSerilogLogLevel())
-            .WriteTo.Console();
+                                  .MinimumLevel
+                                  .Is(logLevelType.ToSerilogLogLevel())
+                                  .WriteTo
+                                  .Console();
 
         if (logToFile)
         {
@@ -49,12 +51,9 @@ await ConsoleApp.RunAsync(
         builder.Services.AddSingleton<EventBusService>();
         builder.Services.AddSingleton<IEventBus>(sp => sp.GetRequiredService<EventBusService>());
         builder.Services.AddSingleton<IPluginRegistry, PluginRegistryService>();
-        builder.Services.AddSingleton<UnixSocketServer>(sp =>
-        {
-            var config = sp.GetRequiredService<IConfigService>().Config;
-            var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
-            return new UnixSocketServer(loggerFactory.CreateLogger<UnixSocketServer>(), config.SocketPath);
-        });
+        builder.Services.AddSingleton<UnixSocketServer>(
+            sp => new(sp.GetRequiredService<IConfigService>().Config.SocketPath)
+        );
         builder.Services.AddSingleton<SocketBroadcastSubscriber>();
         builder.Services.AddSingleton<PluginContextFactory>();
         builder.Services.AddHostedService<EventBusHostedService>();
@@ -69,35 +68,43 @@ await ConsoleApp.RunAsync(
 
         app.Services.GetRequiredService<SocketBroadcastSubscriber>();
 
-        app.MapGet("/callback/{pluginName}", async (string pluginName, HttpContext ctx, IPluginRegistry registry) =>
-        {
-            var plugin = registry.GetAll()
-                .OfType<IHttpCallbackPlugin>()
-                .FirstOrDefault(p => p.Name.Equals(pluginName, StringComparison.OrdinalIgnoreCase));
-
-            if (plugin is null)
+        app.MapGet(
+            "/callback/{pluginName}",
+            async (string pluginName, HttpContext ctx, IPluginRegistry registry) =>
             {
-                ctx.Response.StatusCode = 404;
-                return;
+                var plugin = registry.GetAll()
+                                     .OfType<IHttpCallbackPlugin>()
+                                     .FirstOrDefault(p => p.Name.Equals(pluginName, StringComparison.OrdinalIgnoreCase));
+
+                if (plugin is null)
+                {
+                    ctx.Response.StatusCode = 404;
+
+                    return;
+                }
+
+                await plugin.HandleCallbackAsync(ctx, ct);
             }
+        );
 
-            await plugin.HandleCallbackAsync(ctx, ct);
-        });
-
-        app.MapPost("/callback/{pluginName}", async (string pluginName, HttpContext ctx, IPluginRegistry registry) =>
-        {
-            var plugin = registry.GetAll()
-                .OfType<IHttpCallbackPlugin>()
-                .FirstOrDefault(p => p.Name.Equals(pluginName, StringComparison.OrdinalIgnoreCase));
-
-            if (plugin is null)
+        app.MapPost(
+            "/callback/{pluginName}",
+            async (string pluginName, HttpContext ctx, IPluginRegistry registry) =>
             {
-                ctx.Response.StatusCode = 404;
-                return;
-            }
+                var plugin = registry.GetAll()
+                                     .OfType<IHttpCallbackPlugin>()
+                                     .FirstOrDefault(p => p.Name.Equals(pluginName, StringComparison.OrdinalIgnoreCase));
 
-            await plugin.HandleCallbackAsync(ctx, ct);
-        });
+                if (plugin is null)
+                {
+                    ctx.Response.StatusCode = 404;
+
+                    return;
+                }
+
+                await plugin.HandleCallbackAsync(ctx, ct);
+            }
+        );
 
         await app.RunAsync(ct);
     }

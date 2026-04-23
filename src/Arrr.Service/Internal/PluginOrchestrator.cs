@@ -1,15 +1,15 @@
-using System.Reflection;
 using Arrr.Core.Data.Config;
 using Arrr.Core.Directories;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Types;
-using Arrr.Service.Services;
+using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace Arrr.Service.Internal;
 
 internal class PluginOrchestrator : BackgroundService
 {
-    private readonly ILogger<PluginOrchestrator> _logger;
+    private readonly ILogger _logger = Log.ForContext<PluginOrchestrator>();
     private readonly PluginContextFactory _contextFactory;
     private readonly IPluginRegistry _registry;
     private readonly ArrrConfig _config;
@@ -19,17 +19,22 @@ internal class PluginOrchestrator : BackgroundService
     private FileSystemWatcher? _watcher;
 
     public PluginOrchestrator(
-        ILogger<PluginOrchestrator> logger,
         PluginContextFactory contextFactory,
         IPluginRegistry registry,
         IConfigService configService,
-        DirectoriesConfig directoriesConfig)
+        DirectoriesConfig directoriesConfig
+    )
     {
-        _logger = logger;
         _contextFactory = contextFactory;
         _registry = registry;
         _config = configService.Config;
         _pluginsPath = directoriesConfig[DirectoryType.Plugins];
+    }
+
+    public override void Dispose()
+    {
+        _watcher?.Dispose();
+        base.Dispose();
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -72,7 +77,7 @@ internal class PluginOrchestrator : BackgroundService
             var entry = _config.Plugins.FirstOrDefault(p => p.Id == plugin.Id);
             if (entry is null || !entry.Enabled)
             {
-                _logger.LogDebug("Plugin {Id} not in config or disabled, skipping", plugin.Id);
+                _logger.Debug("Plugin {Id} not in config or disabled, skipping", plugin.Id);
                 context.Unload();
                 return;
             }
@@ -81,7 +86,7 @@ internal class PluginOrchestrator : BackgroundService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to load plugin from {Path}", dllPath);
+            _logger.Error(ex, "Failed to load plugin from {Path}", dllPath);
         }
     }
 
@@ -101,7 +106,7 @@ internal class PluginOrchestrator : BackgroundService
             catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Plugin {Id} crashed", plugin.Id);
+                _logger.Error(ex, "Plugin {Id} crashed", plugin.Id);
             }
         }, cts.Token);
 
@@ -109,12 +114,12 @@ internal class PluginOrchestrator : BackgroundService
         _hosts[plugin.Id] = host;
         _registry.Register(plugin);
 
-        _logger.LogInformation("Started plugin: {Id} v{Version}", plugin.Id, plugin.Version);
+        _logger.Information("Started plugin: {Id} v{Version}", plugin.Id, plugin.Version);
     }
 
     private void StartWatcher(CancellationToken ct)
     {
-        _watcher = new FileSystemWatcher(_pluginsPath, "*.dll")
+        _watcher = new(_pluginsPath, "*.dll")
         {
             NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
             EnableRaisingEvents = true
@@ -129,12 +134,13 @@ internal class PluginOrchestrator : BackgroundService
     {
         var fileName = Path.GetFileNameWithoutExtension(dllPath);
         var host = _hosts.Values.FirstOrDefault(h => h.PluginId.EndsWith(fileName, StringComparison.OrdinalIgnoreCase));
+
         if (host is null) return;
 
         await host.StopAsync();
         _hosts.Remove(host.PluginId);
         _registry.Unregister(host.PluginId);
-        _logger.LogInformation("Unloaded plugin: {Id}", host.PluginId);
+        _logger.Information("Unloaded plugin: {Id}", host.PluginId);
     }
 
     private async Task StopAllPluginsAsync()
@@ -142,11 +148,5 @@ internal class PluginOrchestrator : BackgroundService
         foreach (var host in _hosts.Values)
             await host.StopAsync();
         _hosts.Clear();
-    }
-
-    public override void Dispose()
-    {
-        _watcher?.Dispose();
-        base.Dispose();
     }
 }

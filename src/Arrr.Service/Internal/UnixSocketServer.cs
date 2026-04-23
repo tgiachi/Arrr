@@ -2,16 +2,18 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using Arrr.Core.Data.Notifications;
+using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace Arrr.Service.Internal;
 
 /// <summary>
-/// Listens on a Unix domain socket and broadcasts incoming <see cref="Notification"/> entries
+/// Listens on a Unix domain socket and broadcasts incoming <see cref="Notification" /> entries
 /// as newline-delimited JSON to all connected clients.
 /// </summary>
 internal class UnixSocketServer : IAsyncDisposable
 {
-    private readonly ILogger<UnixSocketServer> _logger;
+    private readonly ILogger _logger = Log.ForContext<UnixSocketServer>();
     private readonly string _socketPath;
     private readonly List<NetworkStream> _clients = new();
     private readonly SemaphoreSlim _clientsLock = new(1, 1);
@@ -19,25 +21,9 @@ internal class UnixSocketServer : IAsyncDisposable
     private Socket? _listener;
 
     /// <summary>Initializes the server with the socket path.</summary>
-    public UnixSocketServer(ILogger<UnixSocketServer> logger, string socketPath)
+    public UnixSocketServer(string socketPath)
     {
-        _logger = logger;
         _socketPath = socketPath;
-    }
-
-    /// <summary>Starts accepting clients until cancellation is requested.</summary>
-    public async Task RunAsync(CancellationToken ct)
-    {
-        if (File.Exists(_socketPath))
-            File.Delete(_socketPath);
-
-        _listener = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-        _listener.Bind(new UnixDomainSocketEndPoint(_socketPath));
-        _listener.Listen(10);
-
-        _logger.LogInformation("Arrr service started, listening on {Path}", _socketPath);
-
-        await AcceptClientsAsync(ct);
     }
 
     /// <summary>Broadcasts a notification as JSON to all connected clients.</summary>
@@ -64,6 +50,21 @@ internal class UnixSocketServer : IAsyncDisposable
         _clientsLock.Release();
     }
 
+    /// <summary>Starts accepting clients until cancellation is requested.</summary>
+    public async Task RunAsync(CancellationToken ct)
+    {
+        if (File.Exists(_socketPath))
+            File.Delete(_socketPath);
+
+        _listener = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+        _listener.Bind(new UnixDomainSocketEndPoint(_socketPath));
+        _listener.Listen(10);
+
+        _logger.Information("Arrr service started, listening on {Path}", _socketPath);
+
+        await AcceptClientsAsync(ct);
+    }
+
     private async Task AcceptClientsAsync(CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
@@ -77,10 +78,10 @@ internal class UnixSocketServer : IAsyncDisposable
                 _clients.Add(stream);
                 _clientsLock.Release();
 
-                _logger.LogDebug("Client connected, total: {Count}", _clients.Count);
+                _logger.Debug("Client connected, total: {Count}", _clients.Count);
             }
             catch (OperationCanceledException) { break; }
-            catch (Exception ex) { _logger.LogError(ex, "Error accepting client"); }
+            catch (Exception ex) { _logger.Error(ex, "Error accepting client"); }
         }
     }
 
@@ -88,6 +89,7 @@ internal class UnixSocketServer : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await _clientsLock.WaitAsync();
+
         foreach (var client in _clients)
             client.Dispose();
         _clients.Clear();
