@@ -1,0 +1,21 @@
+name: arrr
+version: ${VERSION}
+arch: amd64
+maintainer: tgiachi <tom@orivega.io>
+description: Arrr — Linux desktop notification aggregator daemon
+homepage: https://github.com/tgiachi/Arrr
+license: MIT
+
+deb:
+  signature:
+    key_file: ${GNUPGHOME:-~/.gnupg}/private-key.gpg
+    key_id: FE67774DF63A2BB6
+
+contents:
+  - src: publish/Arrr.Service
+    dst: /usr/local/bin/arrr
+    file_info:
+      mode: 0755
+
+  - src: deploy/arrr.service
+    dst: /usr/lib/systemd/user/arrr.service
