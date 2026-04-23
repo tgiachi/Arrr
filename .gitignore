@@ -589,3 +589,6 @@ definitions.lua
 
 dist/
 benchmarks/.compare
+
+# Arrr runtime-generated files
+arrr.config
