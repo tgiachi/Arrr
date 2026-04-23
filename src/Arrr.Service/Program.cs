@@ -1,3 +1,5 @@
+using Arrr.Core.Data.Events;
+using Arrr.Core.Data.Notifications;
 using Arrr.Core.Data.Config;
 using Arrr.Core.Directories;
 using Arrr.Core.Extensions.Logger;
@@ -69,6 +71,22 @@ await ConsoleApp.RunAsync(
 
         var configService = app.Services.GetRequiredService<IConfigService>();
         await configService.LoadAsync(ct);
+
+        var eventBus = app.Services.GetRequiredService<IEventBus>();
+
+        eventBus.Subscribe<ArrStartedEvent>(async (evt, token) =>
+            await eventBus.PublishAsync(
+                new Notification(
+                    Guid.NewGuid(), "arrr", "Arrr started",
+                    $"Listening on port {configService.Config.Web.Port}",
+                    evt.Timestamp, null
+                ), token
+            )
+        );
+
+        app.Lifetime.ApplicationStarted.Register(() =>
+            _ = eventBus.PublishAsync(new ArrStartedEvent(DateTimeOffset.UtcNow), ct)
+        );
 
         app.Urls.Add($"http://0.0.0.0:{configService.Config.Web.Port}");
 
