@@ -1,7 +1,6 @@
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Channels;
 using Arrr.Core.Data.Notifications;
 using Arrr.Service.Internal;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -11,7 +10,7 @@ namespace Arrr.Tests.Service;
 [TestFixture]
 public class UnixSocketServerTests
 {
-    private string _socketPath = string.Empty;
+    private string _socketPath = "";
 
     [SetUp]
     public void SetUp()
@@ -27,10 +26,9 @@ public class UnixSocketServerTests
     }
 
     [Test]
-    public async Task RunAsync_WhenNotificationWritten_ClientReceivesJsonLine()
+    public async Task RunAsync_WhenBroadcastCalled_ClientReceivesJsonLine()
     {
-        var channel = Channel.CreateUnbounded<Notification>();
-        await using var server = new UnixSocketServer(NullLogger<UnixSocketServer>.Instance, _socketPath, channel.Reader);
+        await using var server = new UnixSocketServer(NullLogger<UnixSocketServer>.Instance, _socketPath);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var serverTask = server.RunAsync(cts.Token);
@@ -42,7 +40,7 @@ public class UnixSocketServerTests
         using var stream = new NetworkStream(client, ownsSocket: false);
 
         var notification = new Notification(Guid.NewGuid(), "test", "Hello", "World", DateTimeOffset.UtcNow, null);
-        await channel.Writer.WriteAsync(notification, cts.Token);
+        await server.BroadcastAsync(notification, cts.Token);
 
         var buffer = new byte[4096];
         var read = await stream.ReadAsync(buffer, cts.Token);
@@ -62,8 +60,6 @@ public class UnixSocketServerTests
     private static async Task WaitForSocketAsync(string path, CancellationToken ct)
     {
         while (!File.Exists(path))
-        {
             await Task.Delay(20, ct);
-        }
     }
 }
