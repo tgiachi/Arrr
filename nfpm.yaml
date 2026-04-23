@@ -10,6 +10,7 @@ deb:
   signature:
     key_file: ${NFPM_SIGNING_KEY_FILE}
     key_id: FE67774DF63A2BB6
+    passphrase: ${NFPM_DEB_SIGNING_KEY_PASSPHRASE}
 
 contents:
   - src: publish/Arrr.Service
