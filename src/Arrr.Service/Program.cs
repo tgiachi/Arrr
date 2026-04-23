@@ -66,6 +66,8 @@ await ConsoleApp.RunAsync(
         var configService = app.Services.GetRequiredService<IConfigService>();
         await configService.LoadAsync(ct);
 
+        app.Urls.Add($"http://0.0.0.0:{configService.Config.Web.Port}");
+
         app.Services.GetRequiredService<SocketBroadcastSubscriber>();
 
         app.MapGet(
