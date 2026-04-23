@@ -5,7 +5,6 @@ using Arrr.Core.Interfaces;
 using Arrr.Core.Json;
 using Arrr.Core.Services;
 using Arrr.Core.Types;
-using Arrr.Service;
 using ConsoleAppFramework;
 using Serilog;
 
@@ -49,7 +48,7 @@ await ConsoleApp.RunAsync(
         builder.Services.AddSingleton<IConfigService, ConfigService>();
 
         builder.Logging.ClearProviders().AddSerilog();
-        builder.Services.AddHostedService<Worker>();
+
 
         var host = builder.Build();
 
