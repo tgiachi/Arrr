@@ -19,32 +19,29 @@ mkdir -p "$ROOT_DIR/dist"
 SIGNING_KEY_FILE=$(mktemp --suffix=.asc)
 TMPGNUPG=$(mktemp -d)
 chmod 700 "$TMPGNUPG"
-trap 'rm -rf "$TMPGNUPG" "$SIGNING_KEY_FILE"' EXIT
+# allow-loopback-pinentry is required for --pinentry-mode loopback to work in the agent
+echo "allow-loopback-pinentry" > "$TMPGNUPG/gpg-agent.conf"
+trap 'GNUPGHOME="$TMPGNUPG" gpgconf --kill gpg-agent 2>/dev/null; rm -rf "$TMPGNUPG" "$SIGNING_KEY_FILE"' EXIT
 
 read -rsp "GPG passphrase: " GPG_PASSPHRASE
 echo
 
-# Import the passphrase-protected key into a throwaway keyring
+# Import the passphrase-protected key into the isolated keyring
 gpg --export-secret-keys --armor FE67774DF63A2BB6 | \
-    gpg --batch --yes \
+    GNUPGHOME="$TMPGNUPG" gpg --batch --yes \
         --pinentry-mode loopback \
         --passphrase "$GPG_PASSPHRASE" \
-        --homedir "$TMPGNUPG" \
         --import
 
-# Strip the passphrase: provide old pass then empty new pass via stdin
-printf '%s\n\n\n' "$GPG_PASSPHRASE" | \
-    gpg --batch --yes \
-        --pinentry-mode loopback \
-        --passphrase-fd 0 \
-        --homedir "$TMPGNUPG" \
-        --change-passphrase FE67774DF63A2BB6
-
-# Export the now-unprotected key for nfpm
-gpg --batch --yes \
+# Strip the passphrase: with --batch + --passphrase, gpg uses the supplied value as
+# the old passphrase and sets the new passphrase to empty (documented behavior)
+GNUPGHOME="$TMPGNUPG" gpg --batch --yes \
     --pinentry-mode loopback \
-    --passphrase "" \
-    --homedir "$TMPGNUPG" \
+    --passphrase "$GPG_PASSPHRASE" \
+    --change-passphrase FE67774DF63A2BB6
+
+# Export the now-unprotected key for nfpm (no --passphrase needed for an unprotected key)
+GNUPGHOME="$TMPGNUPG" gpg --batch --yes \
     --export-secret-keys --armor FE67774DF63A2BB6 > "$SIGNING_KEY_FILE"
 
 export VERSION
