@@ -16,7 +16,14 @@ public class PluginRunnerTests
         await bus.StartAsync(cts.Token);
 
         var received = new TaskCompletionSource<Notification>();
-        bus.Subscribe<Notification>((n, _) => { received.TrySetResult(n); return Task.CompletedTask; });
+        bus.Subscribe<Notification>(
+            (n, _) =>
+            {
+                received.TrySetResult(n);
+
+                return Task.CompletedTask;
+            }
+        );
 
         var plugin = new FakeSourcePlugin("com.test.plugin", [expected]);
         var ctx = new FakePluginContext(bus);

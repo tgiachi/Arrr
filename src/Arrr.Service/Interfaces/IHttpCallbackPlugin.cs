@@ -1,5 +1,4 @@
 using Arrr.Core.Interfaces;
-using Microsoft.AspNetCore.Http;
 
 namespace Arrr.Service.Interfaces;
 

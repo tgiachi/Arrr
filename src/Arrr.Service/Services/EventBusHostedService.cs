@@ -12,12 +12,8 @@ public class EventBusHostedService : IHostedService
     }
 
     public Task StartAsync(CancellationToken ct)
-    {
-        return _eventBusService.StartAsync(ct);
-    }
+        => _eventBusService.StartAsync(ct);
 
     public Task StopAsync(CancellationToken ct)
-    {
-        return _eventBusService.StopAsync(ct);
-    }
+        => _eventBusService.StopAsync(ct);
 }

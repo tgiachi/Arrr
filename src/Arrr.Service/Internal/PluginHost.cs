@@ -4,17 +4,17 @@ namespace Arrr.Service.Internal;
 
 internal class PluginHost
 {
-    private readonly ISourcePlugin _plugin;
     private readonly PluginLoadContext _loadContext;
     private readonly CancellationTokenSource _cts;
     private readonly Task _runTask;
 
-    public ISourcePlugin Plugin => _plugin;
-    public string PluginId => _plugin.Id;
+    public ISourcePlugin Plugin { get; }
+
+    public string PluginId => Plugin.Id;
 
     public PluginHost(ISourcePlugin plugin, PluginLoadContext loadContext, CancellationTokenSource cts, Task runTask)
     {
-        _plugin = plugin;
+        Plugin = plugin;
         _loadContext = loadContext;
         _cts = cts;
         _runTask = runTask;

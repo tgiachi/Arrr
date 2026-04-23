@@ -8,11 +8,9 @@ public class PluginRegistryServiceTests
 {
     private PluginRegistryService _registry = null!;
 
-    [SetUp]
-    public void SetUp()
-    {
-        _registry = new PluginRegistryService();
-    }
+    [Test]
+    public void GetAll_WhenEmpty_ReturnsEmptyList()
+        => Assert.That(_registry.GetAll(), Is.Empty);
 
     [Test]
     public void Register_WhenPluginAdded_AppearsInGetAll()
@@ -24,6 +22,10 @@ public class PluginRegistryServiceTests
         Assert.That(_registry.GetAll(), Has.Count.EqualTo(1));
     }
 
+    [SetUp]
+    public void SetUp()
+        => _registry = new();
+
     [Test]
     public void Unregister_WhenPluginRemoved_DisappearsFromGetAll()
     {
@@ -32,12 +34,6 @@ public class PluginRegistryServiceTests
 
         _registry.Unregister("com.test.plugin");
 
-        Assert.That(_registry.GetAll(), Is.Empty);
-    }
-
-    [Test]
-    public void GetAll_WhenEmpty_ReturnsEmptyList()
-    {
         Assert.That(_registry.GetAll(), Is.Empty);
     }
 }

@@ -1,10 +1,9 @@
 using Arrr.Core.Directories;
 using Arrr.Core.Interfaces;
-using Arrr.Core.Services;
 using Arrr.Core.Types;
-using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Extensions.Logging;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Arrr.Service.Internal;
 
@@ -26,9 +25,11 @@ internal class PluginContextFactory
         var callbackUrl = $"/callback/{plugin.Name}";
 
         var serilogLogger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            .WriteTo.File(logPath, rollingInterval: RollingInterval.Day)
-            .CreateLogger();
+                            .MinimumLevel
+                            .Debug()
+                            .WriteTo
+                            .File(logPath, rollingInterval: RollingInterval.Day)
+                            .CreateLogger();
 
         var logger = new SerilogLoggerFactory(serilogLogger).CreateLogger(plugin.Id);
 
@@ -39,11 +40,11 @@ internal class PluginContextFactory
 internal sealed class PluginContext : IPluginContext
 {
     public string ConfigPath { get; }
-    public Microsoft.Extensions.Logging.ILogger Logger { get; }
+    public ILogger Logger { get; }
     public string CallbackUrl { get; }
     public IEventBus EventBus { get; }
 
-    public PluginContext(string configPath, Microsoft.Extensions.Logging.ILogger logger, string callbackUrl, IEventBus eventBus)
+    public PluginContext(string configPath, ILogger logger, string callbackUrl, IEventBus eventBus)
     {
         ConfigPath = configPath;
         Logger = logger;

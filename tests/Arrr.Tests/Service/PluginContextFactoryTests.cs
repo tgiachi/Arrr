@@ -12,18 +12,15 @@ public class PluginContextFactoryTests
     private string _tempRoot = "";
     private DirectoriesConfig _directoriesConfig = null!;
 
-    [SetUp]
-    public void SetUp()
+    [Test]
+    public void Create_CallbackUrl_ContainsPluginName()
     {
-        _tempRoot = Path.Combine(Path.GetTempPath(), $"arrr_ctx_test_{Guid.NewGuid()}");
-        _directoriesConfig = new DirectoriesConfig(_tempRoot, Enum.GetNames<DirectoryType>());
-    }
+        var factory = new PluginContextFactory(new EventBusService(), _directoriesConfig);
+        var plugin = new FakeSourcePlugin("com.test.arrr.plugins.rss");
 
-    [TearDown]
-    public void TearDown()
-    {
-        if (Directory.Exists(_tempRoot))
-            Directory.Delete(_tempRoot, recursive: true);
+        var ctx = factory.Create(plugin);
+
+        Assert.That(ctx.CallbackUrl, Does.Contain("rss"));
     }
 
     [Test]
@@ -38,14 +35,19 @@ public class PluginContextFactoryTests
         Assert.That(ctx.ConfigPath, Is.EqualTo(expected));
     }
 
-    [Test]
-    public void Create_CallbackUrl_ContainsPluginName()
+    [SetUp]
+    public void SetUp()
     {
-        var factory = new PluginContextFactory(new EventBusService(), _directoriesConfig);
-        var plugin = new FakeSourcePlugin("com.test.arrr.plugins.rss");
+        _tempRoot = Path.Combine(Path.GetTempPath(), $"arrr_ctx_test_{Guid.NewGuid()}");
+        _directoriesConfig = new(_tempRoot, Enum.GetNames<DirectoryType>());
+    }
 
-        var ctx = factory.Create(plugin);
-
-        Assert.That(ctx.CallbackUrl, Does.Contain("rss"));
+    [TearDown]
+    public void TearDown()
+    {
+        if (Directory.Exists(_tempRoot))
+        {
+            Directory.Delete(_tempRoot, true);
+        }
     }
 }

@@ -27,9 +27,13 @@ internal class FakeSourcePlugin : ISourcePlugin
     public async Task StartAsync(IPluginContext context, CancellationToken ct)
     {
         if (_throws is not null)
+        {
             throw _throws;
+        }
 
         foreach (var n in _notifications)
+        {
             await context.EventBus.PublishAsync(n, ct);
+        }
     }
 }

@@ -7,5 +7,6 @@ public enum DirectoryType
 {
     Scripts,
     Logs,
-    Plugins
+    Plugins,
+    Configs
 }

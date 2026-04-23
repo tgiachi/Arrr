@@ -28,7 +28,7 @@ public interface ISourcePlugin
     string Icon { get; }
 
     /// <summary>
-    /// Starts the plugin. The plugin publishes events via <paramref name="context"/>.EventBus
+    /// Starts the plugin. The plugin publishes events via <paramref name="context" />.EventBus
     /// until cancellation is requested.
     /// </summary>
     Task StartAsync(IPluginContext context, CancellationToken ct);

@@ -7,6 +7,14 @@ public class PluginRegistryService : IPluginRegistry
     private readonly Dictionary<string, ISourcePlugin> _plugins = new();
     private readonly Lock _lock = new();
 
+    public IReadOnlyList<ISourcePlugin> GetAll()
+    {
+        lock (_lock)
+        {
+            return _plugins.Values.ToList();
+        }
+    }
+
     public void Register(ISourcePlugin plugin)
     {
         lock (_lock)
@@ -20,14 +28,6 @@ public class PluginRegistryService : IPluginRegistry
         lock (_lock)
         {
             _plugins.Remove(pluginId);
-        }
-    }
-
-    public IReadOnlyList<ISourcePlugin> GetAll()
-    {
-        lock (_lock)
-        {
-            return _plugins.Values.ToList();
         }
     }
 }
