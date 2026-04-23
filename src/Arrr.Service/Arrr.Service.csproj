@@ -16,4 +16,8 @@
     <ItemGroup>
         <ProjectReference Include="..\Arrr.Core\Arrr.Core.csproj"/>
     </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Arrr.Tests" />
+    </ItemGroup>
 </Project>

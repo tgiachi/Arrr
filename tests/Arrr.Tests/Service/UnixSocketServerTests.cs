@@ -1,0 +1,69 @@
+using System.Net.Sockets;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Channels;
+using Arrr.Core.Data.Notifications;
+using Arrr.Service.Internal;
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace Arrr.Tests.Service;
+
+[TestFixture]
+public class UnixSocketServerTests
+{
+    private string _socketPath = string.Empty;
+
+    [SetUp]
+    public void SetUp()
+    {
+        _socketPath = Path.Combine(Path.GetTempPath(), $"arrr_test_{Guid.NewGuid()}.sock");
+    }
+
+    [TearDown]
+    public void TearDown()
+    {
+        if (File.Exists(_socketPath))
+            File.Delete(_socketPath);
+    }
+
+    [Test]
+    public async Task RunAsync_WhenNotificationWritten_ClientReceivesJsonLine()
+    {
+        var channel = Channel.CreateUnbounded<Notification>();
+        await using var server = new UnixSocketServer(NullLogger<UnixSocketServer>.Instance, _socketPath, channel.Reader);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var serverTask = server.RunAsync(cts.Token);
+
+        await WaitForSocketAsync(_socketPath, cts.Token);
+
+        using var client = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+        await client.ConnectAsync(new UnixDomainSocketEndPoint(_socketPath), cts.Token);
+        using var stream = new NetworkStream(client, ownsSocket: false);
+
+        var notification = new Notification(Guid.NewGuid(), "test", "Hello", "World", DateTimeOffset.UtcNow, null);
+        await channel.Writer.WriteAsync(notification, cts.Token);
+
+        var buffer = new byte[4096];
+        var read = await stream.ReadAsync(buffer, cts.Token);
+        var line = Encoding.UTF8.GetString(buffer, 0, read).TrimEnd('\n');
+        var received = JsonSerializer.Deserialize<Notification>(line);
+
+        Assert.That(received, Is.EqualTo(notification));
+
+        cts.Cancel();
+        try
+        {
+            await serverTask.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private static async Task WaitForSocketAsync(string path, CancellationToken ct)
+    {
+        while (!File.Exists(path))
+        {
+            await Task.Delay(20, ct);
+        }
+    }
+}
