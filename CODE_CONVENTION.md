@@ -1,6 +1,6 @@
-# Code Convention
+# Code Convention — Arrr
 
-This document defines coding conventions for Moongate. It is intentionally strict to keep the codebase consistent and readable.
+This document defines coding conventions for the Arrr project. It is intentionally strict to keep the codebase consistent and readable.
 
 ## 1. General Principles
 
@@ -8,59 +8,73 @@ This document defines coding conventions for Moongate. It is intentionally stric
 - Keep domain boundaries explicit.
 - Keep files small and focused.
 - Avoid hidden magic and implicit behavior.
-- Write code that is easy to reason about under load and during debugging.
+- Write code that is easy to reason about during debugging.
 
 ## 2. Project Structure and Namespaces
 
 ### 2.1 Folder-to-Namespace Rule
 
-- Namespace must match folder path.
-- Example: `src/Moongate.Server/Services/Spatial/SpatialWorldService.cs` -> `namespace Moongate.Server.Services.Spatial;`
+Namespace must match folder path exactly.
+
+```
+src/Arrr.Core/Services/ConfigService.cs        → namespace Arrr.Core.Services;
+src/Arrr.Service/Subscribers/SocketBroadcastSubscriber.cs → namespace Arrr.Service.Subscribers;
+tests/Arrr.Tests/Core/EventBusServiceTests.cs  → namespace Arrr.Tests.Core;
+```
 
 ### 2.2 Domain-First Organization
 
-- Group by domain first, not by technical suffix.
-- Use existing project domains (`Services/*`, `Handlers`, `FileLoaders`, `Data/*`, `Interfaces/*`, `Types/*`, `Extensions/*`).
+Group by domain first, not by technical suffix.
 
 ### 2.3 Mandatory Namespace Buckets
 
-- `Types`: enums and type constants domain-wide.
-- `Data`: DTOs and simple data carriers.
-- `Data.Internal`: internal-only data models/implementation details.
-- `Interfaces`: contracts only.
+| Bucket | Content |
+|---|---|
+| `Types` | Enums, type constants (domain-prefixed) |
+| `Data` | DTOs, records, simple data carriers |
+| `Data.Config` | Configuration models |
+| `Data.Notifications` | Notification DTO |
+| `Data.Internal.*` | Internal-only data models |
+| `Interfaces` | Contracts only |
+| `Services` | Service implementations |
+| `Internal` | Implementation details not part of public API |
+| `Subscribers` | `IEventBus` subscriber classes |
+| `DBus` | D-Bus interface definitions |
 
 ## 3. C# File and Type Rules
 
 - One `.cs` file must contain at most one primary type (`class`, `record`, or `enum`).
 - File name must match type name.
 - Use file-scoped namespaces.
-- Keep `Dispose` methods as the last methods in the class.
+- Do **not** use primary constructors.
+- Do **not** use expression-bodied constructors (`public X(...) => ...`); constructors must always have a body `{ }`.
 
 ## 4. Class Layout Order
 
 Inside a type, use this order:
 
 1. `const` fields
-2. `private readonly` fields (must start with `_`)
-3. non-readonly fields
-4. properties
-5. constructor(s)
-6. public methods
-7. protected methods
-8. private methods
-9. `Dispose`/finalization methods (last)
+2. `private readonly` fields (prefixed `_`)
+3. Non-readonly fields
+4. Properties
+5. Constructor(s)
+6. Public methods
+7. Protected methods
+8. Private methods
+9. `Dispose`/finalization methods (always last)
 
 ### 4.1 Private Readonly Naming
 
-- All `private readonly` fields must start with `_`.
-- Examples:
-  - `_logger`
-  - `_gameEventBusService`
-  - `_persistenceService`
+All `private readonly` fields must start with `_`:
+
+```csharp
+private readonly IEventBus _eventBus;
+private readonly DirectoriesConfig _directoriesConfig;
+```
 
 ### 4.2 Dispose Position
 
-- If a class implements `IDisposable` and/or `IAsyncDisposable`, `Dispose`/`DisposeAsync` must be the last method(s) in the class.
+If a class implements `IDisposable` or `IAsyncDisposable`, `Dispose`/`DisposeAsync` must be the last method(s) in the file.
 
 ## 5. Interfaces
 
@@ -71,107 +85,150 @@ Inside a type, use this order:
 ## 6. Enums
 
 - Enums must live under a `Types` namespace for their domain.
-- Prefer explicit underlying type when protocol/storage needs fixed size.
+- Always include the domain in the enum name.
 
-## 7. Serialization and Persistence
+```csharp
+// Types/LogLevelType.cs
+namespace Arrr.Core.Types;
+public enum LogLevelType { ... }
 
-- Persisted entities must be explicit and version-safe.
-- When adding persistent fields, update:
-  - entity model
-  - MemoryPack annotations or ignore rules
-  - tests
-- Never rely on runtime-only fields for persistence correctness.
+// Types/DirectoryType.cs
+namespace Arrr.Core.Types;
+public enum DirectoryType { Scripts, Logs, Plugins, Configs }
+```
 
-## 8. Event and Runtime State Rules
+## 7. Strings
 
-- Runtime source of truth is session/runtime state, not stale persistence reads.
-- Events should carry enough context to avoid extra ambiguous lookups.
-- Cross-thread communication must go through queues/bus abstractions.
+- Always use `""` instead of `string.Empty`.
 
-## 9. Test Conventions
+## 8. Logging
 
-### 9.1 Structure
+- Use Serilog **statically** via `Log.ForContext<T>()`. Do not inject `ILogger<T>` via DI.
+- Declare the logger as a `private readonly` field initialized inline.
 
-- Tests must be organized by domain/component, mirroring production code.
-- Avoid placing test files directly in project root test folders.
-- Use dedicated folders such as:
-  - `Server/Handlers`
-  - `Server/Services/<Domain>`
-  - `Server/FileLoaders`
-  - `Server/Bootstrap`
-  - `Server/Data/Events/<Domain>`
+```csharp
+private readonly ILogger _logger = Log.ForContext<MyService>();
+```
 
-### 9.2 Naming
+- When both Serilog and Microsoft.Extensions.Logging are in scope (e.g., `Arrr.Service` which uses `Microsoft.NET.Sdk.Web`), add a using alias to resolve the ambiguity:
+
+```csharp
+using Serilog;
+using ILogger = Serilog.ILogger;
+```
+
+- Use static message templates; never use string interpolation for structured logs.
+- Keep template shape stable across calls.
+
+## 9. Event Bus
+
+- All event types must implement `IArrrEvent`.
+- Use `IEventBus.Subscribe<T>` to register handlers; use `IEventBus.PublishAsync<T>` to emit events.
+- Subscriber classes live in `Subscribers/` and register themselves in the constructor.
+
+```csharp
+// Pattern: SocketBroadcastSubscriber
+internal class MySubscriber
+{
+    public MySubscriber(IEventBus eventBus, ...)
+    {
+        eventBus.Subscribe<Notification>(HandleAsync);
+    }
+}
+```
+
+## 10. Plugin System
+
+- Plugins implement `ISourcePlugin` (Id in reverse-domain format: `com.github.author.arrr.plugins.name`).
+- Plugins receive an `IPluginContext` — use `context.EventBus` to publish, `context.Logger` to log, `context.ConfigPath` for config.
+- Plugin hosts are loaded via `PluginLoadContext` (`AssemblyLoadContext(isCollectible: true)`) for hot-reload support.
+
+## 11. D-Bus Interfaces
+
+- D-Bus proxy interfaces live in `DBus/` and must be `public` (required by Tmds.DBus runtime proxy generation via Reflection.Emit).
+- Annotate with `[DBusInterface("...")]` and inherit `IDBusObject`.
+
+## 12. Hosted Services / Subscribers
+
+- Background services implement `IHostedService` (or extend `BackgroundService`).
+- If an optional external dependency (e.g., D-Bus session bus) is unavailable at startup, log a `Warning` and return cleanly — do not crash the host.
+- Subscribers that are not hosted services are registered as singletons and force-resolved in `Program.cs` to trigger constructor subscription registration.
+
+## 13. Test Conventions
+
+### 13.1 Structure
+
+```
+tests/Arrr.Tests/<Domain>/<Subdomain>/<SubjectName>Tests.cs
+namespace Arrr.Tests.<Domain>.<Subdomain>;
+```
+
+Examples:
+```
+tests/Arrr.Tests/Core/EventBusServiceTests.cs   → namespace Arrr.Tests.Core;
+tests/Arrr.Tests/Service/UnixSocketServerTests.cs → namespace Arrr.Tests.Service;
+tests/Arrr.Tests/Support/FakeSourcePlugin.cs    → namespace Arrr.Tests.Support;
+```
+
+### 13.2 Naming
 
 - File: `<SubjectName>Tests.cs`
 - Class: `<SubjectName>Tests`
 - One main test class per file.
+- Test method style: `Method_Scenario_ExpectedResult`.
 
-### 9.3 Namespace Rule (Tests)
+### 13.3 Test Support
 
-- Namespace must match test path under `tests/Moongate.Tests`.
-- Example:
-  - `tests/Moongate.Tests/Server/Services/Events/GameEventBusServiceTests.cs`
-  - `namespace Moongate.Tests.Server.Services.Events;`
-
-### 9.4 Test Support
-
-- Shared fakes/builders/helpers go in `Support` or `TestSupport`.
+- Shared fakes, builders, and helpers go in `tests/Arrr.Tests/Support/`.
 - Do not mix reusable test infrastructure into domain test files.
 
-## 10. Source Generator and Runtime Safety
+### 13.4 InternalsVisibleTo
 
-- Prefer static, explicit registrations over runtime reflection when possible.
-- Keep public API and generated code deterministic.
-- New reflection-heavy code must be justified and tested against the affected runtime paths.
+`Arrr.Service.csproj` exposes internals to `Arrr.Tests` via:
+```xml
+<InternalsVisibleTo Include="Arrr.Tests"/>
+```
 
-## 11. Commits
+## 14. Commits
 
 - Use Conventional Commits (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, etc.).
-- Keep commits scoped and meaningful.
+- Scope commits to the affected subsystem: `feat(dbus):`, `fix(socket):`, `test(eventbus):`.
+- Never add `Co-Authored-By: Claude` to commits.
 
-## 12. Non-Negotiable Hygiene
+## 15. Non-Negotiable Hygiene
 
 - No dead code.
 - No TODO comments without a tracked follow-up.
 - No inconsistent naming across domains.
 - Keep warnings under control; do not normalize noisy warnings.
+- No `string.Empty` — use `""`.
+- No primary constructors.
+- No expression-bodied constructors.
 
-## 13. Additional Conventions
+## 16. Additional Conventions
 
-1. Nullability
+**Nullability**
 - Use nullable reference types consistently.
-- Avoid null-forgiving (`!`) unless explicitly justified in code.
+- Avoid null-forgiving (`!`) unless explicitly justified.
 
-2. Async naming and signatures
+**Async naming**
 - Async methods must end with `Async`.
 - Include `CancellationToken` on I/O-bound public async methods.
 
-3. Logging
-- Use static message templates.
-- Keep template shape stable across calls.
-- Do not use string interpolation for structured logs.
-
-4. Exception handling
+**Exception handling**
 - Use guard clauses (`ArgumentNullException.ThrowIfNull`, etc.).
 - Do not swallow exceptions silently.
 
-5. API collection exposure
-- Expose read-only collection contracts (`IReadOnlyList<>`, `IReadOnlyDictionary<>`) where mutation is not intended.
+**Collection exposure**
+- Expose `IReadOnlyList<>` or `IReadOnlyDictionary<>` where mutation by callers is not intended.
 
-6. Hot-path allocations
-- Minimize allocations in network/game-loop hot paths.
-- Prefer value-oriented and span-based APIs when appropriate.
-
-7. Persistence mapping completeness
-- Any persisted field change must include MemoryPack contract updates and test coverage.
-
-8. Test naming style
+**Test naming**
 - Prefer `Method_Scenario_ExpectedResult`.
 - Keep tests focused on a single behavior.
 
-9. No magic numbers
+**No magic numbers**
 - Replace protocol/timing literals with named constants.
 
-10. Using directives
-- Keep usings ordered and deterministic (system first, then project/local).
+**Using directives**
+- Keep usings ordered: system first, then third-party, then project namespaces.
+- Add using aliases when a name is ambiguous across two libraries in scope.
