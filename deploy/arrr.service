@@ -1,0 +1,18 @@
+[Unit]
+Description=Arrr notification aggregator
+Documentation=https://github.com/tgiachi/Arrr
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/arrr/Arrr.Service --rootDirectory %h/.local/share/arrr
+Restart=on-failure
+RestartSec=5
+
+# stdout/stderr go to systemd journal (journalctl --user -u arrr -f)
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=arrr
+
+[Install]
+WantedBy=default.target
