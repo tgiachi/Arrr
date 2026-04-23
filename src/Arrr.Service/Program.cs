@@ -58,6 +58,7 @@ await ConsoleApp.RunAsync(
         builder.Services.AddSingleton<PluginContextFactory>();
         builder.Services.AddHostedService<EventBusHostedService>();
         builder.Services.AddHostedService<PluginOrchestrator>();
+        builder.Services.AddHostedService<DBusNotifySubscriber>();
 
         builder.Logging.ClearProviders().AddSerilog();
 
