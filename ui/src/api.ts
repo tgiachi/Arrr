@@ -1,4 +1,4 @@
-import type { Plugin } from './types'
+import type { Plugin, PluginConfigResponse } from './types'
 
 export class ArrrApi {
   constructor(
@@ -56,7 +56,7 @@ export class ArrrApi {
     await this.req(`/api/plugins/${encodeURIComponent(packageId)}/uninstall`, { method: 'POST' })
   }
 
-  async getConfig(pluginId: string): Promise<Record<string, unknown>> {
+  async getConfig(pluginId: string): Promise<PluginConfigResponse> {
     return (await this.req(`/api/plugins/${encodeURIComponent(pluginId)}/config`)).json()
   }
 

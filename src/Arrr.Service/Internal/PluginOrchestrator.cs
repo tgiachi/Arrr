@@ -1,4 +1,7 @@
+using System.ComponentModel;
+using System.Reflection;
 using System.Text.Json;
+using Arrr.Core.Attributes;
 using Arrr.Core.Data.Api;
 using Arrr.Core.Data.Config;
 using Arrr.Core.Directories;
@@ -356,7 +359,7 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
         return null;
     }
 
-    public async Task<JsonElement?> GetPluginConfigAsync(string pluginId, CancellationToken ct = default)
+    public async Task<PluginConfigResponse?> GetPluginConfigAsync(string pluginId, CancellationToken ct = default)
     {
         var dll = ResolveDllPath(pluginId);
         if (dll is null)
@@ -388,13 +391,26 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
             }
 
             EncryptionUtils.ApplySensitiveFields(config, decrypt: true);
-            return JsonSerializer.SerializeToElement(config, configType, _jsonOpts);
+
+            var values = JsonSerializer.SerializeToElement(config, configType, _jsonOpts);
+            var schema = BuildSchema(configType);
+            return new PluginConfigResponse(values, schema);
         }
         finally
         {
             ctx.Unload();
         }
     }
+
+    private static ConfigFieldInfo[] BuildSchema(Type configType) =>
+        configType
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(p => new ConfigFieldInfo(
+                p.Name,
+                p.GetCustomAttribute<DescriptionAttribute>()?.Description,
+                p.GetCustomAttribute<SensitiveAttribute>() is not null
+            ))
+            .ToArray();
 
     public async Task SavePluginConfigAsync(string pluginId, JsonElement incoming, CancellationToken ct = default)
     {

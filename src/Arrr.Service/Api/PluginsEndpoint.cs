@@ -119,10 +119,10 @@ internal static class PluginsEndpoint
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
                     return error!;
 
-                var config = await manager.GetPluginConfigAsync(pluginId, ct);
-                return config is null
+                var response = await manager.GetPluginConfigAsync(pluginId, ct);
+                return response is null
                     ? Results.NotFound(new { pluginId, error = "Plugin not found or has no config." })
-                    : Results.Ok(config);
+                    : Results.Ok(response);
             }
         );
 

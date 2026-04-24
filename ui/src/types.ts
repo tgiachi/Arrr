@@ -11,6 +11,17 @@ export interface Plugin {
   hasCallback: boolean
 }
 
+export interface ConfigFieldInfo {
+  name: string
+  description: string | null
+  sensitive: boolean
+}
+
+export interface PluginConfigResponse {
+  values: Record<string, unknown>
+  schema: ConfigFieldInfo[]
+}
+
 export interface Settings {
   apiKey: string
   baseUrl: string

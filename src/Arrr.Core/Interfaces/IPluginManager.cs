@@ -22,11 +22,11 @@ public interface IPluginManager
     Task ReloadAllAsync(CancellationToken ct);
 
     /// <summary>
-    /// Returns the plugin's config as a <see cref="JsonElement"/> with sensitive fields decrypted.
-    /// Returns <c>null</c> if the plugin does not implement <see cref="IConfigurablePlugin"/>
-    /// or its DLL has not been loaded.
+    /// Returns the plugin's config values (sensitive fields decrypted) plus the field schema
+    /// (name, description, sensitive flag) derived from the config type's properties.
+    /// Returns <c>null</c> if the plugin does not implement <see cref="IConfigurablePlugin"/>.
     /// </summary>
-    Task<JsonElement?> GetPluginConfigAsync(string pluginId, CancellationToken ct = default);
+    Task<PluginConfigResponse?> GetPluginConfigAsync(string pluginId, CancellationToken ct = default);
 
     /// <summary>
     /// Persists <paramref name="config"/> to the plugin's config file,
