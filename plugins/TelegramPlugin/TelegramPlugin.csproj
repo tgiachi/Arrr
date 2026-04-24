@@ -8,7 +8,7 @@
         <RootNamespace>TelegramPlugin</RootNamespace>
 
         <PackageId>Arrr.Plugin.Telegram</PackageId>
-        <Version>1.0.0</Version>
+        <Version>1.1.0</Version>
         <Authors>Tom</Authors>
         <Company>orivega.io</Company>
         <Description>Telegram user-account plugin for Arrr — receives messages via MTProto and publishes desktop notifications.</Description>
@@ -24,7 +24,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Arrr.Core" Version="1.2.0" />
+        <PackageReference Include="Arrr.Core" Version="1.1.0" />
         <PackageReference Include="WTelegramClient" Version="3.*" />
     </ItemGroup>
 
