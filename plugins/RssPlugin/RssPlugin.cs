@@ -15,21 +15,18 @@ public class RssPlugin : IPollingPlugin
     private RssPluginConfig _config = new();
     private bool _firstPoll = true;
 
-    public string Id          => "com.arrr.rss";
-    public string Name        => "RSS";
-    public string Version     => "1.0.0";
-    public string Author      => "Tom";
+    public string Id => "com.arrr.rss";
+    public string Name => "RSS";
+    public string Version => "1.0.0";
+    public string Author => "Tom";
     public string Description => "Polls RSS/Atom feeds and publishes notifications for new items.";
     public string[] Categories => ["rss", "news"];
-    public string Icon        => "";
+    public string Icon => "";
 
     public TimeSpan Interval => TimeSpan.FromMinutes(5);
 
-    public async Task StartAsync(IPluginContext context, CancellationToken ct)
-    {
-        _config = await context.LoadConfigAsync<RssPluginConfig>(ct);
-        context.Logger.LogInformation("RSS plugin loaded {Count} feed(s)", _config.Feeds.Count);
-    }
+    public void Dispose()
+        => _httpClient.Dispose();
 
     public async Task PollAsync(IPluginContext context, CancellationToken ct)
     {
@@ -47,9 +44,18 @@ public class RssPlugin : IPollingPlugin
 
         if (_firstPoll)
         {
-            context.Logger.LogInformation("RSS first poll complete — {Count} item(s) indexed, notifications suppressed", _seenIds.Count);
+            context.Logger.LogInformation(
+                "RSS first poll complete — {Count} item(s) indexed, notifications suppressed",
+                _seenIds.Count
+            );
             _firstPoll = false;
         }
+    }
+
+    public async Task StartAsync(IPluginContext context, CancellationToken ct)
+    {
+        _config = await context.LoadConfigAsync<RssPluginConfig>(ct);
+        context.Logger.LogInformation("RSS plugin loaded {Count} feed(s)", _config.Feeds.Count);
     }
 
     private async Task PollFeedAsync(RssFeedConfig feed, IPluginContext context, bool seedOnly, CancellationToken ct)
@@ -60,35 +66,32 @@ public class RssPlugin : IPollingPlugin
 
         foreach (var item in syndicationFeed.Items)
         {
-            var itemId = item.Id
-                         ?? item.Links.FirstOrDefault()?.Uri?.ToString()
-                         ?? item.Title?.Text;
+            var itemId = item.Id ?? item.Links.FirstOrDefault()?.Uri?.ToString() ?? item.Title?.Text;
 
             if (itemId is null || !_seenIds.Add(itemId))
+            {
                 continue;
+            }
 
             if (seedOnly)
+            {
                 continue;
+            }
 
             var link = item.Links.FirstOrDefault()?.Uri?.ToString();
             var body = link is not null ? $"{feed.Label}\n{link}" : feed.Label;
 
             await context.EventBus.PublishAsync(
                 new Notification(
-                    Id:        Guid.NewGuid(),
-                    Source:    Id,
-                    Title:     item.Title?.Text ?? "(no title)",
-                    Body:      body,
-                    Timestamp: item.PublishDate == default ? DateTimeOffset.UtcNow : item.PublishDate,
-                    IconUrl:   null
+                    Guid.NewGuid(),
+                    Id,
+                    item.Title?.Text ?? "(no title)",
+                    body,
+                    item.PublishDate == default ? DateTimeOffset.UtcNow : item.PublishDate,
+                    null
                 ),
                 ct
             );
         }
-    }
-
-    public void Dispose()
-    {
-        _httpClient.Dispose();
     }
 }
