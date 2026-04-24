@@ -16,6 +16,31 @@ namespace Arrr.Tests.Service;
 public class PluginsEndpointTests
 {
     [Test]
+    public async Task GetPlugins_WithEmptyApiKeyConfig_Returns503()
+    {
+        var (client, app, _) = await CreateHostAsync("");
+        await using var _ = app;
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/plugins");
+        request.Headers.Add("X-Api-Key", "anything");
+
+        var response = await client.SendAsync(request);
+
+        Assert.That((int)response.StatusCode, Is.EqualTo(503));
+    }
+
+    [Test]
+    public async Task GetPlugins_WithMissingKey_Returns401()
+    {
+        var (client, app, _) = await CreateHostAsync("secret");
+        await using var _ = app;
+
+        var response = await client.GetAsync("/api/plugins");
+
+        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
+    }
+
+    [Test]
     public async Task GetPlugins_WithNoPlugins_ReturnsEmptyArray()
     {
         var (client, app, _) = await CreateHostAsync("secret");
@@ -52,17 +77,6 @@ public class PluginsEndpointTests
     }
 
     [Test]
-    public async Task GetPlugins_WithMissingKey_Returns401()
-    {
-        var (client, app, _) = await CreateHostAsync("secret");
-        await using var _ = app;
-
-        var response = await client.GetAsync("/api/plugins");
-
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
-    }
-
-    [Test]
     public async Task GetPlugins_WithWrongKey_Returns401()
     {
         var (client, app, _) = await CreateHostAsync("secret");
@@ -76,22 +90,9 @@ public class PluginsEndpointTests
         Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.Unauthorized));
     }
 
-    [Test]
-    public async Task GetPlugins_WithEmptyApiKeyConfig_Returns503()
-    {
-        var (client, app, _) = await CreateHostAsync("");
-        await using var _ = app;
-
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/plugins");
-        request.Headers.Add("X-Api-Key", "anything");
-
-        var response = await client.SendAsync(request);
-
-        Assert.That((int)response.StatusCode, Is.EqualTo(503));
-    }
-
     private static async Task<(HttpClient client, WebApplication app, IPluginRegistry registry)> CreateHostAsync(
-        string apiKey)
+        string apiKey
+    )
     {
         var bus = new EventBusService();
         await bus.StartAsync(CancellationToken.None);
@@ -103,6 +104,7 @@ public class PluginsEndpointTests
         builder.Services.AddSingleton<IConfigService>(new FakeConfigService(apiKey));
         builder.Services.AddSingleton<IEventBus>(bus);
         builder.Services.AddSingleton<IPluginRegistry>(registry);
+        builder.Services.AddSingleton<IPluginManager>(new FakePluginManager());
 
         var app = builder.Build();
         app.MapPluginsApi();

@@ -29,6 +29,8 @@ internal class PluginContextFactory
                             .Debug()
                             .WriteTo
                             .File(logPath, rollingInterval: RollingInterval.Day)
+                            .WriteTo
+                            .Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
                             .CreateLogger();
 
         var logger = new SerilogLoggerFactory(serilogLogger).CreateLogger(plugin.Id);

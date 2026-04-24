@@ -131,6 +131,7 @@ public class ExternalNotifyEndpointTests
         builder.Services.AddSingleton<IConfigService>(new FakeConfigService(apiKey));
         builder.Services.AddSingleton<IEventBus>(bus);
         builder.Services.AddSingleton<IPluginRegistry, PluginRegistryService>();
+        builder.Services.AddSingleton<IPluginManager>(new FakePluginManager());
 
         var app = builder.Build();
         app.MapExternalApi();

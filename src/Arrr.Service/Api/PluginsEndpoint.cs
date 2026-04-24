@@ -1,6 +1,5 @@
 using Arrr.Core.Data.Api;
 using Arrr.Core.Interfaces;
-using Arrr.Service.Interfaces;
 
 namespace Arrr.Service.Api;
 
@@ -12,29 +11,78 @@ internal static class PluginsEndpoint
             "/api/plugins",
             (HttpContext ctx, IConfigService configService, IPluginRegistry registry) =>
             {
-                var key = configService.Config.ApiKey;
-
-                if (key == "")
-                {
-                    return Results.Problem("API key not configured", statusCode: 503);
-                }
-
-                if (!ctx.Request.Headers.TryGetValue("X-Api-Key", out var provided) || provided != key)
-                {
-                    return Results.Unauthorized();
-                }
+                if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                    return error!;
 
                 var plugins = registry.GetAll()
                                       .Select(
                                           p => new PluginInfoResponse(
-                                              p.Id, p.Name, p.Version,
-                                              p.Author, p.Description,
-                                              p.Categories, p.Icon
+                                              p.Id, p.Name, p.Version, p.Author,
+                                              p.Description, p.Categories, p.Icon
                                           )
                                       )
                                       .ToList();
 
                 return Results.Ok(plugins);
+            }
+        );
+
+        app.MapGet(
+            "/api/plugins/available",
+            (HttpContext ctx, IConfigService configService, IPluginManager manager) =>
+            {
+                if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                    return error!;
+
+                return Results.Ok(manager.GetAvailable());
+            }
+        );
+
+        app.MapPost(
+            "/api/plugins/{pluginId}/enable",
+            async (HttpContext ctx, string pluginId, IConfigService configService, IPluginManager manager, CancellationToken ct) =>
+            {
+                if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                    return error!;
+
+                await manager.EnableAsync(pluginId, ct);
+                return Results.Ok(new { pluginId, enabled = true });
+            }
+        );
+
+        app.MapPost(
+            "/api/plugins/{pluginId}/disable",
+            async (HttpContext ctx, string pluginId, IConfigService configService, IPluginManager manager) =>
+            {
+                if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                    return error!;
+
+                await manager.DisableAsync(pluginId);
+                return Results.Ok(new { pluginId, enabled = false });
+            }
+        );
+
+        app.MapPost(
+            "/api/plugins/{pluginId}/reload",
+            async (HttpContext ctx, string pluginId, IConfigService configService, IPluginManager manager, CancellationToken ct) =>
+            {
+                if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                    return error!;
+
+                await manager.ReloadAsync(pluginId, ct);
+                return Results.Ok(new { pluginId, reloaded = true });
+            }
+        );
+
+        app.MapPost(
+            "/api/plugins/reload/all",
+            async (HttpContext ctx, IConfigService configService, IPluginManager manager, CancellationToken ct) =>
+            {
+                if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                    return error!;
+
+                await manager.ReloadAllAsync(ct);
+                return Results.Ok(new { reloaded = true });
             }
         );
 

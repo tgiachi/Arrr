@@ -34,4 +34,10 @@ public class ConfigService : IConfigService
 
         return Task.CompletedTask;
     }
+
+    public void Save()
+    {
+        JsonUtils.SerializeToFile(Config, _configPath, ArrrConfigJsonContext.Default);
+        _logger.Information("Config saved to {Path}", _configPath);
+    }
 }
