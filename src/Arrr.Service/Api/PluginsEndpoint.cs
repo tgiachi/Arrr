@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Arrr.Core.Data.Api;
 using Arrr.Core.Interfaces;
 using Arrr.Service.Internal;
@@ -108,6 +109,43 @@ internal static class PluginsEndpoint
 
                 await installer.UninstallAsync(packageId, ct);
                 return Results.Ok(new { packageId, uninstalled = true });
+            }
+        );
+
+        app.MapGet(
+            "/api/plugins/{pluginId}/config",
+            async (HttpContext ctx, string pluginId, IConfigService configService, IPluginManager manager, CancellationToken ct) =>
+            {
+                if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                    return error!;
+
+                var config = await manager.GetPluginConfigAsync(pluginId, ct);
+                return config is null
+                    ? Results.NotFound(new { pluginId, error = "Plugin not found or has no config." })
+                    : Results.Ok(config);
+            }
+        );
+
+        app.MapPost(
+            "/api/plugins/{pluginId}/config",
+            async (HttpContext ctx, string pluginId, JsonElement body, IConfigService configService, IPluginManager manager, CancellationToken ct) =>
+            {
+                if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                    return error!;
+
+                try
+                {
+                    await manager.SavePluginConfigAsync(pluginId, body, ct);
+                    return Results.Ok(new { pluginId, saved = true });
+                }
+                catch (KeyNotFoundException)
+                {
+                    return Results.NotFound(new { pluginId, error = "Plugin not found." });
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return Results.BadRequest(new { pluginId, error = ex.Message });
+                }
             }
         );
 

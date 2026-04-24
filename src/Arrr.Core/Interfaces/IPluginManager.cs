@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Arrr.Core.Data.Api;
 
 namespace Arrr.Core.Interfaces;
@@ -19,4 +20,17 @@ public interface IPluginManager
 
     /// <summary>Unloads and reloads all plugins.</summary>
     Task ReloadAllAsync(CancellationToken ct);
+
+    /// <summary>
+    /// Returns the plugin's config as a <see cref="JsonElement"/> with sensitive fields decrypted.
+    /// Returns <c>null</c> if the plugin does not implement <see cref="IConfigurablePlugin"/>
+    /// or its DLL has not been loaded.
+    /// </summary>
+    Task<JsonElement?> GetPluginConfigAsync(string pluginId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Persists <paramref name="config"/> to the plugin's config file,
+    /// encrypting any <c>[Sensitive]</c> fields before writing.
+    /// </summary>
+    Task SavePluginConfigAsync(string pluginId, JsonElement config, CancellationToken ct = default);
 }

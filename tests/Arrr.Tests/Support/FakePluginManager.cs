@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Arrr.Core.Data.Api;
 using Arrr.Core.Interfaces;
 
@@ -18,4 +19,10 @@ internal class FakePluginManager : IPluginManager
     public Task ReloadAsync(string pluginId, CancellationToken ct) => Task.CompletedTask;
 
     public Task ReloadAllAsync(CancellationToken ct) => Task.CompletedTask;
+
+    public Task<JsonElement?> GetPluginConfigAsync(string pluginId, CancellationToken ct = default)
+        => Task.FromResult<JsonElement?>(JsonSerializer.SerializeToElement(new { }));
+
+    public Task SavePluginConfigAsync(string pluginId, JsonElement config, CancellationToken ct = default)
+        => Task.CompletedTask;
 }

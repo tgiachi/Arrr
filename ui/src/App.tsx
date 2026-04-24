@@ -14,6 +14,7 @@ import { RefreshCcw, Settings, Skull } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrrApi } from './api'
 import { PluginCard } from './components/PluginCard'
+import { ConfigModal } from './components/ConfigModal'
 import { InstallPanel } from './components/InstallPanel'
 import { SettingsPanel } from './components/SettingsPanel'
 import type { Plugin, Settings as AppSettings } from './types'
@@ -43,6 +44,7 @@ export default function App() {
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set())
   const [reloadingAll, setReloadingAll] = useState(false)
   const [toasts, setToasts] = useState<Toast[]>([])
+  const [configuringPlugin, setConfiguringPlugin] = useState<Plugin | null>(null)
 
   const apiRef = useRef<ArrrApi | null>(null)
   apiRef.current = new ArrrApi(settings.baseUrl || '', settings.apiKey || '')
@@ -277,12 +279,23 @@ export default function App() {
                   onToggle={handleToggle}
                   onReload={handleReload}
                   onUninstall={handleUninstall}
+                  onConfigure={setConfiguringPlugin}
                 />
               ))}
             </SimpleGrid>
           )}
         </Grid>
       </Box>
+
+      {/* Config modal */}
+      {configuringPlugin && (
+        <ConfigModal
+          plugin={configuringPlugin}
+          api={api()}
+          onClose={() => setConfiguringPlugin(null)}
+          onToast={toast}
+        />
+      )}
 
       {/* Toast stack */}
       <Box position="fixed" bottom={4} right={4} zIndex={100} display="flex" flexDirection="column" gap={2}>

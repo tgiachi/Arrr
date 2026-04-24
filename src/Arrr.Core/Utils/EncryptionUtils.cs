@@ -1,5 +1,7 @@
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using Arrr.Core.Attributes;
 
 namespace Arrr.Core.Utils;
 
@@ -52,6 +54,29 @@ public static class EncryptionUtils
 
     public static bool IsEncrypted(string value) =>
         value.StartsWith(Prefix, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Walks all public string properties decorated with <c>[Sensitive]</c> and
+    /// either encrypts or decrypts them in-place.
+    /// </summary>
+    public static void ApplySensitiveFields(object config, bool decrypt)
+    {
+        var props = config.GetType()
+                          .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                          .Where(p => p.PropertyType == typeof(string)
+                                   && p.CanRead && p.CanWrite
+                                   && p.GetCustomAttribute<SensitiveAttribute>() is not null);
+
+        foreach (var prop in props)
+        {
+            var value = prop.GetValue(config) as string;
+            if (string.IsNullOrEmpty(value)) continue;
+
+            prop.SetValue(config, decrypt
+                ? Decrypt(value)
+                : IsEncrypted(value) ? value : Encrypt(value));
+        }
+    }
 
     private static byte[] DeriveKey()
     {

@@ -1,8 +1,10 @@
+using System.Text.Json;
 using Arrr.Core.Data.Api;
 using Arrr.Core.Data.Config;
 using Arrr.Core.Directories;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Types;
+using Arrr.Core.Utils;
 using Serilog;
 using ILogger = Serilog.ILogger;
 
@@ -16,6 +18,12 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
     private readonly IConfigService _configService;
     private readonly ArrrConfig _config;
     private readonly string _pluginsPath;
+
+    private static readonly JsonSerializerOptions _jsonOpts = new()
+    {
+        WriteIndented = true,
+        PropertyNameCaseInsensitive = true,
+    };
 
     private readonly Dictionary<string, PluginHost> _hosts = new();
     private readonly Dictionary<string, string> _dllPaths = new();
@@ -319,5 +327,78 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
         await StopAllPluginsAsync();
         _dllPaths.Clear();
         await LoadAllPluginsAsync(ct);
+    }
+
+    public async Task<JsonElement?> GetPluginConfigAsync(string pluginId, CancellationToken ct = default)
+    {
+        if (!_dllPaths.TryGetValue(pluginId, out var dll))
+            return null;
+
+        var ctx = new PluginLoadContext(dll);
+        try
+        {
+            var assembly = ctx.LoadFromAssemblyPath(dll);
+            var pluginType = assembly.GetTypes()
+                                     .FirstOrDefault(t => !t.IsAbstract && t.IsAssignableTo(typeof(ISourcePlugin)));
+
+            if (pluginType is null || Activator.CreateInstance(pluginType) is not IConfigurablePlugin configurable)
+                return null;
+
+            var configType = configurable.ConfigType;
+            var configPath = _contextFactory.GetConfigPath(pluginId);
+
+            object config;
+            if (File.Exists(configPath))
+            {
+                await using var stream = File.OpenRead(configPath);
+                config = (await JsonSerializer.DeserializeAsync(stream, configType, _jsonOpts, ct))
+                         ?? Activator.CreateInstance(configType)!;
+            }
+            else
+            {
+                config = Activator.CreateInstance(configType)!;
+            }
+
+            EncryptionUtils.ApplySensitiveFields(config, decrypt: true);
+            return JsonSerializer.SerializeToElement(config, configType, _jsonOpts);
+        }
+        finally
+        {
+            ctx.Unload();
+        }
+    }
+
+    public async Task SavePluginConfigAsync(string pluginId, JsonElement incoming, CancellationToken ct = default)
+    {
+        if (!_dllPaths.TryGetValue(pluginId, out var dll))
+            throw new KeyNotFoundException($"Plugin '{pluginId}' not found.");
+
+        var ctx = new PluginLoadContext(dll);
+        try
+        {
+            var assembly = ctx.LoadFromAssemblyPath(dll);
+            var pluginType = assembly.GetTypes()
+                                     .FirstOrDefault(t => !t.IsAbstract && t.IsAssignableTo(typeof(ISourcePlugin)));
+
+            if (pluginType is null || Activator.CreateInstance(pluginType) is not IConfigurablePlugin configurable)
+                throw new InvalidOperationException($"Plugin '{pluginId}' does not expose a config type.");
+
+            var configType = configurable.ConfigType;
+            var config = incoming.Deserialize(configType, _jsonOpts)
+                         ?? Activator.CreateInstance(configType)!;
+
+            EncryptionUtils.ApplySensitiveFields(config, decrypt: false);
+
+            var configPath = _contextFactory.GetConfigPath(pluginId);
+            var dir = Path.GetDirectoryName(configPath);
+            if (dir is not null) Directory.CreateDirectory(dir);
+
+            await using var stream = File.Create(configPath);
+            await JsonSerializer.SerializeAsync(stream, config, configType, _jsonOpts, ct);
+        }
+        finally
+        {
+            ctx.Unload();
+        }
     }
 }

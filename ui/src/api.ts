@@ -55,4 +55,15 @@ export class ArrrApi {
   async uninstall(packageId: string) {
     await this.req(`/api/plugins/${encodeURIComponent(packageId)}/uninstall`, { method: 'POST' })
   }
+
+  async getConfig(pluginId: string): Promise<Record<string, unknown>> {
+    return (await this.req(`/api/plugins/${encodeURIComponent(pluginId)}/config`)).json()
+  }
+
+  async saveConfig(pluginId: string, config: Record<string, unknown>) {
+    await this.req(`/api/plugins/${encodeURIComponent(pluginId)}/config`, {
+      method: 'POST',
+      body: JSON.stringify(config),
+    })
+  }
 }

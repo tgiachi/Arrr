@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace ImapPlugin;
 
-public class ImapPlugin : IPollingPlugin
+public class ImapPlugin : IPollingPlugin, IConfigurablePlugin
 {
     private readonly HashSet<string> _seenIds = [];
 
@@ -22,6 +22,7 @@ public class ImapPlugin : IPollingPlugin
     public string Description => "Polls an IMAP mailbox and publishes notifications for new messages.";
     public string[] Categories => ["email", "imap"];
     public string Icon => "";
+    public Type ConfigType => typeof(ImapPluginConfig);
 
     public TimeSpan Interval => TimeSpan.FromMinutes(2);
 
