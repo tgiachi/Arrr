@@ -1,3 +1,23 @@
+## [1.2.0](https://github.com/tgiachi/Arrr/compare/v1.1.1...v1.2.0) (2026-04-24)
+
+### Features
+
+* **callback:** add ICallbackPlugin + POST /api/plugins/{id}/callback endpoint ([4ec00eb](https://github.com/tgiachi/Arrr/commit/4ec00eb5c8b157f42b1fbaa553244170db2637b5))
+* **config-schema:** expose field descriptions in config API and UI ([f7e7e3a](https://github.com/tgiachi/Arrr/commit/f7e7e3a1de403be051fa99829c6396f83288296d))
+* **config:** add plugin config GET/POST endpoints with sensitive field encryption ([8093217](https://github.com/tgiachi/Arrr/commit/809321789b52b5dd815b7980ef836c3fe4b6b6f8))
+* **docker:** add Dockerfile and build-docker.sh ([b5e4843](https://github.com/tgiachi/Arrr/commit/b5e4843cfca3d6c0a724ff5a303c86dd4f629d33))
+* **qr:** add generic IQrPlugin system for in-UI QR code pairing ([17a6220](https://github.com/tgiachi/Arrr/commit/17a622049e90d636f1c7a31281b9769aca7c443d))
+* **telegram:** add TelegramPlugin via MTProto user account (WTelegramClient) ([1994ad4](https://github.com/tgiachi/Arrr/commit/1994ad496ffda449762505113dd16a53e39425f9))
+* **ui:** add Vite + React + Chakra UI plugin manager ([be0597b](https://github.com/tgiachi/Arrr/commit/be0597bb7ad2390dbceb30a37a3db4c86fab6fbf))
+* **whatsapp:** add WhatsApp plugin via whatsmeow Go bridge ([1a96aa8](https://github.com/tgiachi/Arrr/commit/1a96aa80c1fb542e0cfb7cf0af082a038ea592c7))
+
+### Bug Fixes
+
+* **ci:** create local-packages dir before dotnet restore to avoid NU1301 ([5a3b293](https://github.com/tgiachi/Arrr/commit/5a3b293e4991f01458d885257e890b7c1f055758))
+* **config:** scan plugins dir as fallback when dllPaths cache misses ([126a58c](https://github.com/tgiachi/Arrr/commit/126a58cba70656182bbd7a9267973189245bc739))
+* **rss:** set User-Agent header to avoid 403 from Reddit and similar feeds ([644fdb5](https://github.com/tgiachi/Arrr/commit/644fdb513362d027583eba537b4032903d370881))
+* **telegram:** return null from ConfigCallback for unknown keys ([ab1134d](https://github.com/tgiachi/Arrr/commit/ab1134df0dc366df3c999e121ddb31b64c989769))
+
 ## [1.1.0](https://github.com/tgiachi/Arrr/compare/v1.0.0...v1.1.0) (2026-04-24)
 
 ### Features
