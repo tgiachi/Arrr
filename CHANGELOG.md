@@ -1,3 +1,11 @@
+## [1.1.0](https://github.com/tgiachi/Arrr/compare/v1.0.0...v1.1.0) (2026-04-24)
+
+### Features
+
+* **core:** add plugin config service with sensitive field encryption ([3d43ba2](https://github.com/tgiachi/Arrr/commit/3d43ba285c1c1a4259acfa8f4b2c10c579d88dca))
+* **plugins:** add IPluginManager with enable/disable/reload endpoints ([ad3556e](https://github.com/tgiachi/Arrr/commit/ad3556e17af48a10c082dac4494e94a283a7114f))
+* **plugins:** install/uninstall plugins from NuGet + RSS first-poll seeding ([76d925c](https://github.com/tgiachi/Arrr/commit/76d925cc6020436ee178fe14861e08086f3bd0d1))
+
 ## 1.0.0 (2026-04-24)
 
 ### Features
