@@ -1,3 +1,20 @@
+## [1.3.0](https://github.com/tgiachi/Arrr/compare/v1.2.1...v1.3.0) (2026-04-24)
+
+### Features
+
+* add pluggable sink system (output connectors) ([4de27ef](https://github.com/tgiachi/Arrr/commit/4de27ef810b3ff6989209c723816162ddf64b2f4))
+* **sink:** add DbusNotifySink replacing DBusNotifySubscriber ([07be0ae](https://github.com/tgiachi/Arrr/commit/07be0ae94cd6190f5cb7b8219e7024cd30f71923))
+* **sink:** add ISinkPlugin, ISinkContext, ISinkManager, AvailableSinkResponse, SinkEntry ([8e9bb7e](https://github.com/tgiachi/Arrr/commit/8e9bb7e93359de049c32774346047b9641787a4c))
+* **sink:** add SinksEndpoint + FakeSinkManager with full test coverage ([39a29a7](https://github.com/tgiachi/Arrr/commit/39a29a7d69b6cd3c98b576b135f513a2c02b6f3b))
+* **sink:** add UnixSocketSink replacing UnixSocketServer, remove old subscribers ([1781c74](https://github.com/tgiachi/Arrr/commit/1781c74f069b3c8ed7fa44db8f2babe102bea6e5))
+* **ui:** show available NuGet plugins with install button ([be4e370](https://github.com/tgiachi/Arrr/commit/be4e3707d1007ea5928e038aed4e35c97a7a3958))
+* **ui:** split NuGet panel into plugins/sinks sections with search ([254d5e9](https://github.com/tgiachi/Arrr/commit/254d5e97466a87c13fe23d0663be886ec09a9bbb))
+
+### Bug Fixes
+
+* add arrr-plugin tag to WhatsApp plugin, show icon in NuGet card ([1d8ccf5](https://github.com/tgiachi/Arrr/commit/1d8ccf53b36dc54db8cf055b60430b9fe1c64952))
+* **ui:** search NuGet by tag arrr-plugin instead of name prefix ([17d9fdf](https://github.com/tgiachi/Arrr/commit/17d9fdf47ffd4a053acab1be8ee4449436092943))
+
 ## [1.2.1](https://github.com/tgiachi/Arrr/compare/v1.2.0...v1.2.1) (2026-04-24)
 
 ### Bug Fixes

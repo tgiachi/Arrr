@@ -8,7 +8,7 @@
         <RootNamespace>ImapPlugin</RootNamespace>
 
         <PackageId>Arrr.Plugin.Imap</PackageId>
-        <Version>1.2.1</Version>
+        <Version>1.3.0</Version>
         <Authors>Tom</Authors>
         <Company>orivega.io</Company>
         <Description>IMAP email plugin for Arrr — polls mailboxes and publishes desktop notifications for new messages.</Description>
