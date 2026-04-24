@@ -20,10 +20,14 @@ jobs:
           dotnet-version: "10.0.x"
 
       - name: Restore
-        run: dotnet restore src/Arrr.Core/Arrr.Core.csproj
+        run: |
+          dotnet restore src/Arrr.Core/Arrr.Core.csproj
+          dotnet restore plugins/RssPlugin/RssPlugin.csproj
 
       - name: Build
-        run: dotnet build src/Arrr.Core/Arrr.Core.csproj -c Release --no-restore
+        run: |
+          dotnet build src/Arrr.Core/Arrr.Core.csproj -c Release --no-restore
+          dotnet build plugins/RssPlugin/RssPlugin.csproj -c Release --no-restore
 
       - name: Test
         run: dotnet test tests/Arrr.Tests/Arrr.Tests.csproj -c Release --filter "Category!=Integration"
@@ -38,6 +42,11 @@ jobs:
             -o ./nupkg
           dotnet pack templates/Arrr.Templates.csproj \
             -c Release \
+            -p:Version="$VERSION" \
+            -o ./nupkg
+          dotnet pack plugins/RssPlugin/RssPlugin.csproj \
+            -c Release \
+            --no-build \
             -p:Version="$VERSION" \
             -o ./nupkg
 

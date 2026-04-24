@@ -61,6 +61,8 @@ await ConsoleApp.RunAsync(
         );
         builder.Services.AddSingleton<SocketBroadcastSubscriber>();
         builder.Services.AddSingleton<PluginContextFactory>();
+        builder.Services.AddSingleton<NuGetPluginInstaller>();
+        builder.Services.AddSingleton<IPluginInstaller>(sp => sp.GetRequiredService<NuGetPluginInstaller>());
         builder.Services.AddSingleton<PluginOrchestrator>();
         builder.Services.AddHostedService(sp => sp.GetRequiredService<PluginOrchestrator>());
         builder.Services.AddSingleton<IPluginManager>(sp => sp.GetRequiredService<PluginOrchestrator>());

@@ -4,6 +4,7 @@ using Arrr.Core.Data.Api;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Services;
 using Arrr.Service.Api;
+using Arrr.Service.Internal;
 using Arrr.Service.Services;
 using Arrr.Tests.Support;
 using Microsoft.AspNetCore.Builder;
@@ -105,6 +106,7 @@ public class PluginsEndpointTests
         builder.Services.AddSingleton<IEventBus>(bus);
         builder.Services.AddSingleton<IPluginRegistry>(registry);
         builder.Services.AddSingleton<IPluginManager>(new FakePluginManager());
+        builder.Services.AddSingleton<IPluginInstaller>(new FakePluginInstaller());
 
         var app = builder.Build();
         app.MapPluginsApi();

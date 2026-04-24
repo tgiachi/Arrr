@@ -14,6 +14,7 @@ public class RssPlugin : IPollingPlugin
     private readonly HashSet<string> _seenIds = [];
 
     private RssPluginConfig _config = new([]);
+    private bool _firstPoll = true;
 
     public string Id          => "com.arrr.rss";
     public string Name        => "RSS";
@@ -46,16 +47,22 @@ public class RssPlugin : IPollingPlugin
         {
             try
             {
-                await PollFeedAsync(feed, context, ct);
+                await PollFeedAsync(feed, context, _firstPoll, ct);
             }
             catch (Exception ex)
             {
                 context.Logger.LogError(ex, "Failed to poll feed {Url}", feed.Url);
             }
         }
+
+        if (_firstPoll)
+        {
+            context.Logger.LogInformation("RSS first poll complete — {Count} item(s) indexed, notifications suppressed", _seenIds.Count);
+            _firstPoll = false;
+        }
     }
 
-    private async Task PollFeedAsync(RssFeedConfig feed, IPluginContext context, CancellationToken ct)
+    private async Task PollFeedAsync(RssFeedConfig feed, IPluginContext context, bool seedOnly, CancellationToken ct)
     {
         var stream = await _httpClient.GetStreamAsync(feed.Url, ct);
         using var reader = XmlReader.Create(stream);
@@ -68,6 +75,9 @@ public class RssPlugin : IPollingPlugin
                          ?? item.Title?.Text;
 
             if (itemId is null || !_seenIds.Add(itemId))
+                continue;
+
+            if (seedOnly)
                 continue;
 
             var link = item.Links.FirstOrDefault()?.Uri?.ToString();
