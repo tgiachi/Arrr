@@ -64,21 +64,44 @@ internal class PluginOrchestrator : BackgroundService
 
         var pluginCtx = _contextFactory.Create(plugin);
         var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        var runTask = Task.Run(
-            async () =>
-            {
-                try
+
+        var runTask = plugin is IPollingPlugin pollingPlugin
+            ? Task.Run(
+                async () =>
                 {
-                    await plugin.StartAsync(pluginCtx, cts.Token);
-                }
-                catch (OperationCanceledException) { }
-                catch (Exception ex)
+                    while (!cts.Token.IsCancellationRequested)
+                    {
+                        try
+                        {
+                            await pollingPlugin.PollAsync(pluginCtx, cts.Token);
+                        }
+                        catch (OperationCanceledException) { break; }
+                        catch (Exception ex)
+                        {
+                            _logger.Error(ex, "Plugin {Id} poll error", plugin.Id);
+                        }
+
+                        await Task.Delay(pollingPlugin.Interval, cts.Token)
+                                  .ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+                    }
+                },
+                cts.Token
+            )
+            : Task.Run(
+                async () =>
                 {
-                    _logger.Error(ex, "Plugin {Id} crashed", plugin.Id);
-                }
-            },
-            cts.Token
-        );
+                    try
+                    {
+                        await plugin.StartAsync(pluginCtx, cts.Token);
+                    }
+                    catch (OperationCanceledException) { }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, "Plugin {Id} crashed", plugin.Id);
+                    }
+                },
+                cts.Token
+            );
 
         var host = new PluginHost(plugin, loadContext, cts, runTask);
         _hosts[plugin.Id] = host;
