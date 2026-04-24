@@ -19,6 +19,7 @@ interface NugetPackage {
   authors: string[]
   totalDownloads: number
   verified: boolean
+  iconUrl?: string
 }
 
 interface Props {
@@ -143,6 +144,19 @@ export function InstallPanel({ onInstall }: Props) {
               transition="all 0.15s"
             >
               <Flex justify="space-between" align="flex-start" gap={2}>
+                <Flex gap={2} flex={1} minW={0} align="flex-start">
+                  {pkg.iconUrl && (
+                    <Box flexShrink={0} mt="1px">
+                      <img
+                        src={pkg.iconUrl}
+                        alt=""
+                        width={32}
+                        height={32}
+                        style={{ borderRadius: 6, objectFit: 'cover' }}
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                      />
+                    </Box>
+                  )}
                 <Box flex={1} minW={0}>
                   <Text
                     fontSize="sm"
@@ -197,6 +211,7 @@ export function InstallPanel({ onInstall }: Props) {
                     </Text>
                   )}
                 </Box>
+                </Flex>
 
                 <Button
                   size="xs"

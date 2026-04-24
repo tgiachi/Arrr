@@ -10,13 +10,26 @@
         <PackageId>Arrr.Plugin.WhatsApp</PackageId>
         <Version>1.1.0</Version>
         <Authors>Tom</Authors>
+        <Company>orivega.io</Company>
         <Description>WhatsApp plugin for Arrr — receives messages via whatsapp-bridge (whatsmeow).</Description>
+        <PackageTags>arrr;arrr-plugin;plugin;whatsapp;notifications;linux</PackageTags>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/tgiachi/Arrr</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/tgiachi/Arrr</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageIcon>arr_logo.png</PackageIcon>
         <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="Arrr.Core" Version="1.1.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="../../assets/arr_logo.png" Pack="true" PackagePath="\"/>
     </ItemGroup>
 
 </Project>
