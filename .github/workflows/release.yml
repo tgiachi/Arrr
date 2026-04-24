@@ -69,11 +69,30 @@ jobs:
           fi
           git remote set-url origin "https://x-access-token:${RELEASE_PAT}@github.com/${{ github.repository }}.git"
 
+      - name: Import GPG key
+        if: steps.release_check.outputs.should_release == 'true'
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | base64 -d | gpg --batch --yes \
+            --pinentry-mode loopback \
+            --passphrase "$GPG_PASSPHRASE" \
+            --import
+
+      - name: Install nfpm
+        if: steps.release_check.outputs.should_release == 'true'
+        run: |
+          curl -fsSL https://github.com/goreleaser/nfpm/releases/latest/download/nfpm_amd64.deb \
+            -o /tmp/nfpm.deb
+          sudo dpkg -i /tmp/nfpm.deb
+
       - name: Run semantic-release
         if: steps.release_check.outputs.should_release == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
           GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           npx -y \
             -p semantic-release \
@@ -85,3 +104,4 @@ jobs:
             -p @semantic-release/exec \
             -p conventional-changelog-conventionalcommits \
             semantic-release
+

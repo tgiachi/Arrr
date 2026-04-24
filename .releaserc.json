@@ -25,7 +25,8 @@
     [
       "@semantic-release/exec",
       {
-        "prepareCmd": "./scripts/semantic-release-prepare.sh ${nextRelease.version}"
+        "prepareCmd": "./scripts/semantic-release-prepare.sh ${nextRelease.version}",
+        "publishCmd": "./scripts/build_package.sh ${nextRelease.version}"
       }
     ],
     [
@@ -35,7 +36,8 @@
           "CHANGELOG.md",
           "src/**/*.csproj",
           "templates/Arrr.Templates.csproj",
-          "plugins/**/*.csproj"
+          "plugins/**/*.csproj",
+          "ui/package.json"
         ],
         "message": "chore(release): ${nextRelease.version}\n\n${nextRelease.notes}"
       }
@@ -44,7 +46,13 @@
       "@semantic-release/github",
       {
         "successComment": false,
-        "releasedLabels": false
+        "releasedLabels": false,
+        "assets": [
+          { "path": "dist/*.deb",         "label": "Debian package (amd64)" },
+          { "path": "dist/*.rpm",         "label": "RPM package (x86_64)" },
+          { "path": "dist/*.pkg.tar.zst", "label": "Arch Linux package (x86_64)" },
+          { "path": "dist/*.pkg.tar.zst.sig", "label": "Arch Linux package signature" }
+        ]
       }
     ]
   ]

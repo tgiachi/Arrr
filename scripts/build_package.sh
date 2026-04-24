@@ -19,8 +19,12 @@ mkdir -p "$ROOT_DIR/dist"
 SIGNING_KEY_FILE=$(mktemp --suffix=.asc)
 trap 'rm -f "$SIGNING_KEY_FILE"' EXIT
 
-read -rsp "GPG passphrase: " GPG_PASSPHRASE
-echo
+# In CI: GPG_PASSPHRASE is injected from secrets.
+# Locally: prompt if not set.
+if [[ -z "${GPG_PASSPHRASE:-}" ]]; then
+    read -rsp "GPG passphrase: " GPG_PASSPHRASE
+    echo
+fi
 
 gpg --batch --yes \
     --pinentry-mode loopback \
