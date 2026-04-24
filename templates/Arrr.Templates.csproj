@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
         <PackageId>Arrr.Templates</PackageId>
         <Version>0.1.0</Version>
         <Authors>Tom</Authors>
@@ -18,10 +19,12 @@
         <ContentTargetFolders>content</ContentTargetFolders>
         <NoDefaultExcludes>true</NoDefaultExcludes>
         <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+        <NoWarn>NU5128</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
         <Content Include="arrr-plugin\**\*" Exclude="arrr-plugin\**\bin\**;arrr-plugin\**\obj\**"/>
+        <Compile Remove="arrr-plugin\**\*"/>
         <None Include="../assets/arr_logo.png" Pack="true" PackagePath="\"/>
     </ItemGroup>
 
