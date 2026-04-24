@@ -4,8 +4,8 @@ namespace WhatsAppPlugin.Data;
 
 public class WhatsAppPluginConfig
 {
-    [Description("Absolute path to the compiled whatsapp-bridge binary. Build with: cd plugins/WhatsAppPlugin/bridge && ./build.sh")]
-    public string BridgePath { get; set; } = "";
+    [Description("Path to the whatsapp-bridge binary. Relative paths are resolved next to the plugin DLL.")]
+    public string BridgePath { get; set; } = "whatsapp-bridge";
 
     [Description("Sender display names or group JID user parts to monitor. Empty = all incoming messages.")]
     public List<string> MonitoredChats { get; set; } = [];

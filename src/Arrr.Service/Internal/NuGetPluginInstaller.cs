@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Arrr.Core.Directories;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Types;
@@ -56,8 +57,10 @@ internal class NuGetPluginInstaller : IPluginInstaller
             throw new InvalidOperationException($"Package '{packageId}' v{pkgVersion} not found on NuGet.org");
 
         var tags = metadata.Tags?.Split([' ', ',', ';'], StringSplitOptions.RemoveEmptyEntries) ?? [];
-        if (!tags.Contains("arrr-plugin", StringComparer.OrdinalIgnoreCase))
-            throw new InvalidOperationException($"Package '{packageId}' is not an Arrr plugin (missing 'arrr-plugin' tag)");
+        var isPlugin = tags.Contains("arrr-plugin", StringComparer.OrdinalIgnoreCase);
+        var isSink   = tags.Contains("arrr-sink",   StringComparer.OrdinalIgnoreCase);
+        if (!isPlugin && !isSink)
+            throw new InvalidOperationException($"Package '{packageId}' is not an Arrr plugin or sink (missing 'arrr-plugin' / 'arrr-sink' tag)");
 
         _logger.Information("Installing {PackageId} v{Version}...", packageId, pkgVersion);
 
@@ -137,6 +140,29 @@ internal class NuGetPluginInstaller : IPluginInstaller
             }
         }
 
+        // Extract native tool binaries matching the current runtime (e.g. whatsapp-bridge)
+        var toolFiles = reader.GetFiles(GetNativeToolsPath()).ToList();
+        foreach (var item in toolFiles)
+        {
+            var fileName = Path.GetFileName(item);
+            var dest = Path.Combine(_pluginsPath, fileName);
+
+            await using var src = reader.GetStream(item);
+            await using var dst = File.Create(dest);
+            await src.CopyToAsync(dst, ct);
+
+            if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+            {
+                File.SetUnixFileMode(dest,
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                    UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+                    UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+            }
+
+            if (!installedFiles.Contains(fileName))
+                installedFiles.Add(fileName);
+        }
+
         var nuspec = await reader.GetNuspecReaderAsync(ct);
         foreach (var dep in nuspec.GetDependencyGroups().SelectMany(g => g.Packages))
         {
@@ -160,4 +186,17 @@ internal class NuGetPluginInstaller : IPluginInstaller
         id.StartsWith("runtime.", StringComparison.OrdinalIgnoreCase) ||
         id.Equals("Arrr.Core", StringComparison.OrdinalIgnoreCase) ||
         id.Equals("NETStandard.Library", StringComparison.OrdinalIgnoreCase);
+
+    private static string GetNativeToolsPath()
+    {
+        var os = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win"
+               : RuntimeInformation.IsOSPlatform(OSPlatform.OSX)     ? "osx"
+               :                                                         "linux";
+        var arch = RuntimeInformation.OSArchitecture switch
+        {
+            Architecture.Arm64 => "arm64",
+            _                  => "x64"
+        };
+        return $"tools/{os}-{arch}";
+    }
 }
