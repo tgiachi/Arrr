@@ -6,6 +6,7 @@
     <Folder Name="/plugins/">
         <Project Path="plugins/RssPlugin/RssPlugin.csproj"/>
         <Project Path="plugins/ImapPlugin/ImapPlugin.csproj"/>
+        <Project Path="plugins/TelegramPlugin/TelegramPlugin.csproj"/>
     </Folder>
     <Folder Name="/tests/">
         <Project Path="tests/Arrr.Tests/Arrr.Tests.csproj"/>
