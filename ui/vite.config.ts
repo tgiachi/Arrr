@@ -6,6 +6,15 @@ export default defineConfig({
   build: {
     outDir: '../src/Arrr.Service/wwwroot',
     emptyOutDir: true,
+    chunkSizeWarningLimit: 700,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          chakra: ['@chakra-ui/react'],
+        },
+      },
+    },
   },
   server: {
     proxy: {
