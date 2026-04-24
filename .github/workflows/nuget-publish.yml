@@ -1,0 +1,49 @@
+name: Publish Arrr.Core to NuGet
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore src/Arrr.Core/Arrr.Core.csproj
+
+      - name: Build
+        run: dotnet build src/Arrr.Core/Arrr.Core.csproj -c Release --no-restore
+
+      - name: Test
+        run: dotnet test tests/Arrr.Tests/Arrr.Tests.csproj -c Release --no-build --filter "Category!=Integration"
+
+      - name: Pack
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          dotnet pack src/Arrr.Core/Arrr.Core.csproj \
+            -c Release \
+            --no-build \
+            -p:Version="$VERSION" \
+            -o ./nupkg
+
+      - name: Push to NuGet.org
+        run: |
+          dotnet nuget push ./nupkg/*.nupkg \
+            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+          dotnet nuget push ./nupkg/*.snupkg \
+            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
