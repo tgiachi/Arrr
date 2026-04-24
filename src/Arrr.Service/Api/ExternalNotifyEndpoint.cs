@@ -46,6 +46,8 @@ internal static class ExternalNotifyEndpoint
             }
         );
 
+        app.MapPluginsApi();
+
         return app;
     }
 }
