@@ -49,13 +49,15 @@ public class TelegramPlugin : ISourcePlugin, IConfigurablePlugin, ICallbackPlugi
             "phone_number" => config.PhoneNumber,
             "session_pathname" => sessionPath,
             "verification_code" => WaitForCode(context.Logger, ct),
-            "password" => config.TwoFactorPassword,
-            _ => ""
+            "password" => string.IsNullOrEmpty(config.TwoFactorPassword) ? null : config.TwoFactorPassword,
+            _ => null
         };
 
         var filter = config.MonitoredChats
             .Select(c => c.Trim().ToLowerInvariant())
             .ToHashSet();
+
+        WTelegram.Helpers.Log = (level, message) => context.Logger.LogDebug("[WTelegram] {Message}", message);
 
         using var client = new Client(ConfigCallback);
 
