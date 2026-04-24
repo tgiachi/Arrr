@@ -10,7 +10,6 @@ using Arrr.Core.Types;
 using Arrr.Service.Api;
 using Arrr.Service.Internal;
 using Arrr.Service.Services;
-using Arrr.Service.Subscribers;
 using ConsoleAppFramework;
 using Scalar.AspNetCore;
 using Serilog;
@@ -56,18 +55,16 @@ await ConsoleApp.RunAsync(
         builder.Services.AddSingleton<EventBusService>();
         builder.Services.AddSingleton<IEventBus>(sp => sp.GetRequiredService<EventBusService>());
         builder.Services.AddSingleton<IPluginRegistry, PluginRegistryService>();
-        builder.Services.AddSingleton<UnixSocketServer>(
-            sp => new(sp.GetRequiredService<IConfigService>().Config.SocketPath)
-        );
-        builder.Services.AddSingleton<SocketBroadcastSubscriber>();
         builder.Services.AddSingleton<PluginContextFactory>();
         builder.Services.AddSingleton<NuGetPluginInstaller>();
         builder.Services.AddSingleton<IPluginInstaller>(sp => sp.GetRequiredService<NuGetPluginInstaller>());
         builder.Services.AddSingleton<PluginOrchestrator>();
         builder.Services.AddHostedService(sp => sp.GetRequiredService<PluginOrchestrator>());
         builder.Services.AddSingleton<IPluginManager>(sp => sp.GetRequiredService<PluginOrchestrator>());
+        builder.Services.AddSingleton<SinkOrchestrator>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<SinkOrchestrator>());
+        builder.Services.AddSingleton<ISinkManager>(sp => sp.GetRequiredService<SinkOrchestrator>());
         builder.Services.AddHostedService<EventBusHostedService>();
-        builder.Services.AddHostedService<DBusNotifySubscriber>();
 
         builder.Services.AddOpenApi();
         builder.Logging.ClearProviders().AddSerilog();
@@ -104,8 +101,8 @@ await ConsoleApp.RunAsync(
         app.UseDefaultFiles();
         app.UseStaticFiles();
 
-        app.Services.GetRequiredService<SocketBroadcastSubscriber>();
         app.MapExternalApi();
+        app.MapSinksApi();
 
         if (configService.Config.IsDebug)
         {

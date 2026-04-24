@@ -190,12 +190,12 @@ X-Api-Key: <your-key>
 
 ## Available Plugins
 
-| Plugin | ID | Description | Auth |
-|--------|----|-------------|------|
-| **RSS / Atom** | `com.arrr.rss` | Polls one or more RSS/Atom feeds and notifies on new items | None |
-| **IMAP** | `com.arrr.imap` | Monitors an IMAP mailbox via IDLE and notifies on new e-mails | Username / password |
-| **Telegram** | `com.arrr.telegram` | Receives messages on your Telegram user account via MTProto (WTelegramClient). Verification code delivered via `POST /api/plugins/{id}/callback` | Phone + QR/code |
-| **WhatsApp** | `com.arrr.whatsapp` | Receives WhatsApp messages via a Go bridge (whatsmeow). First-time QR pairing shown directly in the web UI | QR scan (in-UI) |
+| Plugin | Plugin ID | NuGet | Description | Auth |
+|--------|-----------|-------|-------------|------|
+| **RSS / Atom** | `com.arrr.rss` | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.Rss)](https://www.nuget.org/packages/Arrr.Plugin.Rss) | Polls one or more RSS/Atom feeds and notifies on new items | None |
+| **IMAP** | `com.arrr.imap` | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.Imap)](https://www.nuget.org/packages/Arrr.Plugin.Imap) | Monitors an IMAP mailbox via IDLE and notifies on new e-mails | Username / password |
+| **Telegram** | `com.arrr.telegram` | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.Telegram)](https://www.nuget.org/packages/Arrr.Plugin.Telegram) | Receives messages on your Telegram user account via MTProto (WTelegramClient). Verification code delivered via `POST /api/plugins/{id}/callback` | Phone + QR/code |
+| **WhatsApp** | `com.arrr.whatsapp` | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.WhatsApp)](https://www.nuget.org/packages/Arrr.Plugin.WhatsApp) | Receives WhatsApp messages via a Go bridge (whatsmeow). First-time QR pairing shown directly in the web UI | QR scan (in-UI) |
 
 ### Building the WhatsApp bridge
 
