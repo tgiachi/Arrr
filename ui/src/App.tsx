@@ -16,6 +16,7 @@ import { ArrrApi } from './api'
 import { PluginCard } from './components/PluginCard'
 import { ConfigModal } from './components/ConfigModal'
 import { CallbackModal } from './components/CallbackModal'
+import { QrModal } from './components/QrModal'
 import { InstallPanel } from './components/InstallPanel'
 import { SettingsPanel } from './components/SettingsPanel'
 import type { Plugin, Settings as AppSettings } from './types'
@@ -47,6 +48,7 @@ export default function App() {
   const [toasts, setToasts] = useState<Toast[]>([])
   const [configuringPlugin, setConfiguringPlugin] = useState<Plugin | null>(null)
   const [callbackPlugin, setCallbackPlugin] = useState<Plugin | null>(null)
+  const [qrPlugin, setQrPlugin] = useState<Plugin | null>(null)
 
   const apiRef = useRef<ArrrApi | null>(null)
   apiRef.current = new ArrrApi(settings.baseUrl || '', settings.apiKey || '')
@@ -283,12 +285,22 @@ export default function App() {
                   onUninstall={handleUninstall}
                   onConfigure={setConfiguringPlugin}
                   onCallback={setCallbackPlugin}
+                  onQr={setQrPlugin}
                 />
               ))}
             </SimpleGrid>
           )}
         </Grid>
       </Box>
+
+      {/* QR modal */}
+      {qrPlugin && (
+        <QrModal
+          plugin={qrPlugin}
+          api={api()}
+          onClose={() => setQrPlugin(null)}
+        />
+      )}
 
       {/* Callback modal */}
       {callbackPlugin && (

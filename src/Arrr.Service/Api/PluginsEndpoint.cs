@@ -176,6 +176,31 @@ internal static class PluginsEndpoint
             }
         );
 
+        app.MapGet(
+            "/api/plugins/{pluginId}/qr",
+            (HttpContext ctx, string pluginId, IConfigService configService, IPluginManager manager) =>
+            {
+                if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                    return error!;
+
+                try
+                {
+                    var code = manager.GetPendingQrCode(pluginId);
+                    return code is null
+                        ? Results.NoContent()
+                        : Results.Ok(new { code });
+                }
+                catch (KeyNotFoundException)
+                {
+                    return Results.NotFound(new { pluginId, error = "Plugin not running or not found." });
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return Results.BadRequest(new { pluginId, error = ex.Message });
+                }
+            }
+        );
+
         return app;
     }
 }

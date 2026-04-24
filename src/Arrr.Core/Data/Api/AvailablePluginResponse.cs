@@ -10,5 +10,6 @@ public record AvailablePluginResponse(
     string Icon,
     bool Enabled,
     bool Running,
-    bool HasCallback
+    bool HasCallback,
+    bool HasQr
 );

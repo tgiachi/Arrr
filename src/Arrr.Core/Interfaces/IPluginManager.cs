@@ -39,4 +39,10 @@ public interface IPluginManager
     /// Throws <see cref="KeyNotFoundException"/> if the plugin is not running or does not support callbacks.
     /// </summary>
     Task DeliverCallbackAsync(string pluginId, string body, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns the pending QR code string for a running plugin that implements <see cref="IQrPlugin"/>,
+    /// or <c>null</c> if no pairing is currently in progress.
+    /// </summary>
+    string? GetPendingQrCode(string pluginId);
 }

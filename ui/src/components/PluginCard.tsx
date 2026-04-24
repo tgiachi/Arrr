@@ -9,7 +9,7 @@ import {
   Text,
   Tooltip,
 } from '@chakra-ui/react'
-import { RefreshCw, Settings2, Trash2, Webhook } from 'lucide-react'
+import { QrCode, RefreshCw, Settings2, Trash2, Webhook } from 'lucide-react'
 import type { Plugin } from '../types'
 
 interface Props {
@@ -20,9 +20,10 @@ interface Props {
   onUninstall: (plugin: Plugin) => void
   onConfigure: (plugin: Plugin) => void
   onCallback: (plugin: Plugin) => void
+  onQr: (plugin: Plugin) => void
 }
 
-export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onConfigure, onCallback }: Props) {
+export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onConfigure, onCallback, onQr }: Props) {
   const statusColor = plugin.running ? '#4ade80' : plugin.enabled ? '#facc15' : '#4b5563'
   const statusLabel = plugin.running ? 'Running' : plugin.enabled ? 'Starting' : 'Disabled'
 
@@ -103,6 +104,27 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
                 </Tooltip.Trigger>
                 <Tooltip.Positioner>
                   <Tooltip.Content bg="gray.800" color="white" fontSize="xs">Send callback</Tooltip.Content>
+                </Tooltip.Positioner>
+              </Tooltip.Root>
+            )}
+
+            {plugin.hasQr && plugin.running && (
+              <Tooltip.Root>
+                <Tooltip.Trigger asChild>
+                  <IconButton
+                    aria-label="Scan QR code"
+                    size="xs"
+                    variant="ghost"
+                    color="gray.400"
+                    _hover={{ color: 'green.300', bg: 'whiteAlpha.100' }}
+                    onClick={() => onQr(plugin)}
+                    disabled={busy}
+                  >
+                    <QrCode size={13} />
+                  </IconButton>
+                </Tooltip.Trigger>
+                <Tooltip.Positioner>
+                  <Tooltip.Content bg="gray.800" color="white" fontSize="xs">Scan QR</Tooltip.Content>
                 </Tooltip.Positioner>
               </Tooltip.Root>
             )}

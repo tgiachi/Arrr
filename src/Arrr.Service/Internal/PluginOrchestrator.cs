@@ -251,7 +251,8 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
                     plugin.Description, plugin.Categories, plugin.Icon,
                     Enabled: entry is { Enabled: true },
                     Running: _hosts.ContainsKey(plugin.Id),
-                    HasCallback: plugin is ICallbackPlugin
+                    HasCallback: plugin is ICallbackPlugin,
+                    HasQr: plugin is IQrPlugin
                 ));
 
                 ctx.Unload();
@@ -455,5 +456,16 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
             throw new InvalidOperationException($"Plugin '{pluginId}' does not support callbacks.");
 
         await callbackPlugin.HandleCallbackAsync(body, ct);
+    }
+
+    public string? GetPendingQrCode(string pluginId)
+    {
+        if (!_hosts.TryGetValue(pluginId, out var host))
+            throw new KeyNotFoundException($"Plugin '{pluginId}' is not running.");
+
+        if (host.Plugin is not IQrPlugin qrPlugin)
+            throw new InvalidOperationException($"Plugin '{pluginId}' does not support QR pairing.");
+
+        return qrPlugin.PendingQrCode;
     }
 }

@@ -3,12 +3,11 @@ using System.Text.Json;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
 using Microsoft.Extensions.Logging;
-using QRCoder;
 using WhatsAppPlugin.Data;
 
 namespace WhatsAppPlugin;
 
-public class WhatsAppPlugin : ISourcePlugin, IConfigurablePlugin
+public class WhatsAppPlugin : ISourcePlugin, IConfigurablePlugin, IQrPlugin
 {
     public string Id => "com.arrr.whatsapp";
     public string Name => "WhatsApp";
@@ -18,6 +17,8 @@ public class WhatsAppPlugin : ISourcePlugin, IConfigurablePlugin
     public string[] Categories => ["whatsapp", "messages"];
     public string Icon => "";
     public Type ConfigType => typeof(WhatsAppPluginConfig);
+
+    public string? PendingQrCode { get; private set; }
 
     public void Dispose() { }
 
@@ -65,10 +66,11 @@ public class WhatsAppPlugin : ISourcePlugin, IConfigurablePlugin
             }
         }
 
+        PendingQrCode = null;
         await process.WaitForExitAsync(CancellationToken.None);
     }
 
-    private static void HandleLine(string line, IPluginContext context, HashSet<string> filter, CancellationToken ct)
+    private void HandleLine(string line, IPluginContext context, HashSet<string> filter, CancellationToken ct)
     {
         try
         {
@@ -78,10 +80,12 @@ public class WhatsAppPlugin : ISourcePlugin, IConfigurablePlugin
             switch (root.GetProperty("type").GetString())
             {
                 case "qr":
-                    RenderQr(root.GetProperty("code").GetString() ?? "", context.Logger);
+                    PendingQrCode = root.GetProperty("code").GetString();
+                    context.Logger.LogInformation("WhatsApp QR code ready — open the UI to scan it.");
                     break;
 
                 case "ready":
+                    PendingQrCode = null;
                     var name = root.TryGetProperty("name", out var n) ? n.GetString() : "";
                     var jid = root.TryGetProperty("jid", out var j) ? j.GetString() : "";
                     context.Logger.LogInformation("WhatsApp connected as {Name} ({JID})", name, jid);
@@ -115,22 +119,6 @@ public class WhatsAppPlugin : ISourcePlugin, IConfigurablePlugin
         catch (Exception ex)
         {
             context.Logger.LogDebug(ex, "Could not parse bridge line: {Line}", line);
-        }
-    }
-
-    private static void RenderQr(string code, ILogger logger)
-    {
-        try
-        {
-            var data = new QRCodeGenerator().CreateQrCode(code, QRCodeGenerator.ECCLevel.L);
-            var art = new AsciiQRCode(data).GetGraphic(1);
-            logger.LogWarning(
-                "Open WhatsApp → Settings → Linked Devices → Link a Device and scan:\n{QR}",
-                art);
-        }
-        catch
-        {
-            logger.LogWarning("WhatsApp QR code data (render with any QR tool): {Code}", code);
         }
     }
 }

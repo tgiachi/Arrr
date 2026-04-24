@@ -9,6 +9,7 @@ export interface Plugin {
   enabled: boolean
   running: boolean
   hasCallback: boolean
+  hasQr: boolean
 }
 
 export interface ConfigFieldInfo {

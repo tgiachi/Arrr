@@ -74,4 +74,14 @@ export class ArrrApi {
       body,
     })
   }
+
+  async getQrCode(pluginId: string): Promise<string | null> {
+    const r = await fetch(`${this.baseUrl}/api/plugins/${encodeURIComponent(pluginId)}/qr`, {
+      headers: this.headers(),
+    })
+    if (r.status === 204) return null
+    if (!r.ok) return null
+    const data = await r.json()
+    return data.code ?? null
+  }
 }
