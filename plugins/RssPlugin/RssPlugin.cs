@@ -7,9 +7,12 @@ using RssPlugin.Data;
 
 namespace RssPlugin;
 
-public class RssPlugin : IPollingPlugin
+public class RssPlugin : IPollingPlugin, IConfigurablePlugin
 {
-    private readonly HttpClient _httpClient = new();
+    private readonly HttpClient _httpClient = new()
+    {
+        DefaultRequestHeaders = { { "User-Agent", "Mozilla/5.0 (compatible; Arrr/1.0; +https://github.com/tgiachi/Arrr)" } }
+    };
     private readonly HashSet<string> _seenIds = [];
 
     private RssPluginConfig _config = new();
@@ -22,6 +25,7 @@ public class RssPlugin : IPollingPlugin
     public string Description => "Polls RSS/Atom feeds and publishes notifications for new items.";
     public string[] Categories => ["rss", "news"];
     public string Icon => "";
+    public Type ConfigType => typeof(RssPluginConfig);
 
     public TimeSpan Interval => TimeSpan.FromMinutes(5);
 

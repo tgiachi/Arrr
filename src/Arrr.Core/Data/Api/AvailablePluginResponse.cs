@@ -9,5 +9,7 @@ public record AvailablePluginResponse(
     string[] Categories,
     string Icon,
     bool Enabled,
-    bool Running
+    bool Running,
+    bool HasCallback,
+    bool HasQr
 );

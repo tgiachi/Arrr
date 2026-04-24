@@ -1,8 +1,13 @@
+using System.ComponentModel;
+using System.Reflection;
+using System.Text.Json;
+using Arrr.Core.Attributes;
 using Arrr.Core.Data.Api;
 using Arrr.Core.Data.Config;
 using Arrr.Core.Directories;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Types;
+using Arrr.Core.Utils;
 using Serilog;
 using ILogger = Serilog.ILogger;
 
@@ -16,6 +21,12 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
     private readonly IConfigService _configService;
     private readonly ArrrConfig _config;
     private readonly string _pluginsPath;
+
+    private static readonly JsonSerializerOptions _jsonOpts = new()
+    {
+        WriteIndented = true,
+        PropertyNameCaseInsensitive = true,
+    };
 
     private readonly Dictionary<string, PluginHost> _hosts = new();
     private readonly Dictionary<string, string> _dllPaths = new();
@@ -239,7 +250,9 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
                     plugin.Id, plugin.Name, plugin.Version, plugin.Author,
                     plugin.Description, plugin.Categories, plugin.Icon,
                     Enabled: entry is { Enabled: true },
-                    Running: _hosts.ContainsKey(plugin.Id)
+                    Running: _hosts.ContainsKey(plugin.Id),
+                    HasCallback: plugin is ICallbackPlugin,
+                    HasQr: plugin is IQrPlugin
                 ));
 
                 ctx.Unload();
@@ -319,5 +332,140 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
         await StopAllPluginsAsync();
         _dllPaths.Clear();
         await LoadAllPluginsAsync(ct);
+    }
+
+    private string? ResolveDllPath(string pluginId)
+    {
+        if (_dllPaths.TryGetValue(pluginId, out var cached))
+            return cached;
+
+        foreach (var dll in Directory.EnumerateFiles(_pluginsPath, "*.dll"))
+        {
+            try
+            {
+                var ctx = new PluginLoadContext(dll);
+                try
+                {
+                    var asm = ctx.LoadFromAssemblyPath(dll);
+                    var t = asm.GetTypes().FirstOrDefault(t => !t.IsAbstract && t.IsAssignableTo(typeof(ISourcePlugin)));
+                    if (t is null) continue;
+                    if (Activator.CreateInstance(t) is not ISourcePlugin p) continue;
+                    if (p.Id == pluginId) return dll;
+                }
+                finally { ctx.Unload(); }
+            }
+            catch { /* ignore load errors for individual DLLs */ }
+        }
+
+        return null;
+    }
+
+    public async Task<PluginConfigResponse?> GetPluginConfigAsync(string pluginId, CancellationToken ct = default)
+    {
+        var dll = ResolveDllPath(pluginId);
+        if (dll is null)
+            return null;
+
+        var ctx = new PluginLoadContext(dll);
+        try
+        {
+            var assembly = ctx.LoadFromAssemblyPath(dll);
+            var pluginType = assembly.GetTypes()
+                                     .FirstOrDefault(t => !t.IsAbstract && t.IsAssignableTo(typeof(ISourcePlugin)));
+
+            if (pluginType is null || Activator.CreateInstance(pluginType) is not IConfigurablePlugin configurable)
+                return null;
+
+            var configType = configurable.ConfigType;
+            var configPath = _contextFactory.GetConfigPath(pluginId);
+
+            object config;
+            if (File.Exists(configPath))
+            {
+                await using var stream = File.OpenRead(configPath);
+                config = (await JsonSerializer.DeserializeAsync(stream, configType, _jsonOpts, ct))
+                         ?? Activator.CreateInstance(configType)!;
+            }
+            else
+            {
+                config = Activator.CreateInstance(configType)!;
+            }
+
+            EncryptionUtils.ApplySensitiveFields(config, decrypt: true);
+
+            var values = JsonSerializer.SerializeToElement(config, configType, _jsonOpts);
+            var schema = BuildSchema(configType);
+            return new PluginConfigResponse(values, schema);
+        }
+        finally
+        {
+            ctx.Unload();
+        }
+    }
+
+    private static ConfigFieldInfo[] BuildSchema(Type configType) =>
+        configType
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(p => new ConfigFieldInfo(
+                p.Name,
+                p.GetCustomAttribute<DescriptionAttribute>()?.Description,
+                p.GetCustomAttribute<SensitiveAttribute>() is not null
+            ))
+            .ToArray();
+
+    public async Task SavePluginConfigAsync(string pluginId, JsonElement incoming, CancellationToken ct = default)
+    {
+        var dll = ResolveDllPath(pluginId)
+                  ?? throw new KeyNotFoundException($"Plugin '{pluginId}' not found.");
+
+        var ctx = new PluginLoadContext(dll);
+        try
+        {
+            var assembly = ctx.LoadFromAssemblyPath(dll);
+            var pluginType = assembly.GetTypes()
+                                     .FirstOrDefault(t => !t.IsAbstract && t.IsAssignableTo(typeof(ISourcePlugin)));
+
+            if (pluginType is null || Activator.CreateInstance(pluginType) is not IConfigurablePlugin configurable)
+                throw new InvalidOperationException($"Plugin '{pluginId}' does not expose a config type.");
+
+            var configType = configurable.ConfigType;
+            var config = incoming.Deserialize(configType, _jsonOpts)
+                         ?? Activator.CreateInstance(configType)!;
+
+            EncryptionUtils.ApplySensitiveFields(config, decrypt: false);
+
+            var configPath = _contextFactory.GetConfigPath(pluginId);
+            var dir = Path.GetDirectoryName(configPath);
+            if (dir is not null) Directory.CreateDirectory(dir);
+
+            await using var stream = File.Create(configPath);
+            await JsonSerializer.SerializeAsync(stream, config, configType, _jsonOpts, ct);
+        }
+        finally
+        {
+            ctx.Unload();
+        }
+    }
+
+    public async Task DeliverCallbackAsync(string pluginId, string body, CancellationToken ct = default)
+    {
+        if (!_hosts.TryGetValue(pluginId, out var host))
+            throw new KeyNotFoundException($"Plugin '{pluginId}' is not running.");
+
+        if (host.Plugin is not ICallbackPlugin callbackPlugin)
+            throw new InvalidOperationException($"Plugin '{pluginId}' does not support callbacks.");
+
+        await callbackPlugin.HandleCallbackAsync(body, ct);
+    }
+
+    public string? GetPendingQrCode(string pluginId)
+    {
+        if (!_hosts.TryGetValue(pluginId, out var host))
+            throw new KeyNotFoundException($"Plugin '{pluginId}' is not running.");
+
+        if (host.Plugin is not IQrPlugin qrPlugin)
+            throw new InvalidOperationException($"Plugin '{pluginId}' does not support QR pairing.");
+
+        return qrPlugin.PendingQrCode;
     }
 }

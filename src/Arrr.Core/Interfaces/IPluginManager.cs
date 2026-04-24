@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Arrr.Core.Data.Api;
 
 namespace Arrr.Core.Interfaces;
@@ -19,4 +20,29 @@ public interface IPluginManager
 
     /// <summary>Unloads and reloads all plugins.</summary>
     Task ReloadAllAsync(CancellationToken ct);
+
+    /// <summary>
+    /// Returns the plugin's config values (sensitive fields decrypted) plus the field schema
+    /// (name, description, sensitive flag) derived from the config type's properties.
+    /// Returns <c>null</c> if the plugin does not implement <see cref="IConfigurablePlugin"/>.
+    /// </summary>
+    Task<PluginConfigResponse?> GetPluginConfigAsync(string pluginId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Persists <paramref name="config"/> to the plugin's config file,
+    /// encrypting any <c>[Sensitive]</c> fields before writing.
+    /// </summary>
+    Task SavePluginConfigAsync(string pluginId, JsonElement config, CancellationToken ct = default);
+
+    /// <summary>
+    /// Delivers an arbitrary payload to a running plugin that implements <see cref="ICallbackPlugin"/>.
+    /// Throws <see cref="KeyNotFoundException"/> if the plugin is not running or does not support callbacks.
+    /// </summary>
+    Task DeliverCallbackAsync(string pluginId, string body, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns the pending QR code string for a running plugin that implements <see cref="IQrPlugin"/>,
+    /// or <c>null</c> if no pairing is currently in progress.
+    /// </summary>
+    string? GetPendingQrCode(string pluginId);
 }

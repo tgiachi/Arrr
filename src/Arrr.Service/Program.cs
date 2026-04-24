@@ -101,6 +101,9 @@ await ConsoleApp.RunAsync(
 
         app.Urls.Add($"http://0.0.0.0:{configService.Config.Web.Port}");
 
+        app.UseDefaultFiles();
+        app.UseStaticFiles();
+
         app.Services.GetRequiredService<SocketBroadcastSubscriber>();
         app.MapExternalApi();
 

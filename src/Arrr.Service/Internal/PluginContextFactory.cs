@@ -1,6 +1,4 @@
-using System.Reflection;
 using System.Text.Json;
-using Arrr.Core.Attributes;
 using Arrr.Core.Directories;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Types;
@@ -22,9 +20,12 @@ internal class PluginContextFactory
         _directoriesConfig = directoriesConfig;
     }
 
+    public string GetConfigPath(string pluginId) =>
+        Path.Combine(_directoriesConfig[DirectoryType.Configs], $"{pluginId}.config");
+
     public IPluginContext Create(ISourcePlugin plugin)
     {
-        var configPath = Path.Combine(_directoriesConfig[DirectoryType.Configs], $"{plugin.Id}.config");
+        var configPath = GetConfigPath(plugin.Id);
         var logPath = Path.Combine(_directoriesConfig[DirectoryType.Logs], "plugins", $"{plugin.Id}.log");
         var callbackUrl = $"/callback/{plugin.Name}";
 
@@ -75,13 +76,13 @@ internal sealed class PluginContext : IPluginContext
         await using var stream = File.OpenRead(ConfigPath);
         var config = await JsonSerializer.DeserializeAsync<T>(stream, _jsonOptions, ct) ?? new T();
 
-        ApplySensitiveFields(config, decrypt: true);
+        EncryptionUtils.ApplySensitiveFields(config, decrypt: true);
         return config;
     }
 
     public async Task SaveConfigAsync<T>(T config, CancellationToken ct = default)
     {
-        ApplySensitiveFields(config!, decrypt: false);
+        EncryptionUtils.ApplySensitiveFields(config!, decrypt: false);
 
         var dir = Path.GetDirectoryName(ConfigPath);
         if (dir is not null)
@@ -89,24 +90,5 @@ internal sealed class PluginContext : IPluginContext
 
         await using var stream = File.Create(ConfigPath);
         await JsonSerializer.SerializeAsync(stream, config, _jsonOptions, ct);
-    }
-
-    private static void ApplySensitiveFields(object config, bool decrypt)
-    {
-        var props = config.GetType()
-                          .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                          .Where(p => p.PropertyType == typeof(string)
-                                   && p.CanRead && p.CanWrite
-                                   && p.GetCustomAttribute<SensitiveAttribute>() is not null);
-
-        foreach (var prop in props)
-        {
-            var value = prop.GetValue(config) as string;
-            if (string.IsNullOrEmpty(value)) continue;
-
-            prop.SetValue(config, decrypt
-                ? EncryptionUtils.Decrypt(value)
-                : EncryptionUtils.IsEncrypted(value) ? value : EncryptionUtils.Encrypt(value));
-        }
     }
 }
