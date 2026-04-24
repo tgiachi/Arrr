@@ -26,7 +26,7 @@ interface Props {
 }
 
 const NUGET_SEARCH_URL =
-  'https://azuresearch-usnc.nuget.org/query?q=Arrr.Plugin&prerelease=false&take=25&semVerLevel=2.0.0'
+  'https://azuresearch-usnc.nuget.org/query?q=tags:arrr-plugin&prerelease=false&take=25&semVerLevel=2.0.0'
 
 function formatDownloads(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
