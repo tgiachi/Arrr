@@ -27,7 +27,9 @@ await ConsoleApp.RunAsync(
         CancellationToken ct = default
     ) =>
     {
-        rootDirectory ??= Environment.CurrentDirectory;
+        var xdgDataHome = Environment.GetEnvironmentVariable("XDG_DATA_HOME")
+                          ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share");
+        rootDirectory ??= Path.Combine(xdgDataHome, "arrr");
 
         var directoriesConfig = new DirectoriesConfig(rootDirectory, Enum.GetNames<DirectoryType>());
 

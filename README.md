@@ -86,7 +86,7 @@ dotnet run --project src/Arrr.Service -- --rootDirectory ~/.local/share/arrr
 
 ## Configuration
 
-On first run Arrr creates `~/.local/share/arrr/arrr.config`:
+On first run Arrr creates `$XDG_DATA_HOME/arrr/arrr.config` (defaults to `~/.local/share/arrr/arrr.config`):
 
 ```json
 {
