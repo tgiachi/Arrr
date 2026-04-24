@@ -183,7 +183,7 @@ export default function App() {
             letterSpacing="widest"
             mt="1px"
           >
-            Arrr!
+            Notification center
           </Text>
         </HStack>
 
