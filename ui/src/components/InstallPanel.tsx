@@ -26,8 +26,10 @@ interface Props {
   onInstall: (packageId: string, version: string) => Promise<void>
 }
 
-const NUGET_SEARCH_URL =
-  'https://azuresearch-usnc.nuget.org/query?q=tags:arrr-plugin&prerelease=false&take=25&semVerLevel=2.0.0'
+const NUGET_PLUGIN_URL =
+  'https://azuresearch-usnc.nuget.org/query?q=tags:arrr-plugin&prerelease=false&take=50&semVerLevel=2.0.0'
+const NUGET_SINK_URL =
+  'https://azuresearch-usnc.nuget.org/query?q=tags:arrr-sink&prerelease=false&take=50&semVerLevel=2.0.0'
 
 function formatDownloads(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
@@ -35,32 +37,210 @@ function formatDownloads(n: number): string {
   return String(n)
 }
 
+function filterPkgs(list: NugetPackage[], q: string): NugetPackage[] {
+  if (!q.trim()) return list
+  const lq = q.toLowerCase()
+  return list.filter(
+    (p) =>
+      p.id.toLowerCase().includes(lq) ||
+      p.description?.toLowerCase().includes(lq)
+  )
+}
+
+function PackageCard({
+  pkg,
+  installing,
+  onInstall,
+}: {
+  pkg: NugetPackage
+  installing: boolean
+  onInstall: (pkg: NugetPackage) => void
+}) {
+  return (
+    <Box
+      bg="blackAlpha.400"
+      borderWidth="1px"
+      borderColor="whiteAlpha.100"
+      borderRadius="lg"
+      p={3}
+      _hover={{ borderColor: 'whiteAlpha.200' }}
+      transition="all 0.15s"
+    >
+      <Flex justify="space-between" align="flex-start" gap={2}>
+        <Flex gap={2} flex={1} minW={0} align="flex-start">
+          {pkg.iconUrl && (
+            <Box flexShrink={0} mt="1px">
+              <img
+                src={pkg.iconUrl}
+                alt=""
+                width={32}
+                height={32}
+                style={{ borderRadius: 6, objectFit: 'cover' }}
+                onError={(e) => {
+                  ;(e.target as HTMLImageElement).style.display = 'none'
+                }}
+              />
+            </Box>
+          )}
+
+          <Box flex={1} minW={0}>
+            <Text
+              fontSize="sm"
+              fontWeight="600"
+              color="white"
+              fontFamily="mono"
+              overflow="hidden"
+              textOverflow="ellipsis"
+              whiteSpace="nowrap"
+            >
+              {pkg.id}
+            </Text>
+
+            <HStack gap={2} mt={0.5} mb={1}>
+              <Text fontSize="10px" color="gray.500" fontFamily="mono">
+                v{pkg.version}
+              </Text>
+              {pkg.totalDownloads > 0 && (
+                <HStack gap={0.5}>
+                  <Download size={10} color="#6b7280" />
+                  <Text fontSize="10px" color="gray.500" fontFamily="mono">
+                    {formatDownloads(pkg.totalDownloads)}
+                  </Text>
+                </HStack>
+              )}
+              {pkg.verified && (
+                <Badge
+                  size="xs"
+                  colorPalette="green"
+                  variant="subtle"
+                  fontFamily="mono"
+                  fontSize="9px"
+                >
+                  verified
+                </Badge>
+              )}
+            </HStack>
+
+            {pkg.description && (
+              <Text
+                fontSize="xs"
+                color="gray.500"
+                lineHeight="1.4"
+                style={{
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
+              >
+                {pkg.description}
+              </Text>
+            )}
+          </Box>
+        </Flex>
+
+        <Button
+          size="xs"
+          colorPalette="amber"
+          variant="solid"
+          flexShrink={0}
+          loading={installing}
+          onClick={() => onInstall(pkg)}
+          gap={1}
+        >
+          <PackagePlus size={12} />
+          Install
+        </Button>
+      </Flex>
+    </Box>
+  )
+}
+
+function PackageSection({
+  label,
+  packages,
+  query,
+  installingIds,
+  onInstall,
+}: {
+  label: string
+  packages: NugetPackage[]
+  query: string
+  installingIds: Set<string>
+  onInstall: (pkg: NugetPackage) => void
+}) {
+  const filtered = filterPkgs(packages, query)
+
+  return (
+    <Box>
+      <HStack mb={2} gap={2}>
+        <Text
+          fontSize="xs"
+          fontWeight="600"
+          color="gray.500"
+          textTransform="uppercase"
+          letterSpacing="wider"
+          fontFamily="mono"
+        >
+          {label}
+        </Text>
+        <Badge size="xs" colorPalette="gray" variant="subtle" fontFamily="mono">
+          {filtered.length}
+        </Badge>
+      </HStack>
+
+      {filtered.length === 0 ? (
+        <Text fontSize="xs" color="gray.600" fontFamily="mono" mb={1}>
+          {query ? 'No matches' : 'None available'}
+        </Text>
+      ) : (
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={3}>
+          {filtered.map((pkg) => (
+            <PackageCard
+              key={pkg.id}
+              pkg={pkg}
+              installing={installingIds.has(pkg.id)}
+              onInstall={onInstall}
+            />
+          ))}
+        </SimpleGrid>
+      )}
+    </Box>
+  )
+}
+
 export function InstallPanel({ onInstall }: Props) {
-  const [packages, setPackages] = useState<NugetPackage[]>([])
-  const [loadingPackages, setLoadingPackages] = useState(true)
-  const [nugetError, setNugetError] = useState<string | null>(null)
+  const [plugins, setPlugins] = useState<NugetPackage[]>([])
+  const [sinks, setSinks] = useState<NugetPackage[]>([])
+  const [loading, setLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [installingIds, setInstallingIds] = useState<Set<string>>(new Set())
+  const [query, setQuery] = useState('')
 
   const [packageId, setPackageId] = useState('')
   const [version, setVersion] = useState('')
   const [installing, setInstalling] = useState(false)
 
-  const fetchPackages = async () => {
-    setLoadingPackages(true)
-    setNugetError(null)
+  const fetchAll = async () => {
+    setLoading(true)
+    setFetchError(null)
     try {
-      const res = await fetch(NUGET_SEARCH_URL)
-      if (!res.ok) throw new Error(`NuGet ${res.status}`)
-      const data = await res.json()
-      setPackages(data.data ?? [])
+      const [pr, sr] = await Promise.all([
+        fetch(NUGET_PLUGIN_URL).then((r) => r.json()),
+        fetch(NUGET_SINK_URL).then((r) => r.json()),
+      ])
+      setPlugins(pr.data ?? [])
+      setSinks(sr.data ?? [])
     } catch (e) {
-      setNugetError((e as Error).message)
+      setFetchError((e as Error).message)
     } finally {
-      setLoadingPackages(false)
+      setLoading(false)
     }
   }
 
-  useEffect(() => { fetchPackages() }, [])
+  useEffect(() => {
+    fetchAll()
+  }, [])
 
   const handleInstallPackage = async (pkg: NugetPackage) => {
     setInstallingIds((prev) => new Set(prev).add(pkg.id))
@@ -96,7 +276,7 @@ export function InstallPanel({ onInstall }: Props) {
       borderRadius="xl"
       p={4}
     >
-      {/* NuGet packages */}
+      {/* Header */}
       <Flex justify="space-between" align="center" mb={3}>
         <Text
           fontSize="xs"
@@ -106,15 +286,15 @@ export function InstallPanel({ onInstall }: Props) {
           letterSpacing="wider"
           fontFamily="mono"
         >
-          Available Plugins
+          NuGet Registry
         </Text>
         <Button
           size="xs"
           variant="ghost"
           color="gray.500"
           _hover={{ color: 'amber.300', bg: 'whiteAlpha.50' }}
-          onClick={fetchPackages}
-          loading={loadingPackages}
+          onClick={fetchAll}
+          loading={loading}
           gap={1}
         >
           <RefreshCcw size={12} />
@@ -122,113 +302,50 @@ export function InstallPanel({ onInstall }: Props) {
         </Button>
       </Flex>
 
-      {nugetError ? (
-        <Text fontSize="xs" color="red.400" fontFamily="mono" mb={3}>{nugetError}</Text>
-      ) : loadingPackages ? (
+      {/* Search */}
+      <Box mb={4}>
+        <Input
+          placeholder="Search plugins and sinks…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          size="sm"
+          bg="whiteAlpha.50"
+          borderColor="whiteAlpha.100"
+          color="white"
+          fontFamily="mono"
+          _placeholder={{ color: 'gray.600' }}
+          _focus={{
+            borderColor: 'amber.500',
+            boxShadow: '0 0 0 1px var(--chakra-colors-amber-500)',
+          }}
+        />
+      </Box>
+
+      {fetchError ? (
+        <Text fontSize="xs" color="red.400" fontFamily="mono" mb={3}>
+          {fetchError}
+        </Text>
+      ) : loading ? (
         <Flex justify="center" align="center" h="80px">
           <Spinner color="amber.500" size="sm" />
         </Flex>
-      ) : packages.length === 0 ? (
-        <Text fontSize="xs" color="gray.600" fontFamily="mono" mb={3}>No packages found</Text>
       ) : (
-        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={3} mb={4}>
-          {packages.map((pkg) => (
-            <Box
-              key={pkg.id}
-              bg="blackAlpha.400"
-              borderWidth="1px"
-              borderColor="whiteAlpha.100"
-              borderRadius="lg"
-              p={3}
-              _hover={{ borderColor: 'whiteAlpha.200' }}
-              transition="all 0.15s"
-            >
-              <Flex justify="space-between" align="flex-start" gap={2}>
-                <Flex gap={2} flex={1} minW={0} align="flex-start">
-                  {pkg.iconUrl && (
-                    <Box flexShrink={0} mt="1px">
-                      <img
-                        src={pkg.iconUrl}
-                        alt=""
-                        width={32}
-                        height={32}
-                        style={{ borderRadius: 6, objectFit: 'cover' }}
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                      />
-                    </Box>
-                  )}
-                <Box flex={1} minW={0}>
-                  <Text
-                    fontSize="sm"
-                    fontWeight="600"
-                    color="white"
-                    fontFamily="mono"
-                    overflow="hidden"
-                    textOverflow="ellipsis"
-                    whiteSpace="nowrap"
-                  >
-                    {pkg.id}
-                  </Text>
-
-                  <HStack gap={2} mt={0.5} mb={1}>
-                    <Text fontSize="10px" color="gray.500" fontFamily="mono">
-                      v{pkg.version}
-                    </Text>
-                    {pkg.totalDownloads > 0 && (
-                      <HStack gap={0.5}>
-                        <Download size={10} color="#6b7280" />
-                        <Text fontSize="10px" color="gray.500" fontFamily="mono">
-                          {formatDownloads(pkg.totalDownloads)}
-                        </Text>
-                      </HStack>
-                    )}
-                    {pkg.verified && (
-                      <Badge
-                        size="xs"
-                        colorPalette="green"
-                        variant="subtle"
-                        fontFamily="mono"
-                        fontSize="9px"
-                      >
-                        verified
-                      </Badge>
-                    )}
-                  </HStack>
-
-                  {pkg.description && (
-                    <Text
-                      fontSize="xs"
-                      color="gray.500"
-                      lineHeight="1.4"
-                      style={{
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      {pkg.description}
-                    </Text>
-                  )}
-                </Box>
-                </Flex>
-
-                <Button
-                  size="xs"
-                  colorPalette="amber"
-                  variant="solid"
-                  flexShrink={0}
-                  loading={installingIds.has(pkg.id)}
-                  onClick={() => handleInstallPackage(pkg)}
-                  gap={1}
-                >
-                  <PackagePlus size={12} />
-                  Install
-                </Button>
-              </Flex>
-            </Box>
-          ))}
-        </SimpleGrid>
+        <Flex direction="column" gap={5} mb={4}>
+          <PackageSection
+            label="Source Plugins"
+            packages={plugins}
+            query={query}
+            installingIds={installingIds}
+            onInstall={handleInstallPackage}
+          />
+          <PackageSection
+            label="Output Sinks"
+            packages={sinks}
+            query={query}
+            installingIds={installingIds}
+            onInstall={handleInstallPackage}
+          />
+        </Flex>
       )}
 
       {/* Manual install */}
@@ -247,7 +364,10 @@ export function InstallPanel({ onInstall }: Props) {
             color="white"
             fontFamily="mono"
             _placeholder={{ color: 'gray.600' }}
-            _focus={{ borderColor: 'amber.500', boxShadow: '0 0 0 1px var(--chakra-colors-amber-500)' }}
+            _focus={{
+              borderColor: 'amber.500',
+              boxShadow: '0 0 0 1px var(--chakra-colors-amber-500)',
+            }}
             flex={2}
           />
           <Input
@@ -260,7 +380,10 @@ export function InstallPanel({ onInstall }: Props) {
             color="white"
             fontFamily="mono"
             _placeholder={{ color: 'gray.600' }}
-            _focus={{ borderColor: 'amber.500', boxShadow: '0 0 0 1px var(--chakra-colors-amber-500)' }}
+            _focus={{
+              borderColor: 'amber.500',
+              boxShadow: '0 0 0 1px var(--chakra-colors-amber-500)',
+            }}
             flex={1}
             maxW="120px"
           />
