@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Tom (tom@orivega.io)",
+  "classifications": ["Arrr", "Sink", "Notifications"],
+  "identity": "Arrr.Sink.Template",
+  "name": "Arrr Sink",
+  "shortName": "arrr-sink",
+  "description": "An output sink for the Arrr notification aggregator daemon.",
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "sourceName": "MySink",
+  "preferNameDirectory": true,
+  "symbols": {
+    "SinkId": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "com.example.mysink",
+      "replaces": "com.example.mysink",
+      "description": "Reverse-domain unique sink ID (e.g. com.yourname.slack)"
+    },
+    "Author": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "Your Name",
+      "replaces": "Your Name",
+      "description": "Sink author name"
+    }
+  }
+}
