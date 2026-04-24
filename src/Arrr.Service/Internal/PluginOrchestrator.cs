@@ -329,9 +329,36 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
         await LoadAllPluginsAsync(ct);
     }
 
+    private string? ResolveDllPath(string pluginId)
+    {
+        if (_dllPaths.TryGetValue(pluginId, out var cached))
+            return cached;
+
+        foreach (var dll in Directory.EnumerateFiles(_pluginsPath, "*.dll"))
+        {
+            try
+            {
+                var ctx = new PluginLoadContext(dll);
+                try
+                {
+                    var asm = ctx.LoadFromAssemblyPath(dll);
+                    var t = asm.GetTypes().FirstOrDefault(t => !t.IsAbstract && t.IsAssignableTo(typeof(ISourcePlugin)));
+                    if (t is null) continue;
+                    if (Activator.CreateInstance(t) is not ISourcePlugin p) continue;
+                    if (p.Id == pluginId) return dll;
+                }
+                finally { ctx.Unload(); }
+            }
+            catch { /* ignore load errors for individual DLLs */ }
+        }
+
+        return null;
+    }
+
     public async Task<JsonElement?> GetPluginConfigAsync(string pluginId, CancellationToken ct = default)
     {
-        if (!_dllPaths.TryGetValue(pluginId, out var dll))
+        var dll = ResolveDllPath(pluginId);
+        if (dll is null)
             return null;
 
         var ctx = new PluginLoadContext(dll);
@@ -370,8 +397,8 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
 
     public async Task SavePluginConfigAsync(string pluginId, JsonElement incoming, CancellationToken ct = default)
     {
-        if (!_dllPaths.TryGetValue(pluginId, out var dll))
-            throw new KeyNotFoundException($"Plugin '{pluginId}' not found.");
+        var dll = ResolveDllPath(pluginId)
+                  ?? throw new KeyNotFoundException($"Plugin '{pluginId}' not found.");
 
         var ctx = new PluginLoadContext(dll);
         try
