@@ -29,4 +29,6 @@ internal class FakePluginManager : IPluginManager
 
     public Task DeliverCallbackAsync(string pluginId, string body, CancellationToken ct = default)
         => Task.CompletedTask;
+
+    public string? GetPendingQrCode(string pluginId) => null;
 }
