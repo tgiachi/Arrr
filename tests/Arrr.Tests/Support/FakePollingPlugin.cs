@@ -6,13 +6,13 @@ internal class FakePollingPlugin : IPollingPlugin
 {
     private readonly Func<int, Exception?>? _throwOnCall;
 
-    public string Id          => "com.test.polling";
-    public string Name        => "polling";
-    public string Version     => "1.0.0";
-    public string Author      => "test";
+    public string Id => "com.test.polling";
+    public string Name => "polling";
+    public string Version => "1.0.0";
+    public string Author => "test";
     public string Description => "fake polling plugin";
     public string[] Categories => [];
-    public string Icon        => "";
+    public string Icon => "";
 
     public TimeSpan Interval { get; }
     public int PollCount { get; private set; }
@@ -22,8 +22,6 @@ internal class FakePollingPlugin : IPollingPlugin
         Interval = interval ?? TimeSpan.FromMilliseconds(10);
         _throwOnCall = throwOnCall;
     }
-
-    public Task StartAsync(IPluginContext context, CancellationToken ct) => Task.CompletedTask;
 
     public Task PollAsync(IPluginContext context, CancellationToken ct)
     {
@@ -37,4 +35,7 @@ internal class FakePollingPlugin : IPollingPlugin
 
         return Task.CompletedTask;
     }
+
+    public Task StartAsync(IPluginContext context, CancellationToken ct)
+        => Task.CompletedTask;
 }

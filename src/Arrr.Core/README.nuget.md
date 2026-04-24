@@ -42,7 +42,7 @@ Drop the compiled `.dll` into Arrr's `plugins/` directory and add the plugin ent
 
 ## Interfaces
 
-| Interface | Use when |
-|-----------|----------|
+| Interface        | Use when                                          |
+|------------------|---------------------------------------------------|
 | `IPollingPlugin` | Fixed-interval polling — service manages the loop |
-| `ISourcePlugin` | Custom scheduling / event-driven sources |
+| `ISourcePlugin`  | Custom scheduling / event-driven sources          |
