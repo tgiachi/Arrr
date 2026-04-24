@@ -30,6 +30,11 @@
 
     <ItemGroup>
         <None Include="../../assets/arr_logo.png" Pack="true" PackagePath="\"/>
+        <None Include="bridge/linux-x64/whatsapp-bridge"   Pack="true" PackagePath="tools/linux-x64/"   Condition="Exists('bridge/linux-x64/whatsapp-bridge')"/>
+        <None Include="bridge/linux-arm64/whatsapp-bridge" Pack="true" PackagePath="tools/linux-arm64/" Condition="Exists('bridge/linux-arm64/whatsapp-bridge')"/>
+        <None Include="bridge/win-x64/whatsapp-bridge.exe" Pack="true" PackagePath="tools/win-x64/"     Condition="Exists('bridge/win-x64/whatsapp-bridge.exe')"/>
+        <None Include="bridge/osx-x64/whatsapp-bridge"     Pack="true" PackagePath="tools/osx-x64/"     Condition="Exists('bridge/osx-x64/whatsapp-bridge')"/>
+        <None Include="bridge/osx-arm64/whatsapp-bridge"   Pack="true" PackagePath="tools/osx-arm64/"   Condition="Exists('bridge/osx-arm64/whatsapp-bridge')"/>
     </ItemGroup>
 
 </Project>

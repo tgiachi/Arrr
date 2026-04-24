@@ -6,13 +6,84 @@ on:
       - "v*"
 
 jobs:
+  build-bridge:
+    name: Build bridge (${{ matrix.rid }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+            ext: ""
+          - os: ubuntu-24.04-arm
+            rid: linux-arm64
+            ext: ""
+          - os: windows-latest
+            rid: win-x64
+            ext: ".exe"
+          - os: macos-13
+            rid: osx-x64
+            ext: ""
+          - os: macos-latest
+            rid: osx-arm64
+            ext: ""
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+
+      - name: Build whatsapp-bridge
+        working-directory: plugins/WhatsAppPlugin/bridge
+        run: go build -tags sqlite_fts5 -o whatsapp-bridge${{ matrix.ext }} .
+
+      - name: Upload bridge artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bridge-${{ matrix.rid }}
+          path: plugins/WhatsAppPlugin/bridge/whatsapp-bridge${{ matrix.ext }}
+
   publish:
+    name: Build & Publish NuGet packages
     runs-on: ubuntu-latest
+    needs: build-bridge
     permissions:
       contents: read
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Download bridge linux-x64
+        uses: actions/download-artifact@v4
+        with:
+          name: bridge-linux-x64
+          path: plugins/WhatsAppPlugin/bridge/linux-x64/
+
+      - name: Download bridge linux-arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: bridge-linux-arm64
+          path: plugins/WhatsAppPlugin/bridge/linux-arm64/
+
+      - name: Download bridge win-x64
+        uses: actions/download-artifact@v4
+        with:
+          name: bridge-win-x64
+          path: plugins/WhatsAppPlugin/bridge/win-x64/
+
+      - name: Download bridge osx-x64
+        uses: actions/download-artifact@v4
+        with:
+          name: bridge-osx-x64
+          path: plugins/WhatsAppPlugin/bridge/osx-x64/
+
+      - name: Download bridge osx-arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: bridge-osx-arm64
+          path: plugins/WhatsAppPlugin/bridge/osx-arm64/
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -30,7 +101,6 @@ jobs:
       - name: Pack Arrr.Core to local feed
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          mkdir -p local-packages
           dotnet pack src/Arrr.Core/Arrr.Core.csproj \
             -c Release \
             --no-build \
@@ -42,9 +112,11 @@ jobs:
           dotnet restore plugins/RssPlugin/RssPlugin.csproj
           dotnet restore plugins/ImapPlugin/ImapPlugin.csproj
           dotnet restore plugins/TelegramBotSink/TelegramBotSink.csproj
+          dotnet restore plugins/WhatsAppPlugin/WhatsAppPlugin.csproj
           dotnet build plugins/RssPlugin/RssPlugin.csproj -c Release --no-restore
           dotnet build plugins/ImapPlugin/ImapPlugin.csproj -c Release --no-restore
           dotnet build plugins/TelegramBotSink/TelegramBotSink.csproj -c Release --no-restore
+          dotnet build plugins/WhatsAppPlugin/WhatsAppPlugin.csproj -c Release --no-restore
 
       - name: Test
         run: dotnet test tests/Arrr.Tests/Arrr.Tests.csproj -c Release --filter "Category!=Integration"
@@ -72,6 +144,11 @@ jobs:
             -p:Version="$VERSION" \
             -o ./nupkg
           dotnet pack plugins/TelegramBotSink/TelegramBotSink.csproj \
+            -c Release \
+            --no-build \
+            -p:Version="$VERSION" \
+            -o ./nupkg
+          dotnet pack plugins/WhatsAppPlugin/WhatsAppPlugin.csproj \
             -c Release \
             --no-build \
             -p:Version="$VERSION" \

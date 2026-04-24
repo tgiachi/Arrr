@@ -26,11 +26,20 @@ public class WhatsAppPlugin : ISourcePlugin, IConfigurablePlugin, IQrPlugin
     {
         var config = await context.LoadConfigAsync<WhatsAppPluginConfig>(ct);
 
-        if (string.IsNullOrEmpty(config.BridgePath) || !File.Exists(config.BridgePath))
+        var bridgePath = config.BridgePath;
+        if (!Path.IsPathRooted(bridgePath))
+        {
+            var pluginDir = Path.GetDirectoryName(typeof(WhatsAppPlugin).Assembly.Location) ?? "";
+            bridgePath = Path.Combine(pluginDir, bridgePath);
+            if (!File.Exists(bridgePath) && OperatingSystem.IsWindows())
+                bridgePath += ".exe";
+        }
+
+        if (!File.Exists(bridgePath))
         {
             context.Logger.LogError(
-                "whatsapp-bridge binary not found at '{Path}'. Build it: cd plugins/WhatsAppPlugin/bridge && ./build.sh",
-                config.BridgePath);
+                "whatsapp-bridge binary not found at '{Path}'. Install Arrr.Plugin.WhatsApp from NuGet or build the bridge manually.",
+                bridgePath);
             return;
         }
 
@@ -39,7 +48,7 @@ public class WhatsAppPlugin : ISourcePlugin, IConfigurablePlugin, IQrPlugin
             .Select(c => c.Trim().ToLowerInvariant())
             .ToHashSet();
 
-        var psi = new ProcessStartInfo(config.BridgePath, sessionPath)
+        var psi = new ProcessStartInfo(bridgePath, sessionPath)
         {
             RedirectStandardOutput = true,
             RedirectStandardError = true,
