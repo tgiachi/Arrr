@@ -9,7 +9,10 @@ namespace RssPlugin;
 
 public class RssPlugin : IPollingPlugin, IConfigurablePlugin
 {
-    private readonly HttpClient _httpClient = new();
+    private readonly HttpClient _httpClient = new()
+    {
+        DefaultRequestHeaders = { { "User-Agent", "Mozilla/5.0 (compatible; Arrr/1.0; +https://github.com/tgiachi/Arrr)" } }
+    };
     private readonly HashSet<string> _seenIds = [];
 
     private RssPluginConfig _config = new();
