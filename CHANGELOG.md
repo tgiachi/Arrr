@@ -1,3 +1,9 @@
+## [1.2.1](https://github.com/tgiachi/Arrr/compare/v1.2.0...v1.2.1) (2026-04-24)
+
+### Bug Fixes
+
+* **tests:** implement GetPendingQrCode in FakePluginManager ([d58e017](https://github.com/tgiachi/Arrr/commit/d58e017db60d47913754fdf1cc402fa00521b6a7))
+
 ## [1.2.0](https://github.com/tgiachi/Arrr/compare/v1.1.1...v1.2.0) (2026-04-24)
 
 ### Features

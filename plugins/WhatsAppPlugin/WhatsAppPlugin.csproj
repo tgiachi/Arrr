@@ -8,7 +8,7 @@
         <RootNamespace>WhatsAppPlugin</RootNamespace>
 
         <PackageId>Arrr.Plugin.WhatsApp</PackageId>
-        <Version>1.2.0</Version>
+        <Version>1.2.1</Version>
         <Authors>Tom</Authors>
         <Description>WhatsApp plugin for Arrr — receives messages via whatsapp-bridge (whatsmeow).</Description>
         <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
