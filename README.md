@@ -1,5 +1,9 @@
 # Arrr! 🏴‍☠️
 
+<p align="center">
+  <img src="assets/arr_logo.png" alt="Arrr! logo" width="128"/>
+</p>
+
 > *Arrr!* — because every good notification deserves a pirate's welcome.
 
 Arrr is a Linux desktop notification aggregator daemon. It runs as a background service, collects notifications from multiple sources via a plugin system, and delivers them to your desktop through D-Bus (the standard freedesktop.org Notifications API) and a Unix domain socket for any client that wants to listen.

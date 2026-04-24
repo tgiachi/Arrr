@@ -17,6 +17,7 @@
         <RepositoryUrl>https://github.com/tgiachi/Arrr</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackageReadmeFile>README.nuget.md</PackageReadmeFile>
+        <PackageIcon>arr_logo.png</PackageIcon>
         <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
         <IncludeSymbols>true</IncludeSymbols>
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
@@ -29,6 +30,7 @@
 
     <ItemGroup>
         <None Include="README.nuget.md" Pack="true" PackagePath="\"/>
+        <None Include="../../assets/arr_logo.png" Pack="true" PackagePath="\"/>
     </ItemGroup>
 
 </Project>
