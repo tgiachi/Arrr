@@ -156,6 +156,22 @@ X-Api-Key: <your-key>
 
 ---
 
+## Plugin Template
+
+Install the `dotnet new` template to scaffold a new plugin in seconds:
+
+```bash
+dotnet new install Arrr.Templates
+dotnet new arrr-plugin -n MyRssPlugin \
+    --PluginId com.example.rss \
+    --Author "Your Name" \
+    --Interval "00:05:00"
+```
+
+This generates a ready-to-build project with `IPollingPlugin` pre-wired and all metadata filled in.
+
+---
+
 ## Writing a Plugin
 
 Implement `ISourcePlugin` from `Arrr.Core`, drop the compiled `.dll` into the `plugins/` directory and restart the daemon.
