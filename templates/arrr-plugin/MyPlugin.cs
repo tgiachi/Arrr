@@ -5,6 +5,9 @@ namespace MyPlugin;
 
 public class MyPlugin : IPollingPlugin
 {
+    private MyPluginConfig _config = new();
+    private bool _firstPoll = true;
+
     public string Id          => "com.example.myplugin";
     public string Name        => "MyPlugin";
     public string Version     => "1.0.0";
@@ -13,14 +16,23 @@ public class MyPlugin : IPollingPlugin
     public string[] Categories => [];
     public string Icon        => "";
 
-    public TimeSpan Interval  => TimeSpan.Parse("00:05:00");
+    public TimeSpan Interval => TimeSpan.Parse("00:05:00");
 
-    // StartAsync is managed by the Arrr host — leave it empty.
-    public Task StartAsync(IPluginContext context, CancellationToken ct) => Task.CompletedTask;
+    public async Task StartAsync(IPluginContext context, CancellationToken ct)
+    {
+        _config = await context.LoadConfigAsync<MyPluginConfig>(ct);
+    }
 
     public async Task PollAsync(IPluginContext context, CancellationToken ct)
     {
-        // TODO: fetch data from your source and publish notifications.
+        if (_firstPoll)
+        {
+            // Seed state on first run to avoid notification burst.
+            _firstPoll = false;
+            return;
+        }
+
+        // TODO: fetch data and publish notifications.
         await context.EventBus.PublishAsync(
             new Notification(
                 Id:        Guid.NewGuid(),

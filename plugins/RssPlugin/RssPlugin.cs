@@ -1,5 +1,4 @@
 using System.ServiceModel.Syndication;
-using System.Text.Json;
 using System.Xml;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
@@ -13,7 +12,7 @@ public class RssPlugin : IPollingPlugin
     private readonly HttpClient _httpClient = new();
     private readonly HashSet<string> _seenIds = [];
 
-    private RssPluginConfig _config = new([]);
+    private RssPluginConfig _config = new();
     private bool _firstPoll = true;
 
     public string Id          => "com.arrr.rss";
@@ -28,16 +27,7 @@ public class RssPlugin : IPollingPlugin
 
     public async Task StartAsync(IPluginContext context, CancellationToken ct)
     {
-        if (!File.Exists(context.ConfigPath))
-        {
-            context.Logger.LogWarning("RSS config not found at {Path} — no feeds will be polled", context.ConfigPath);
-            return;
-        }
-
-        await using var stream = File.OpenRead(context.ConfigPath);
-        _config = await JsonSerializer.DeserializeAsync<RssPluginConfig>(stream, cancellationToken: ct)
-                  ?? new([]);
-
+        _config = await context.LoadConfigAsync<RssPluginConfig>(ct);
         context.Logger.LogInformation("RSS plugin loaded {Count} feed(s)", _config.Feeds.Count);
     }
 

@@ -19,15 +19,27 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
-      - name: Restore
+      - name: Restore & build Arrr.Core
         run: |
           dotnet restore src/Arrr.Core/Arrr.Core.csproj
-          dotnet restore plugins/RssPlugin/RssPlugin.csproj
-
-      - name: Build
-        run: |
           dotnet build src/Arrr.Core/Arrr.Core.csproj -c Release --no-restore
+
+      - name: Pack Arrr.Core to local feed
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p local-packages
+          dotnet pack src/Arrr.Core/Arrr.Core.csproj \
+            -c Release \
+            --no-build \
+            -p:Version="$VERSION" \
+            -o ./local-packages
+
+      - name: Restore & build plugins
+        run: |
+          dotnet restore plugins/RssPlugin/RssPlugin.csproj
+          dotnet restore plugins/ImapPlugin/ImapPlugin.csproj
           dotnet build plugins/RssPlugin/RssPlugin.csproj -c Release --no-restore
+          dotnet build plugins/ImapPlugin/ImapPlugin.csproj -c Release --no-restore
 
       - name: Test
         run: dotnet test tests/Arrr.Tests/Arrr.Tests.csproj -c Release --filter "Category!=Integration"
@@ -45,6 +57,11 @@ jobs:
             -p:Version="$VERSION" \
             -o ./nupkg
           dotnet pack plugins/RssPlugin/RssPlugin.csproj \
+            -c Release \
+            --no-build \
+            -p:Version="$VERSION" \
+            -o ./nupkg
+          dotnet pack plugins/ImapPlugin/ImapPlugin.csproj \
             -c Release \
             --no-build \
             -p:Version="$VERSION" \

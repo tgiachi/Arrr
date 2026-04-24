@@ -1,3 +1,6 @@
 namespace RssPlugin.Data;
 
-public record RssPluginConfig(List<RssFeedConfig> Feeds);
+public class RssPluginConfig
+{
+    public List<RssFeedConfig> Feeds { get; set; } = [];
+}

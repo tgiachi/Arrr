@@ -15,4 +15,10 @@ internal class FakePluginContext : IPluginContext
     {
         EventBus = eventBus;
     }
+
+    public Task<T> LoadConfigAsync<T>(CancellationToken ct = default) where T : new()
+        => Task.FromResult(new T());
+
+    public Task SaveConfigAsync<T>(T config, CancellationToken ct = default)
+        => Task.CompletedTask;
 }
