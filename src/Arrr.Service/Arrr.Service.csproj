@@ -5,7 +5,7 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <UserSecretsId>dotnet-Arrr.Service-c444e611-0700-4f6e-bbb2-3e1ed145b75e</UserSecretsId>
-        <Version>0.1.0</Version>
+        <Version>1.0.0</Version>
         <SelfContained>true</SelfContained>
         <PublishSingleFile>true</PublishSingleFile>
         <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
