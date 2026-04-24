@@ -86,7 +86,7 @@ dotnet run --project src/Arrr.Service -- --rootDirectory ~/.local/share/arrr
 
 ## Configuration
 
-On first run Arrr creates `~/.local/share/arrr/config/arrr.json`:
+On first run Arrr creates `~/.local/share/arrr/arrr.config`:
 
 ```json
 {
