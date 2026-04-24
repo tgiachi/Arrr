@@ -1,3 +1,16 @@
+export interface Sink {
+  id: string
+  name: string
+  version: string
+  author: string
+  description: string
+  icon: string
+  enabled: boolean
+  running: boolean
+  isBuiltIn: boolean
+  hasConfig: boolean
+}
+
 export interface Plugin {
   id: string
   name: string

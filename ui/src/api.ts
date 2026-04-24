@@ -1,4 +1,4 @@
-import type { Plugin, PluginConfigResponse } from './types'
+import type { Plugin, PluginConfigResponse, Sink } from './types'
 
 export class ArrrApi {
   constructor(
@@ -72,6 +72,33 @@ export class ArrrApi {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body,
+    })
+  }
+
+  async getSinks(): Promise<Sink[]> {
+    return (await this.req('/api/sinks')).json()
+  }
+
+  async enableSink(id: string) {
+    await this.req(`/api/sinks/${encodeURIComponent(id)}/enable`, { method: 'POST' })
+  }
+
+  async disableSink(id: string) {
+    await this.req(`/api/sinks/${encodeURIComponent(id)}/disable`, { method: 'POST' })
+  }
+
+  async reloadSink(id: string) {
+    await this.req(`/api/sinks/${encodeURIComponent(id)}/reload`, { method: 'POST' })
+  }
+
+  async getSinkConfig(sinkId: string): Promise<PluginConfigResponse> {
+    return (await this.req(`/api/sinks/${encodeURIComponent(sinkId)}/config`)).json()
+  }
+
+  async saveSinkConfig(sinkId: string, config: Record<string, unknown>) {
+    await this.req(`/api/sinks/${encodeURIComponent(sinkId)}/config`, {
+      method: 'POST',
+      body: JSON.stringify(config),
     })
   }
 

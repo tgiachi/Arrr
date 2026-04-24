@@ -12,17 +12,18 @@ import {
 } from '@chakra-ui/react'
 import { ChevronDown, ChevronUp, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import type { ArrrApi } from '../api'
-import type { ConfigFieldInfo, Plugin } from '../types'
+import type { ConfigFieldInfo, PluginConfigResponse } from '../types'
 
 interface Props {
-  plugin: Plugin
-  api: ArrrApi
+  id: string
+  name: string
   onClose: () => void
   onToast: (title: string, type: 'success' | 'error') => void
+  getConfig: () => Promise<PluginConfigResponse>
+  saveConfig: (config: Record<string, unknown>) => Promise<void>
 }
 
-export function ConfigModal({ plugin, api, onClose, onToast }: Props) {
+export function ConfigModal({ id, name, onClose, onToast, getConfig, saveConfig }: Props) {
   const [json, setJson] = useState('')
   const [schema, setSchema] = useState<ConfigFieldInfo[]>([])
   const [loading, setLoading] = useState(true)
@@ -31,15 +32,14 @@ export function ConfigModal({ plugin, api, onClose, onToast }: Props) {
   const [schemaOpen, setSchemaOpen] = useState(false)
 
   useEffect(() => {
-    api
-      .getConfig(plugin.id)
+    getConfig()
       .then(({ values, schema }) => {
         setJson(JSON.stringify(values, null, 2))
         setSchema(schema)
       })
       .catch((e: Error) => onToast(e.message, 'error'))
       .finally(() => setLoading(false))
-  }, [plugin.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = async () => {
     let parsed: Record<string, unknown>
@@ -53,8 +53,8 @@ export function ConfigModal({ plugin, api, onClose, onToast }: Props) {
 
     setSaving(true)
     try {
-      await api.saveConfig(plugin.id, parsed)
-      onToast(`${plugin.name} config saved`, 'success')
+      await saveConfig(parsed)
+      onToast(`${name} config saved`, 'success')
       onClose()
     } catch (e) {
       onToast((e as Error).message, 'error')
@@ -82,10 +82,10 @@ export function ConfigModal({ plugin, api, onClose, onToast }: Props) {
             <Flex justify="space-between" align="center">
               <Box>
                 <Dialog.Title fontFamily="heading" fontWeight="700" fontSize="lg" color="white">
-                  Configure {plugin.name}
+                  Configure {name}
                 </Dialog.Title>
                 <Text fontFamily="mono" fontSize="xs" color="gray.500" mt={0.5}>
-                  {plugin.id}
+                  {id}
                 </Text>
               </Box>
               <Dialog.CloseTrigger asChild>

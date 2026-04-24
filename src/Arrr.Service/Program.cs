@@ -61,6 +61,9 @@ await ConsoleApp.RunAsync(
         builder.Services.AddSingleton<PluginOrchestrator>();
         builder.Services.AddHostedService(sp => sp.GetRequiredService<PluginOrchestrator>());
         builder.Services.AddSingleton<IPluginManager>(sp => sp.GetRequiredService<PluginOrchestrator>());
+        builder.Services.AddSingleton<SinkOrchestrator>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<SinkOrchestrator>());
+        builder.Services.AddSingleton<ISinkManager>(sp => sp.GetRequiredService<SinkOrchestrator>());
         builder.Services.AddHostedService<EventBusHostedService>();
 
         builder.Services.AddOpenApi();

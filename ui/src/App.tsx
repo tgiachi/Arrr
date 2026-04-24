@@ -14,12 +14,13 @@ import { RefreshCcw, Settings, Skull } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrrApi } from './api'
 import { PluginCard } from './components/PluginCard'
+import { SinkCard } from './components/SinkCard'
 import { ConfigModal } from './components/ConfigModal'
 import { CallbackModal } from './components/CallbackModal'
 import { QrModal } from './components/QrModal'
 import { InstallPanel } from './components/InstallPanel'
 import { SettingsPanel } from './components/SettingsPanel'
-import type { Plugin, Settings as AppSettings } from './types'
+import type { Plugin, Sink, Settings as AppSettings } from './types'
 
 const STORAGE_KEY = 'arrr-settings'
 
@@ -50,6 +51,12 @@ export default function App() {
   const [callbackPlugin, setCallbackPlugin] = useState<Plugin | null>(null)
   const [qrPlugin, setQrPlugin] = useState<Plugin | null>(null)
 
+  const [sinks, setSinks] = useState<Sink[]>([])
+  const [loadingSinks, setLoadingSinks] = useState(false)
+  const [sinksError, setSinksError] = useState<string | null>(null)
+  const [sinkBusyIds, setSinkBusyIds] = useState<Set<string>>(new Set())
+  const [configuringSink, setConfiguringSink] = useState<Sink | null>(null)
+
   const apiRef = useRef<ArrrApi | null>(null)
   apiRef.current = new ArrrApi(settings.baseUrl || '', settings.apiKey || '')
 
@@ -74,10 +81,27 @@ export default function App() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const fetchSinks = useCallback(async () => {
+    setLoadingSinks(true)
+    setSinksError(null)
+    try {
+      const list = await api().getSinks()
+      setSinks(list)
+    } catch (e) {
+      setSinksError((e as Error).message)
+    } finally {
+      setLoadingSinks(false)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
-    if (settings.apiKey) fetchPlugins()
-    else setSettingsOpen(true)
-  }, [settings.apiKey, fetchPlugins])
+    if (settings.apiKey) {
+      fetchPlugins()
+      fetchSinks()
+    } else {
+      setSettingsOpen(true)
+    }
+  }, [settings.apiKey, fetchPlugins, fetchSinks])
 
   const withBusy = async (id: string, fn: () => Promise<void>) => {
     setBusyIds((prev) => new Set(prev).add(id))
@@ -87,6 +111,21 @@ export default function App() {
       toast((e as Error).message, 'error')
     } finally {
       setBusyIds((prev) => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }
+  }
+
+  const withSinkBusy = async (id: string, fn: () => Promise<void>) => {
+    setSinkBusyIds((prev) => new Set(prev).add(id))
+    try {
+      await fn()
+    } catch (e) {
+      toast((e as Error).message, 'error')
+    } finally {
+      setSinkBusyIds((prev) => {
         const next = new Set(prev)
         next.delete(id)
         return next
@@ -139,6 +178,21 @@ export default function App() {
       throw e
     }
   }
+
+  const handleSinkToggle = (sink: Sink, enabled: boolean) =>
+    withSinkBusy(sink.id, async () => {
+      if (enabled) await api().enableSink(sink.id)
+      else await api().disableSink(sink.id)
+      toast(`${sink.name} ${enabled ? 'enabled' : 'disabled'}`, 'success')
+      await fetchSinks()
+    })
+
+  const handleSinkReload = (sink: Sink) =>
+    withSinkBusy(sink.id, async () => {
+      await api().reloadSink(sink.id)
+      toast(`${sink.name} reloaded`, 'success')
+      await fetchSinks()
+    })
 
   const handleSaveSettings = (s: AppSettings) => {
     setSettings(s)
@@ -290,6 +344,48 @@ export default function App() {
               ))}
             </SimpleGrid>
           )}
+
+          {/* Output Connectors section */}
+          {settings.apiKey && (
+            <Box mt={4}>
+              <Text
+                fontSize="xs"
+                fontFamily="mono"
+                color="gray.600"
+                textTransform="uppercase"
+                letterSpacing="widest"
+                mb={3}
+              >
+                Output Connectors
+              </Text>
+
+              {sinksError && (
+                <Alert.Root status="error" borderRadius="xl" bg="red.900" borderColor="red.700" mb={3}>
+                  <Alert.Indicator />
+                  <Alert.Title fontSize="sm">{sinksError}</Alert.Title>
+                </Alert.Root>
+              )}
+
+              {loadingSinks && sinks.length === 0 ? (
+                <Flex justify="center" align="center" h="100px">
+                  <Spinner color="amber.500" size="md" />
+                </Flex>
+              ) : (
+                <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={4}>
+                  {sinks.map((sink) => (
+                    <SinkCard
+                      key={sink.id}
+                      sink={sink}
+                      busy={sinkBusyIds.has(sink.id)}
+                      onToggle={handleSinkToggle}
+                      onReload={handleSinkReload}
+                      onConfigure={setConfiguringSink}
+                    />
+                  ))}
+                </SimpleGrid>
+              )}
+            </Box>
+          )}
         </Grid>
       </Box>
 
@@ -312,12 +408,26 @@ export default function App() {
         />
       )}
 
-      {/* Config modal */}
+      {/* Plugin config modal */}
       {configuringPlugin && (
         <ConfigModal
-          plugin={configuringPlugin}
-          api={api()}
+          id={configuringPlugin.id}
+          name={configuringPlugin.name}
+          getConfig={() => api().getConfig(configuringPlugin.id)}
+          saveConfig={(c) => api().saveConfig(configuringPlugin.id, c)}
           onClose={() => setConfiguringPlugin(null)}
+          onToast={toast}
+        />
+      )}
+
+      {/* Sink config modal */}
+      {configuringSink && (
+        <ConfigModal
+          id={configuringSink.id}
+          name={configuringSink.name}
+          getConfig={() => api().getSinkConfig(configuringSink.id)}
+          saveConfig={(c) => api().saveSinkConfig(configuringSink.id, c)}
+          onClose={() => setConfiguringSink(null)}
           onToast={toast}
         />
       )}
