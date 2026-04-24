@@ -1,6 +1,6 @@
+using Arrr.Core.Data.Config;
 using Arrr.Core.Data.Events;
 using Arrr.Core.Data.Notifications;
-using Arrr.Core.Data.Config;
 using Arrr.Core.Directories;
 using Arrr.Core.Extensions.Logger;
 using Arrr.Core.Interfaces;
@@ -8,12 +8,11 @@ using Arrr.Core.Json;
 using Arrr.Core.Services;
 using Arrr.Core.Types;
 using Arrr.Service.Api;
-using Scalar.AspNetCore;
-using Arrr.Service.Interfaces;
 using Arrr.Service.Internal;
 using Arrr.Service.Services;
 using Arrr.Service.Subscribers;
 using ConsoleAppFramework;
+using Scalar.AspNetCore;
 using Serilog;
 
 JsonUtils.RegisterJsonContext(ArrrConfigJsonContext.Default);
@@ -27,8 +26,8 @@ await ConsoleApp.RunAsync(
         CancellationToken ct = default
     ) =>
     {
-        var xdgDataHome = Environment.GetEnvironmentVariable("XDG_DATA_HOME")
-                          ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share");
+        var xdgDataHome = Environment.GetEnvironmentVariable("XDG_DATA_HOME") ??
+                          Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share");
         rootDirectory ??= Path.Combine(xdgDataHome, "arrr");
 
         var directoriesConfig = new DirectoriesConfig(rootDirectory, Enum.GetNames<DirectoryType>());
@@ -62,8 +61,12 @@ await ConsoleApp.RunAsync(
         );
         builder.Services.AddSingleton<SocketBroadcastSubscriber>();
         builder.Services.AddSingleton<PluginContextFactory>();
+        builder.Services.AddSingleton<NuGetPluginInstaller>();
+        builder.Services.AddSingleton<IPluginInstaller>(sp => sp.GetRequiredService<NuGetPluginInstaller>());
+        builder.Services.AddSingleton<PluginOrchestrator>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<PluginOrchestrator>());
+        builder.Services.AddSingleton<IPluginManager>(sp => sp.GetRequiredService<PluginOrchestrator>());
         builder.Services.AddHostedService<EventBusHostedService>();
-        builder.Services.AddHostedService<PluginOrchestrator>();
         builder.Services.AddHostedService<DBusNotifySubscriber>();
 
         builder.Services.AddOpenApi();

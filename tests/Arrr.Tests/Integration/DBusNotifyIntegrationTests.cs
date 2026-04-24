@@ -3,9 +3,7 @@ using Tmds.DBus;
 
 namespace Arrr.Tests.Integration;
 
-[TestFixture]
-[Category("Integration")]
-[Explicit("Requires a running D-Bus session bus and desktop environment")]
+[TestFixture, Category("Integration"), Explicit("Requires a running D-Bus session bus and desktop environment")]
 public class DBusNotifyIntegrationTests
 {
     [Test]
@@ -20,15 +18,15 @@ public class DBusNotifyIntegrationTests
         );
 
         var id = await proxy.NotifyAsync(
-            "Arrr",
-            0,
-            "",
-            "Arrr — test notifica",
-            "Hello from Arrr D-Bus integration test!",
-            [],
-            new Dictionary<string, object>(),
-            3000
-        );
+                     "Arrr",
+                     0,
+                     "",
+                     "Arrr — test notifica",
+                     "Hello from Arrr D-Bus integration test!",
+                     [],
+                     new Dictionary<string, object>(),
+                     3000
+                 );
 
         Assert.That(id, Is.GreaterThan(0u));
     }

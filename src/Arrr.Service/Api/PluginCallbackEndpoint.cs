@@ -18,6 +18,7 @@ internal static class PluginCallbackEndpoint
                 if (plugin is null)
                 {
                     ctx.Response.StatusCode = 404;
+
                     return;
                 }
 
@@ -36,6 +37,7 @@ internal static class PluginCallbackEndpoint
                 if (plugin is null)
                 {
                     ctx.Response.StatusCode = 404;
+
                     return;
                 }
 

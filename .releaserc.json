@@ -34,7 +34,8 @@
         "assets": [
           "CHANGELOG.md",
           "src/**/*.csproj",
-          "templates/Arrr.Templates.csproj"
+          "templates/Arrr.Templates.csproj",
+          "plugins/**/*.csproj"
         ],
         "message": "chore(release): ${nextRelease.version}\n\n${nextRelease.notes}"
       }

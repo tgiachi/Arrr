@@ -16,19 +16,20 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0"/>
-        <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1"/>
-        <PackageReference Include="Serilog.Sinks.File" Version="7.0.0"/>
-        <PackageReference Include="Tmds.DBus" Version="0.92.0"/>
+        <PackageReference Include="NuGet.Protocol" Version="7.3.1" />
+        <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
+        <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+        <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+        <PackageReference Include="Tmds.DBus" Version="0.92.0" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.7" />
         <PackageReference Include="Scalar.AspNetCore" Version="2.14.4" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Arrr.Core\Arrr.Core.csproj"/>
+        <ProjectReference Include="..\Arrr.Core\Arrr.Core.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <InternalsVisibleTo Include="Arrr.Tests"/>
+        <InternalsVisibleTo Include="Arrr.Tests" />
     </ItemGroup>
 </Project>

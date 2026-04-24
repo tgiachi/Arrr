@@ -1,3 +1,4 @@
+using Arrr.Core.Data.Api;
 using Arrr.Core.Data.Config;
 using Arrr.Core.Directories;
 using Arrr.Core.Interfaces;
@@ -7,15 +8,17 @@ using ILogger = Serilog.ILogger;
 
 namespace Arrr.Service.Internal;
 
-internal class PluginOrchestrator : BackgroundService
+internal class PluginOrchestrator : BackgroundService, IPluginManager
 {
     private readonly ILogger _logger = Log.ForContext<PluginOrchestrator>();
     private readonly PluginContextFactory _contextFactory;
     private readonly IPluginRegistry _registry;
+    private readonly IConfigService _configService;
     private readonly ArrrConfig _config;
     private readonly string _pluginsPath;
 
     private readonly Dictionary<string, PluginHost> _hosts = new();
+    private readonly Dictionary<string, string> _dllPaths = new();
     private FileSystemWatcher? _watcher;
 
     public PluginOrchestrator(
@@ -27,6 +30,7 @@ internal class PluginOrchestrator : BackgroundService
     {
         _contextFactory = contextFactory;
         _registry = registry;
+        _configService = configService;
         _config = configService.Config;
         _pluginsPath = directoriesConfig[DirectoryType.Plugins];
     }
@@ -49,10 +53,19 @@ internal class PluginOrchestrator : BackgroundService
 
     private async Task LoadAllPluginsAsync(CancellationToken ct)
     {
-        foreach (var file in Directory.EnumerateFiles(_pluginsPath, "*.dll"))
+        var dlls = Directory.EnumerateFiles(_pluginsPath, "*.dll").ToList();
+        _logger.Information("Scanning plugins directory: {Path} ({Count} DLL(s) found)", _pluginsPath, dlls.Count);
+
+        foreach (var file in dlls)
         {
             await TryLoadPluginAsync(file, ct);
         }
+
+        _logger.Information(
+            "Plugin startup complete — {Running}/{Total} plugin(s) running",
+            _hosts.Count,
+            dlls.Count
+        );
     }
 
     private async Task StartPluginAsync(ISourcePlugin plugin, PluginLoadContext loadContext, CancellationToken ct)
@@ -66,42 +79,54 @@ internal class PluginOrchestrator : BackgroundService
         var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
         var runTask = plugin is IPollingPlugin pollingPlugin
-            ? Task.Run(
-                async () =>
-                {
-                    while (!cts.Token.IsCancellationRequested)
-                    {
-                        try
-                        {
-                            await pollingPlugin.PollAsync(pluginCtx, cts.Token);
-                        }
-                        catch (OperationCanceledException) { break; }
-                        catch (Exception ex)
-                        {
-                            _logger.Error(ex, "Plugin {Id} poll error", plugin.Id);
-                        }
+                          ? Task.Run(
+                              async () =>
+                              {
+                                  try
+                                  {
+                                      await plugin.StartAsync(pluginCtx, cts.Token);
+                                  }
+                                  catch (OperationCanceledException) { return; }
+                                  catch (Exception ex)
+                                  {
+                                      _logger.Error(ex, "Plugin {Id} StartAsync failed", plugin.Id);
 
-                        await Task.Delay(pollingPlugin.Interval, cts.Token)
-                                  .ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
-                    }
-                },
-                cts.Token
-            )
-            : Task.Run(
-                async () =>
-                {
-                    try
-                    {
-                        await plugin.StartAsync(pluginCtx, cts.Token);
-                    }
-                    catch (OperationCanceledException) { }
-                    catch (Exception ex)
-                    {
-                        _logger.Error(ex, "Plugin {Id} crashed", plugin.Id);
-                    }
-                },
-                cts.Token
-            );
+                                      return;
+                                  }
+
+                                  while (!cts.Token.IsCancellationRequested)
+                                  {
+                                      try
+                                      {
+                                          await pollingPlugin.PollAsync(pluginCtx, cts.Token);
+                                      }
+                                      catch (OperationCanceledException) { break; }
+                                      catch (Exception ex)
+                                      {
+                                          _logger.Error(ex, "Plugin {Id} poll error", plugin.Id);
+                                      }
+
+                                      await Task.Delay(pollingPlugin.Interval, cts.Token)
+                                                .ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+                                  }
+                              },
+                              cts.Token
+                          )
+                          : Task.Run(
+                              async () =>
+                              {
+                                  try
+                                  {
+                                      await plugin.StartAsync(pluginCtx, cts.Token);
+                                  }
+                                  catch (OperationCanceledException) { }
+                                  catch (Exception ex)
+                                  {
+                                      _logger.Error(ex, "Plugin {Id} crashed", plugin.Id);
+                                  }
+                              },
+                              cts.Token
+                          );
 
         var host = new PluginHost(plugin, loadContext, cts, runTask);
         _hosts[plugin.Id] = host;
@@ -155,11 +180,13 @@ internal class PluginOrchestrator : BackgroundService
                 return;
             }
 
+            _dllPaths[plugin.Id] = dllPath;
+
             var entry = _config.Plugins.FirstOrDefault(p => p.Id == plugin.Id);
 
             if (entry is null || !entry.Enabled)
             {
-                _logger.Debug("Plugin {Id} not in config or disabled, skipping", plugin.Id);
+                _logger.Information("Plugin {Id} not in config or disabled, skipping", plugin.Id);
                 context.Unload();
 
                 return;
@@ -187,5 +214,110 @@ internal class PluginOrchestrator : BackgroundService
         _hosts.Remove(host.PluginId);
         _registry.Unregister(host.PluginId);
         _logger.Information("Unloaded plugin: {Id}", host.PluginId);
+    }
+
+    public IReadOnlyList<AvailablePluginResponse> GetAvailable()
+    {
+        var result = new List<AvailablePluginResponse>();
+
+        foreach (var dll in Directory.EnumerateFiles(_pluginsPath, "*.dll"))
+        {
+            try
+            {
+                var ctx = new PluginLoadContext(dll);
+                var assembly = ctx.LoadFromAssemblyPath(dll);
+                var pluginType = assembly.GetTypes()
+                                         .FirstOrDefault(t => !t.IsAbstract && t.IsAssignableTo(typeof(ISourcePlugin)));
+
+                if (pluginType is null) { ctx.Unload(); continue; }
+
+                if (Activator.CreateInstance(pluginType) is not ISourcePlugin plugin) { ctx.Unload(); continue; }
+
+                var entry = _config.Plugins.FirstOrDefault(p => p.Id == plugin.Id);
+
+                result.Add(new AvailablePluginResponse(
+                    plugin.Id, plugin.Name, plugin.Version, plugin.Author,
+                    plugin.Description, plugin.Categories, plugin.Icon,
+                    Enabled: entry is { Enabled: true },
+                    Running: _hosts.ContainsKey(plugin.Id)
+                ));
+
+                ctx.Unload();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to inspect plugin at {Path}", dll);
+            }
+        }
+
+        return result;
+    }
+
+    public async Task EnableAsync(string pluginId, CancellationToken ct)
+    {
+        var entry = _config.Plugins.FirstOrDefault(p => p.Id == pluginId);
+
+        if (entry is null)
+            _config.Plugins.Add(new PluginEntry { Id = pluginId, Enabled = true });
+        else
+            entry.Enabled = true;
+
+        _configService.Save();
+
+        if (_dllPaths.TryGetValue(pluginId, out var dll))
+        {
+            await TryLoadPluginAsync(dll, ct);
+        }
+        else
+        {
+            _logger.Warning("DLL for plugin {Id} not found in cache, rescanning", pluginId);
+            await LoadAllPluginsAsync(ct);
+        }
+    }
+
+    public async Task DisableAsync(string pluginId)
+    {
+        var entry = _config.Plugins.FirstOrDefault(p => p.Id == pluginId);
+
+        if (entry is not null)
+            entry.Enabled = false;
+
+        _configService.Save();
+
+        if (_hosts.TryGetValue(pluginId, out var host))
+        {
+            await host.StopAsync();
+            _hosts.Remove(pluginId);
+            _registry.Unregister(pluginId);
+            _logger.Information("Disabled plugin: {Id}", pluginId);
+        }
+    }
+
+    public async Task ReloadAsync(string pluginId, CancellationToken ct)
+    {
+        if (_hosts.TryGetValue(pluginId, out var host))
+        {
+            await host.StopAsync();
+            _hosts.Remove(pluginId);
+            _registry.Unregister(pluginId);
+        }
+
+        if (_dllPaths.TryGetValue(pluginId, out var dll))
+        {
+            await TryLoadPluginAsync(dll, ct);
+            _logger.Information("Reloaded plugin: {Id}", pluginId);
+        }
+        else
+        {
+            _logger.Warning("Cannot reload {Id}: DLL not found in cache", pluginId);
+        }
+    }
+
+    public async Task ReloadAllAsync(CancellationToken ct)
+    {
+        _logger.Information("Reloading all plugins...");
+        await StopAllPluginsAsync();
+        _dllPaths.Clear();
+        await LoadAllPluginsAsync(ct);
     }
 }

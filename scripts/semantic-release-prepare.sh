@@ -14,7 +14,7 @@ FILES=()
 
 while IFS= read -r file; do
   FILES+=("$file")
-done < <(find src templates -name "*.csproj" -type f | sort)
+done < <(find src templates plugins -name "*.csproj" -type f | sort)
 
 for file in "${FILES[@]}"; do
   if [[ ! -f "$file" ]]; then

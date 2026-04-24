@@ -1,22 +1,22 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <AssemblyName>RssPlugin</AssemblyName>
+        <RootNamespace>RssPlugin</RootNamespace>
 
-        <!-- NuGet package metadata -->
-        <PackageId>Arrr.Core</PackageId>
-        <Version>1.1.0</Version>
+        <PackageId>Arrr.Plugin.Rss</PackageId>
+        <Version>1.0.0</Version>
         <Authors>Tom</Authors>
         <Company>orivega.io</Company>
-        <Description>Core interfaces and models for writing Arrr notification plugins (ISourcePlugin, IPollingPlugin, IEventBus).</Description>
-        <PackageTags>arrr;notifications;linux;plugin;dbus</PackageTags>
+        <Description>RSS/Atom feed plugin for Arrr — polls feeds and publishes desktop notifications for new items.</Description>
+        <PackageTags>arrr;arrr-plugin;plugin;rss;atom;notifications;linux</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageProjectUrl>https://github.com/tgiachi/Arrr</PackageProjectUrl>
         <RepositoryUrl>https://github.com/tgiachi/Arrr</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
-        <PackageReadmeFile>README.nuget.md</PackageReadmeFile>
         <PackageIcon>arr_logo.png</PackageIcon>
         <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
         <IncludeSymbols>true</IncludeSymbols>
@@ -24,12 +24,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.7"/>
-        <PackageReference Include="Serilog" Version="4.3.1"/>
+        <PackageReference Include="Arrr.Core" Version="*"/>
+        <PackageReference Include="System.ServiceModel.Syndication" Version="10.0.0"/>
     </ItemGroup>
 
     <ItemGroup>
-        <None Include="README.nuget.md" Pack="true" PackagePath="\"/>
         <None Include="../../assets/arr_logo.png" Pack="true" PackagePath="\"/>
     </ItemGroup>
 

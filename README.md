@@ -140,18 +140,50 @@ GET /api/plugins
 X-Api-Key: <your-key>
 ```
 
-```json
-[
-  {
-    "id": "com.example.myplugin",
-    "name": "My Plugin",
-    "version": "1.0.0",
-    "author": "Someone",
-    "description": "Does something cool",
-    "categories": ["rss"],
-    "icon": ""
-  }
-]
+### List available plugins (all DLLs in plugins/)
+
+```http
+GET /api/plugins/available
+X-Api-Key: <your-key>
+```
+
+Returns each plugin with `enabled` and `running` fields.
+
+### Enable / Disable a plugin
+
+```http
+POST /api/plugins/{pluginId}/enable
+POST /api/plugins/{pluginId}/disable
+X-Api-Key: <your-key>
+```
+
+### Reload plugins
+
+```http
+POST /api/plugins/{pluginId}/reload    # reload single plugin
+POST /api/plugins/reload/all           # reload all plugins
+X-Api-Key: <your-key>
+```
+
+### Install a plugin from NuGet
+
+Plugins published on NuGet.org with the `arrr-plugin` tag can be installed directly:
+
+```http
+POST /api/plugins/install
+X-Api-Key: <your-key>
+Content-Type: application/json
+
+{ "packageId": "Arrr.Plugin.Rss", "version": "1.0.0" }
+```
+
+Omit `version` to install the latest. The installer downloads the package and its dependencies, extracts the DLLs into the `plugins/` directory and starts the plugin automatically.
+
+### Uninstall a plugin
+
+```http
+POST /api/plugins/Arrr.Plugin.Rss/uninstall
+X-Api-Key: <your-key>
 ```
 
 ---

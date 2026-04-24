@@ -14,4 +14,6 @@ internal class FakeConfigService : IConfigService
 
     public Task LoadAsync(CancellationToken ct = default)
         => Task.CompletedTask;
+
+    public void Save() { }
 }

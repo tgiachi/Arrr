@@ -31,6 +31,12 @@ internal class PluginHost
         catch (OperationCanceledException) { }
 
         _cts.Dispose();
+
+        if (Plugin is IDisposable disposable)
+        {
+            disposable.Dispose();
+        }
+
         _loadContext.Unload();
     }
 }

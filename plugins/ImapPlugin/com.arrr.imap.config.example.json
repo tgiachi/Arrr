@@ -1,0 +1,8 @@
+{
+  "Host": "imap.gmail.com",
+  "Port": 993,
+  "UseSsl": true,
+  "Username": "user@gmail.com",
+  "Password": "your-app-password",
+  "Folder": "INBOX"
+}

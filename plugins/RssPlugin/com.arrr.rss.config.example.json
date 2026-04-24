@@ -1,0 +1,12 @@
+{
+  "Feeds": [
+    {
+      "Url": "https://feeds.feedburner.com/TheHackersNews",
+      "Label": "The Hacker News"
+    },
+    {
+      "Url": "https://www.reddit.com/r/linux/.rss",
+      "Label": "r/linux"
+    }
+  ]
+}

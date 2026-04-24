@@ -15,4 +15,7 @@ public interface IConfigService
     /// Loads the configuration from disk. If the file does not exist, creates it with default values.
     /// </summary>
     Task LoadAsync(CancellationToken ct = default);
+
+    /// <summary>Persists the current configuration to disk.</summary>
+    void Save();
 }

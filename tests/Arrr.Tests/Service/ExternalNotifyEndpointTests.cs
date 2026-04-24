@@ -5,6 +5,7 @@ using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Services;
 using Arrr.Service.Api;
+using Arrr.Service.Internal;
 using Arrr.Service.Services;
 using Arrr.Tests.Support;
 using Microsoft.AspNetCore.Builder;
@@ -131,6 +132,8 @@ public class ExternalNotifyEndpointTests
         builder.Services.AddSingleton<IConfigService>(new FakeConfigService(apiKey));
         builder.Services.AddSingleton<IEventBus>(bus);
         builder.Services.AddSingleton<IPluginRegistry, PluginRegistryService>();
+        builder.Services.AddSingleton<IPluginManager>(new FakePluginManager());
+        builder.Services.AddSingleton<IPluginInstaller>(new FakePluginInstaller());
 
         var app = builder.Build();
         app.MapExternalApi();
