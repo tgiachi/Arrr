@@ -74,18 +74,24 @@ await ConsoleApp.RunAsync(
 
         var eventBus = app.Services.GetRequiredService<IEventBus>();
 
-        eventBus.Subscribe<ArrStartedEvent>(async (evt, token) =>
-            await eventBus.PublishAsync(
-                new Notification(
-                    Guid.NewGuid(), "arrr", "Arrr started",
-                    $"Listening on port {configService.Config.Web.Port}",
-                    evt.Timestamp, null
-                ), token
-            )
+        eventBus.Subscribe<ArrStartedEvent>(
+            async (evt, token) =>
+                await eventBus.PublishAsync(
+                    new Notification(
+                        Guid.NewGuid(),
+                        "arrr",
+                        "Arrr started",
+                        $"Listening on port {configService.Config.Web.Port}",
+                        evt.Timestamp,
+                        null
+                    ),
+                    token
+                )
         );
 
-        app.Lifetime.ApplicationStarted.Register(() =>
-            _ = eventBus.PublishAsync(new ArrStartedEvent(DateTimeOffset.UtcNow), ct)
+        app.Lifetime.ApplicationStarted.Register(
+            () =>
+                _ = eventBus.PublishAsync(new ArrStartedEvent(DateTimeOffset.UtcNow), ct)
         );
 
         app.Urls.Add($"http://0.0.0.0:{configService.Config.Web.Port}");
@@ -100,43 +106,7 @@ await ConsoleApp.RunAsync(
             Log.Logger.Information("Debug mode: OpenAPI at /openapi/v1.json — Scalar UI at /scalar/v1");
         }
 
-        app.MapGet(
-            "/callback/{pluginName}",
-            async (string pluginName, HttpContext ctx, IPluginRegistry registry) =>
-            {
-                var plugin = registry.GetAll()
-                                     .OfType<IHttpCallbackPlugin>()
-                                     .FirstOrDefault(p => p.Name.Equals(pluginName, StringComparison.OrdinalIgnoreCase));
-
-                if (plugin is null)
-                {
-                    ctx.Response.StatusCode = 404;
-
-                    return;
-                }
-
-                await plugin.HandleCallbackAsync(ctx, ct);
-            }
-        );
-
-        app.MapPost(
-            "/callback/{pluginName}",
-            async (string pluginName, HttpContext ctx, IPluginRegistry registry) =>
-            {
-                var plugin = registry.GetAll()
-                                     .OfType<IHttpCallbackPlugin>()
-                                     .FirstOrDefault(p => p.Name.Equals(pluginName, StringComparison.OrdinalIgnoreCase));
-
-                if (plugin is null)
-                {
-                    ctx.Response.StatusCode = 404;
-
-                    return;
-                }
-
-                await plugin.HandleCallbackAsync(ctx, ct);
-            }
-        );
+        app.MapPluginCallbacks(ct);
 
         await app.RunAsync(ct);
     }
