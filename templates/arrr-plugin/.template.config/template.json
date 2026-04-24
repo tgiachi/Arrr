@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Tom (tom@orivega.io)",
+  "classifications": ["Arrr", "Plugin", "Notifications"],
+  "identity": "Arrr.Plugin.Template",
+  "name": "Arrr Plugin",
+  "shortName": "arrr-plugin",
+  "description": "A polling plugin for the Arrr notification aggregator daemon.",
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  },
+  "sourceName": "MyPlugin",
+  "preferNameDirectory": true,
+  "symbols": {
+    "PluginId": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "com.example.myplugin",
+      "replaces": "com.example.myplugin",
+      "description": "Reverse-domain unique plugin ID (e.g. com.yourname.rss)"
+    },
+    "Author": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "Your Name",
+      "replaces": "Your Name",
+      "description": "Plugin author name"
+    },
+    "Interval": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "00:05:00",
+      "replaces": "00:05:00",
+      "description": "Polling interval as TimeSpan string (hh:mm:ss)"
+    }
+  }
+}
