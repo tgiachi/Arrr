@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AssemblyName>WhatsAppPlugin</AssemblyName>
+        <RootNamespace>WhatsAppPlugin</RootNamespace>
+
+        <PackageId>Arrr.Plugin.WhatsApp</PackageId>
+        <Version>1.0.0</Version>
+        <Authors>Tom</Authors>
+        <Description>WhatsApp plugin for Arrr — receives messages via whatsapp-bridge (whatsmeow).</Description>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Arrr.Core" Version="1.4.0" />
+        <PackageReference Include="QRCoder" Version="1.6.0" />
+    </ItemGroup>
+
+</Project>
