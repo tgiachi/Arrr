@@ -9,7 +9,7 @@ import {
   Text,
   Tooltip,
 } from '@chakra-ui/react'
-import { RefreshCw, Settings2, Trash2 } from 'lucide-react'
+import { RefreshCw, Settings2, Trash2, Webhook } from 'lucide-react'
 import type { Plugin } from '../types'
 
 interface Props {
@@ -19,9 +19,10 @@ interface Props {
   onReload: (plugin: Plugin) => void
   onUninstall: (plugin: Plugin) => void
   onConfigure: (plugin: Plugin) => void
+  onCallback: (plugin: Plugin) => void
 }
 
-export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onConfigure }: Props) {
+export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onConfigure, onCallback }: Props) {
   const statusColor = plugin.running ? '#4ade80' : plugin.enabled ? '#facc15' : '#4b5563'
   const statusLabel = plugin.running ? 'Running' : plugin.enabled ? 'Starting' : 'Disabled'
 
@@ -84,6 +85,27 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
                 <Tooltip.Content bg="gray.800" color="white" fontSize="xs">Configure</Tooltip.Content>
               </Tooltip.Positioner>
             </Tooltip.Root>
+
+            {plugin.hasCallback && (
+              <Tooltip.Root>
+                <Tooltip.Trigger asChild>
+                  <IconButton
+                    aria-label="Send callback"
+                    size="xs"
+                    variant="ghost"
+                    color="gray.400"
+                    _hover={{ color: 'cyan.300', bg: 'whiteAlpha.100' }}
+                    onClick={() => onCallback(plugin)}
+                    disabled={busy}
+                  >
+                    <Webhook size={13} />
+                  </IconButton>
+                </Tooltip.Trigger>
+                <Tooltip.Positioner>
+                  <Tooltip.Content bg="gray.800" color="white" fontSize="xs">Send callback</Tooltip.Content>
+                </Tooltip.Positioner>
+              </Tooltip.Root>
+            )}
 
             <Tooltip.Root>
               <Tooltip.Trigger asChild>

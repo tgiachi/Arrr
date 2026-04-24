@@ -25,4 +25,7 @@ internal class FakePluginManager : IPluginManager
 
     public Task SavePluginConfigAsync(string pluginId, JsonElement config, CancellationToken ct = default)
         => Task.CompletedTask;
+
+    public Task DeliverCallbackAsync(string pluginId, string body, CancellationToken ct = default)
+        => Task.CompletedTask;
 }

@@ -149,6 +149,33 @@ internal static class PluginsEndpoint
             }
         );
 
+        app.MapPost(
+            "/api/plugins/{pluginId}/callback",
+            async (HttpContext ctx, string pluginId, IConfigService configService, IPluginManager manager, CancellationToken ct) =>
+            {
+                if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                    return error!;
+
+                string body;
+                using (var reader = new System.IO.StreamReader(ctx.Request.Body))
+                    body = await reader.ReadToEndAsync(ct);
+
+                try
+                {
+                    await manager.DeliverCallbackAsync(pluginId, body, ct);
+                    return Results.Ok(new { pluginId, delivered = true });
+                }
+                catch (KeyNotFoundException)
+                {
+                    return Results.NotFound(new { pluginId, error = "Plugin not running or not found." });
+                }
+                catch (InvalidOperationException ex)
+                {
+                    return Results.BadRequest(new { pluginId, error = ex.Message });
+                }
+            }
+        );
+
         return app;
     }
 }

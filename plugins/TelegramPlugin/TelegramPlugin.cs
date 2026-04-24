@@ -7,7 +7,7 @@ using WTelegram;
 
 namespace TelegramPlugin;
 
-public class TelegramPlugin : ISourcePlugin, IConfigurablePlugin
+public class TelegramPlugin : ISourcePlugin, IConfigurablePlugin, ICallbackPlugin
 {
     public string Id => "com.arrr.telegram";
     public string Name => "Telegram";
@@ -18,7 +18,17 @@ public class TelegramPlugin : ISourcePlugin, IConfigurablePlugin
     public string Icon => "";
     public Type ConfigType => typeof(TelegramPluginConfig);
 
+    private TaskCompletionSource<string>? _pendingCode;
+
     public void Dispose() { }
+
+    public Task HandleCallbackAsync(string body, CancellationToken ct)
+    {
+        var code = body.Trim();
+        if (_pendingCode is not null && !_pendingCode.Task.IsCompleted)
+            _pendingCode.TrySetResult(code);
+        return Task.CompletedTask;
+    }
 
     public async Task StartAsync(IPluginContext context, CancellationToken ct)
     {
@@ -31,7 +41,6 @@ public class TelegramPlugin : ISourcePlugin, IConfigurablePlugin
         }
 
         var sessionPath = Path.ChangeExtension(context.ConfigPath, ".session");
-        var codeFile = Path.ChangeExtension(context.ConfigPath, ".code");
 
         string ConfigCallback(string what) => what switch
         {
@@ -39,7 +48,7 @@ public class TelegramPlugin : ISourcePlugin, IConfigurablePlugin
             "api_hash" => config.ApiHash,
             "phone_number" => config.PhoneNumber,
             "session_pathname" => sessionPath,
-            "verification_code" => WaitForCode(codeFile, context.Logger),
+            "verification_code" => WaitForCode(context.Logger, ct),
             "password" => config.TwoFactorPassword,
             _ => ""
         };
@@ -85,6 +94,32 @@ public class TelegramPlugin : ISourcePlugin, IConfigurablePlugin
         await Task.Delay(Timeout.Infinite, ct).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
     }
 
+    private string WaitForCode(ILogger logger, CancellationToken ct)
+    {
+        _pendingCode = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        logger.LogWarning(
+            "Telegram verification code required. Send it via POST /api/plugins/{Id}/callback with the code as plain text body.",
+            Id
+        );
+
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeoutCts.CancelAfter(TimeSpan.FromMinutes(10));
+
+        try
+        {
+            return _pendingCode.Task.GetAwaiter().GetResult();
+        }
+        catch (OperationCanceledException)
+        {
+            throw new TimeoutException("Telegram verification code not provided within 10 minutes.");
+        }
+        finally
+        {
+            _pendingCode = null;
+        }
+    }
+
     private static (string sender, string chat) ResolvePeer(UpdatesBase updates, Message msg)
     {
         var sender = "";
@@ -118,23 +153,4 @@ public class TelegramPlugin : ISourcePlugin, IConfigurablePlugin
         ChannelForbidden cf => cf.title,
         _ => ""
     };
-
-    private static string WaitForCode(string codeFile, ILogger logger)
-    {
-        logger.LogWarning("Telegram verification code required. Write the code (digits only) to: {Path}", codeFile);
-        File.WriteAllText(codeFile, "");
-
-        var deadline = DateTime.UtcNow.AddMinutes(10);
-        while (DateTime.UtcNow < deadline)
-        {
-            Thread.Sleep(2000);
-            if (!File.Exists(codeFile)) continue;
-            var code = File.ReadAllText(codeFile).Trim();
-            if (string.IsNullOrEmpty(code)) continue;
-            File.Delete(codeFile);
-            return code;
-        }
-
-        throw new TimeoutException("Telegram verification code not provided within 10 minutes.");
-    }
 }

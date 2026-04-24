@@ -15,6 +15,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrrApi } from './api'
 import { PluginCard } from './components/PluginCard'
 import { ConfigModal } from './components/ConfigModal'
+import { CallbackModal } from './components/CallbackModal'
 import { InstallPanel } from './components/InstallPanel'
 import { SettingsPanel } from './components/SettingsPanel'
 import type { Plugin, Settings as AppSettings } from './types'
@@ -45,6 +46,7 @@ export default function App() {
   const [reloadingAll, setReloadingAll] = useState(false)
   const [toasts, setToasts] = useState<Toast[]>([])
   const [configuringPlugin, setConfiguringPlugin] = useState<Plugin | null>(null)
+  const [callbackPlugin, setCallbackPlugin] = useState<Plugin | null>(null)
 
   const apiRef = useRef<ArrrApi | null>(null)
   apiRef.current = new ArrrApi(settings.baseUrl || '', settings.apiKey || '')
@@ -280,12 +282,23 @@ export default function App() {
                   onReload={handleReload}
                   onUninstall={handleUninstall}
                   onConfigure={setConfiguringPlugin}
+                  onCallback={setCallbackPlugin}
                 />
               ))}
             </SimpleGrid>
           )}
         </Grid>
       </Box>
+
+      {/* Callback modal */}
+      {callbackPlugin && (
+        <CallbackModal
+          plugin={callbackPlugin}
+          api={api()}
+          onClose={() => setCallbackPlugin(null)}
+          onToast={toast}
+        />
+      )}
 
       {/* Config modal */}
       {configuringPlugin && (

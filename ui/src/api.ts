@@ -66,4 +66,12 @@ export class ArrrApi {
       body: JSON.stringify(config),
     })
   }
+
+  async sendCallback(pluginId: string, body: string) {
+    await this.req(`/api/plugins/${encodeURIComponent(pluginId)}/callback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body,
+    })
+  }
 }

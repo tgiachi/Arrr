@@ -247,7 +247,8 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
                     plugin.Id, plugin.Name, plugin.Version, plugin.Author,
                     plugin.Description, plugin.Categories, plugin.Icon,
                     Enabled: entry is { Enabled: true },
-                    Running: _hosts.ContainsKey(plugin.Id)
+                    Running: _hosts.ContainsKey(plugin.Id),
+                    HasCallback: plugin is ICallbackPlugin
                 ));
 
                 ctx.Unload();
@@ -427,5 +428,16 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
         {
             ctx.Unload();
         }
+    }
+
+    public async Task DeliverCallbackAsync(string pluginId, string body, CancellationToken ct = default)
+    {
+        if (!_hosts.TryGetValue(pluginId, out var host))
+            throw new KeyNotFoundException($"Plugin '{pluginId}' is not running.");
+
+        if (host.Plugin is not ICallbackPlugin callbackPlugin)
+            throw new InvalidOperationException($"Plugin '{pluginId}' does not support callbacks.");
+
+        await callbackPlugin.HandleCallbackAsync(body, ct);
     }
 }

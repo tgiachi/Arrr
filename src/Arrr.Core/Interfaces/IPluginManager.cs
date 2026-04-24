@@ -33,4 +33,10 @@ public interface IPluginManager
     /// encrypting any <c>[Sensitive]</c> fields before writing.
     /// </summary>
     Task SavePluginConfigAsync(string pluginId, JsonElement config, CancellationToken ct = default);
+
+    /// <summary>
+    /// Delivers an arbitrary payload to a running plugin that implements <see cref="ICallbackPlugin"/>.
+    /// Throws <see cref="KeyNotFoundException"/> if the plugin is not running or does not support callbacks.
+    /// </summary>
+    Task DeliverCallbackAsync(string pluginId, string body, CancellationToken ct = default);
 }

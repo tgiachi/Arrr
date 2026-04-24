@@ -8,6 +8,7 @@ export interface Plugin {
   icon: string
   enabled: boolean
   running: boolean
+  hasCallback: boolean
 }
 
 export interface Settings {
