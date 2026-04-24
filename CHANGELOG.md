@@ -1,3 +1,10 @@
+## [1.4.0](https://github.com/tgiachi/Arrr/compare/v1.3.0...v1.4.0) (2026-04-24)
+
+### Features
+
+* **ci:** add multi-platform whatsapp-bridge build and TelegramBotSink/WhatsApp NuGet publishing ([eadf5d1](https://github.com/tgiachi/Arrr/commit/eadf5d10bbe8128fd37e06e260bffa374e3a11fa))
+* **sink:** add Arrr.Sink.Telegram — delivers notifications via Telegram Bot API ([38044fc](https://github.com/tgiachi/Arrr/commit/38044fcb0e10b5b7aa58ea4aee63d58652e18ce7))
+
 ## [1.3.0](https://github.com/tgiachi/Arrr/compare/v1.2.1...v1.3.0) (2026-04-24)
 
 ### Features
