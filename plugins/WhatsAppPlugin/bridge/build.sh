@@ -18,5 +18,5 @@ EXT=""
 [ "$OS" = "windows" ] && EXT=".exe"
 
 mkdir -p "$RID"
-go build -tags sqlite_fts5 -o "${RID}/whatsapp-bridge${EXT}" .
+CGO_ENABLED=0 go build -o "${RID}/whatsapp-bridge${EXT}" .
 echo "Built: $(pwd)/${RID}/whatsapp-bridge${EXT}"

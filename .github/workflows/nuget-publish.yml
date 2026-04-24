@@ -6,84 +6,29 @@ on:
       - "v*"
 
 jobs:
-  build-bridge:
-    name: Build bridge (${{ matrix.rid }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            rid: linux-x64
-            ext: ""
-          - os: ubuntu-24.04-arm
-            rid: linux-arm64
-            ext: ""
-          - os: windows-latest
-            rid: win-x64
-            ext: ".exe"
-          - os: macos-13
-            rid: osx-x64
-            ext: ""
-          - os: macos-latest
-            rid: osx-arm64
-            ext: ""
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.25.x"
-
-      - name: Build whatsapp-bridge
-        working-directory: plugins/WhatsAppPlugin/bridge
-        run: go build -tags sqlite_fts5 -o whatsapp-bridge${{ matrix.ext }} .
-
-      - name: Upload bridge artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: bridge-${{ matrix.rid }}
-          path: plugins/WhatsAppPlugin/bridge/whatsapp-bridge${{ matrix.ext }}
-
   publish:
     name: Build & Publish NuGet packages
     runs-on: ubuntu-latest
-    needs: build-bridge
     permissions:
       contents: read
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download bridge linux-x64
-        uses: actions/download-artifact@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          name: bridge-linux-x64
-          path: plugins/WhatsAppPlugin/bridge/linux-x64/
+          go-version: "1.26.x"
 
-      - name: Download bridge linux-arm64
-        uses: actions/download-artifact@v4
-        with:
-          name: bridge-linux-arm64
-          path: plugins/WhatsAppPlugin/bridge/linux-arm64/
-
-      - name: Download bridge win-x64
-        uses: actions/download-artifact@v4
-        with:
-          name: bridge-win-x64
-          path: plugins/WhatsAppPlugin/bridge/win-x64/
-
-      - name: Download bridge osx-x64
-        uses: actions/download-artifact@v4
-        with:
-          name: bridge-osx-x64
-          path: plugins/WhatsAppPlugin/bridge/osx-x64/
-
-      - name: Download bridge osx-arm64
-        uses: actions/download-artifact@v4
-        with:
-          name: bridge-osx-arm64
-          path: plugins/WhatsAppPlugin/bridge/osx-arm64/
+      - name: Build whatsapp-bridge (all platforms)
+        working-directory: plugins/WhatsAppPlugin/bridge
+        run: |
+          mkdir -p linux-x64 linux-arm64 win-x64 osx-x64 osx-arm64
+          CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -o linux-x64/whatsapp-bridge   .
+          CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build -o linux-arm64/whatsapp-bridge  .
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o win-x64/whatsapp-bridge.exe  .
+          CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -o osx-x64/whatsapp-bridge      .
+          CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -o osx-arm64/whatsapp-bridge    .
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
