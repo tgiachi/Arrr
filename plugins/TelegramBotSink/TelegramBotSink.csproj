@@ -8,7 +8,7 @@
         <RootNamespace>TelegramBotSink</RootNamespace>
 
         <PackageId>Arrr.Sink.Telegram</PackageId>
-        <Version>1.4.0</Version>
+        <Version>1.4.1</Version>
         <Authors>Tom</Authors>
         <Company>orivega.io</Company>
         <Description>Telegram Bot sink for Arrr — delivers notifications to a Telegram chat or group via Bot API.</Description>

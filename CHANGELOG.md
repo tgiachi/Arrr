@@ -1,3 +1,9 @@
+## [1.4.1](https://github.com/tgiachi/Arrr/compare/v1.4.0...v1.4.1) (2026-04-24)
+
+### Bug Fixes
+
+* **bridge:** replace go-sqlite3 (CGO) with modernc.org/sqlite (pure Go) ([c571c85](https://github.com/tgiachi/Arrr/commit/c571c855178b5d0871f9039f1df8dc2e8ed7ebae))
+
 ## [1.4.0](https://github.com/tgiachi/Arrr/compare/v1.3.0...v1.4.0) (2026-04-24)
 
 ### Features
