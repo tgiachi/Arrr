@@ -1,4 +1,4 @@
-# Arrr! 🏴‍☠️
+# Arrr! ☠️
 
 <p align="center">
   <img src="assets/arr_logo.png" alt="Arrr! logo" width="128"/>
