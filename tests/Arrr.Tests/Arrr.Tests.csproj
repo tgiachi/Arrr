@@ -35,6 +35,7 @@
         <ProjectReference Include="..\..\plugins\SignalRSink\SignalRSink.csproj"/>
         <ProjectReference Include="..\..\plugins\NtfySink\NtfySink.csproj"/>
         <ProjectReference Include="..\..\plugins\SmtpSink\SmtpSink.csproj"/>
+        <ProjectReference Include="..\..\plugins\CalDavSource\CalDavSource.csproj"/>
     </ItemGroup>
 
 </Project>

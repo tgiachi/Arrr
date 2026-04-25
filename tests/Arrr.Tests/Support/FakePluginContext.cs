@@ -6,18 +6,30 @@ namespace Arrr.Tests.Support;
 
 internal class FakePluginContext : IPluginContext
 {
-    public string ConfigPath => "/tmp/fake.config";
-    public ILogger Logger => NullLogger.Instance;
-    public string CallbackUrl => "/callback/fake";
-    public IEventBus EventBus { get; }
+    private readonly Func<Type, object>? _configFactory;
 
-    public FakePluginContext(IEventBus eventBus)
+    public string    ConfigPath  => "/tmp/fake.config";
+    public ILogger   Logger      => NullLogger.Instance;
+    public string    CallbackUrl => "/callback/fake";
+    public IEventBus EventBus    { get; }
+
+    public FakePluginContext(IEventBus eventBus, Func<Type, object>? configFactory = null)
     {
-        EventBus = eventBus;
+        EventBus        = eventBus;
+        _configFactory  = configFactory;
     }
 
     public Task<T> LoadConfigAsync<T>(CancellationToken ct = default) where T : new()
-        => Task.FromResult(new T());
+    {
+        if (_configFactory is not null)
+        {
+            var result = _configFactory(typeof(T));
+            if (result is T typed)
+                return Task.FromResult(typed);
+        }
+
+        return Task.FromResult(new T());
+    }
 
     public Task SaveConfigAsync<T>(T config, CancellationToken ct = default)
         => Task.CompletedTask;
