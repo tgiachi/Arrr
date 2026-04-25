@@ -8,7 +8,7 @@ import App from './App'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ChakraProvider value={system}>
-      <ThemeProvider attribute="data-theme" defaultTheme="dark" disableTransitionOnChange={false}>
+      <ThemeProvider attribute="class" defaultTheme="dark" disableTransitionOnChange={false}>
         <App />
       </ThemeProvider>
     </ChakraProvider>
