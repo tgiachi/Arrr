@@ -72,6 +72,8 @@ jobs:
           dotnet build plugins/NtfySink/NtfySink.csproj     -c Release --no-restore
           dotnet build plugins/SmtpSink/SmtpSink.csproj     -c Release --no-restore
           dotnet build plugins/CalDavSource/CalDavSource.csproj -c Release --no-restore
+          dotnet restore plugins/WebhookSink/WebhookSink.csproj
+          dotnet build plugins/WebhookSink/WebhookSink.csproj   -c Release --no-restore
 
       - name: Test
         run: dotnet test tests/Arrr.Tests/Arrr.Tests.csproj -c Release --filter "Category!=Integration"
@@ -129,6 +131,11 @@ jobs:
             -p:Version="$VERSION" \
             -o ./nupkg
           dotnet pack plugins/CalDavSource/CalDavSource.csproj \
+            -c Release \
+            --no-build \
+            -p:Version="$VERSION" \
+            -o ./nupkg
+          dotnet pack plugins/WebhookSink/WebhookSink.csproj \
             -c Release \
             --no-build \
             -p:Version="$VERSION" \

@@ -12,5 +12,6 @@
         <Project Path="plugins/NtfySink/NtfySink.csproj"/>
         <Project Path="plugins/SmtpSink/SmtpSink.csproj"/>
         <Project Path="plugins/CalDavSource/CalDavSource.csproj"/>
+        <Project Path="plugins/WebhookSink/WebhookSink.csproj"/>
     </Folder>
 </Solution>
