@@ -1,0 +1,127 @@
+using System.Net;
+using System.Net.Sockets;
+using Arrr.Core.Data.Notifications;
+using Arrr.Tests.Support;
+using Microsoft.AspNetCore.SignalR.Client;
+using SignalRSink;
+using SignalRSink.Data;
+
+namespace Arrr.Tests.Sinks.SignalR;
+
+[TestFixture]
+public class SignalRSinkPluginTests
+{
+    private int _port;
+    private SignalRSinkPlugin? _sink;
+
+    [SetUp]
+    public void SetUp()
+    {
+        _port = GetFreePort();
+        _sink = new SignalRSinkPlugin();
+    }
+
+    [TearDown]
+    public async Task TearDown()
+    {
+        if (_sink is not null)
+        {
+            await _sink.StopAsync();
+            _sink = null;
+        }
+    }
+
+    [Test]
+    public async Task StartAsync_HubAcceptsSignalRConnections()
+    {
+        var ctx = new FakeSinkContext(configFactory: _ => new SignalRSinkConfig { Port = _port, HubPath = "notifications" });
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        await _sink!.StartAsync(ctx, cts.Token);
+
+        await using var conn = new HubConnectionBuilder()
+            .WithUrl($"http://localhost:{_port}/notifications")
+            .Build();
+
+        await conn.StartAsync(cts.Token);
+
+        Assert.That(conn.State, Is.EqualTo(HubConnectionState.Connected));
+
+        await conn.StopAsync();
+    }
+
+    [Test]
+    public async Task ConsumeAsync_ClientReceivesNotification()
+    {
+        var ctx = new FakeSinkContext(configFactory: _ => new SignalRSinkConfig { Port = _port, HubPath = "notifications" });
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        await _sink!.StartAsync(ctx, cts.Token);
+
+        var tcs = new TaskCompletionSource<Notification>();
+        cts.Token.Register(() => tcs.TrySetCanceled(cts.Token));
+
+        await using var conn = new HubConnectionBuilder()
+            .WithUrl($"http://localhost:{_port}/notifications")
+            .Build();
+
+        conn.On<Notification>("ReceiveNotification", n => tcs.TrySetResult(n));
+        await conn.StartAsync(cts.Token);
+
+        var notification = new Notification(Guid.NewGuid(), "test", "Title", "Body", DateTimeOffset.UtcNow, null);
+        await _sink.ConsumeAsync(notification, cts.Token);
+
+        var received = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.That(received, Is.EqualTo(notification));
+
+        await conn.StopAsync();
+    }
+
+    [Test]
+    public async Task ConsumeAsync_BeforeStartAsync_DoesNotThrow()
+    {
+        var notification = new Notification(Guid.NewGuid(), "test", "Title", "Body", DateTimeOffset.UtcNow, null);
+        await _sink!.ConsumeAsync(notification, CancellationToken.None);
+    }
+
+    [Test]
+    public async Task StopAsync_DisconnectsClients()
+    {
+        var ctx = new FakeSinkContext(configFactory: _ => new SignalRSinkConfig { Port = _port, HubPath = "notifications" });
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        await _sink!.StartAsync(ctx, cts.Token);
+
+        var disconnectedTcs = new TaskCompletionSource();
+        cts.Token.Register(() => disconnectedTcs.TrySetCanceled(cts.Token));
+
+        await using var conn = new HubConnectionBuilder()
+            .WithUrl($"http://localhost:{_port}/notifications")
+            .Build();
+
+        conn.Closed += _ => { disconnectedTcs.TrySetResult(); return Task.CompletedTask; };
+        await conn.StartAsync(cts.Token);
+        Assert.That(conn.State, Is.EqualTo(HubConnectionState.Connected));
+
+        await _sink.StopAsync();
+
+        await disconnectedTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.That(conn.State, Is.EqualTo(HubConnectionState.Disconnected));
+    }
+
+    [Test]
+    public void StopAsync_WhenNeverStarted_DoesNotThrow()
+    {
+        Assert.DoesNotThrowAsync(() => _sink!.StopAsync());
+    }
+
+    private static int GetFreePort()
+    {
+        using var l = new TcpListener(IPAddress.Loopback, 0);
+        l.Start();
+        int port = ((IPEndPoint)l.LocalEndpoint).Port;
+        l.Stop();
+        return port;
+    }
+}

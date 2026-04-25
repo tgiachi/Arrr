@@ -54,14 +54,10 @@ jobs:
 
       - name: Restore & build plugins
         run: |
-          dotnet restore plugins/RssPlugin/RssPlugin.csproj
-          dotnet restore plugins/ImapPlugin/ImapPlugin.csproj
-          dotnet restore plugins/TelegramBotSink/TelegramBotSink.csproj
-          dotnet restore plugins/WhatsAppPlugin/WhatsAppPlugin.csproj
-          dotnet build plugins/RssPlugin/RssPlugin.csproj -c Release --no-restore
-          dotnet build plugins/ImapPlugin/ImapPlugin.csproj -c Release --no-restore
-          dotnet build plugins/TelegramBotSink/TelegramBotSink.csproj -c Release --no-restore
-          dotnet build plugins/WhatsAppPlugin/WhatsAppPlugin.csproj -c Release --no-restore
+          for plugin in $(find plugins -name "*.csproj"); do
+            dotnet restore "$plugin"
+            dotnet build "$plugin" -c Release --no-restore
+          done
 
       - name: Test
         run: dotnet test tests/Arrr.Tests/Arrr.Tests.csproj -c Release --filter "Category!=Integration"
@@ -78,26 +74,9 @@ jobs:
             -c Release \
             -p:Version="$VERSION" \
             -o ./nupkg
-          dotnet pack plugins/RssPlugin/RssPlugin.csproj \
-            -c Release \
-            --no-build \
-            -p:Version="$VERSION" \
-            -o ./nupkg
-          dotnet pack plugins/ImapPlugin/ImapPlugin.csproj \
-            -c Release \
-            --no-build \
-            -p:Version="$VERSION" \
-            -o ./nupkg
-          dotnet pack plugins/TelegramBotSink/TelegramBotSink.csproj \
-            -c Release \
-            --no-build \
-            -p:Version="$VERSION" \
-            -o ./nupkg
-          dotnet pack plugins/WhatsAppPlugin/WhatsAppPlugin.csproj \
-            -c Release \
-            --no-build \
-            -p:Version="$VERSION" \
-            -o ./nupkg
+          for plugin in $(find plugins -name "*.csproj"); do
+            dotnet pack "$plugin" -c Release --no-build -p:Version="$VERSION" -o ./nupkg
+          done
 
       - name: Push to NuGet.org
         run: |

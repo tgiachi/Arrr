@@ -64,6 +64,7 @@ await ConsoleApp.RunAsync(
         builder.Services.AddSingleton<SinkOrchestrator>();
         builder.Services.AddHostedService(sp => sp.GetRequiredService<SinkOrchestrator>());
         builder.Services.AddSingleton<ISinkManager>(sp => sp.GetRequiredService<SinkOrchestrator>());
+        builder.Services.AddSingleton<IConfigBackupService, ConfigBackupService>();
         builder.Services.AddHostedService<EventBusHostedService>();
 
         builder.Services.AddOpenApi();
@@ -103,6 +104,7 @@ await ConsoleApp.RunAsync(
 
         app.MapExternalApi();
         app.MapSinksApi();
+        app.MapConfigBackupApi();
 
         if (configService.Config.IsDebug)
         {

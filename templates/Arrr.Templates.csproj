@@ -6,8 +6,8 @@
         <Version>1.4.1</Version>
         <Authors>Tom</Authors>
         <Company>orivega.io</Company>
-        <Description>dotnet new templates for writing Arrr notification plugins.</Description>
-        <PackageTags>arrr;notifications;linux;plugin;template;dotnet-new</PackageTags>
+        <Description>dotnet new templates for writing Arrr notification plugins and sinks.</Description>
+        <PackageTags>arrr;notifications;linux;plugin;sink;template;dotnet-new</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageProjectUrl>https://github.com/tgiachi/Arrr</PackageProjectUrl>
         <RepositoryUrl>https://github.com/tgiachi/Arrr</RepositoryUrl>
@@ -24,7 +24,9 @@
 
     <ItemGroup>
         <Content Include="arrr-plugin\**\*" Exclude="arrr-plugin\**\bin\**;arrr-plugin\**\obj\**"/>
+        <Content Include="arrr-sink\**\*"   Exclude="arrr-sink\**\bin\**;arrr-sink\**\obj\**"/>
         <Compile Remove="arrr-plugin\**\*"/>
+        <Compile Remove="arrr-sink\**\*"/>
         <None Include="../assets/arr_logo.png" Pack="true" PackagePath="\"/>
     </ItemGroup>
 
