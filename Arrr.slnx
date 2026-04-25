@@ -3,7 +3,11 @@
         <Project Path="src/Arrr.Core/Arrr.Core.csproj"/>
         <Project Path="src/Arrr.Service/Arrr.Service.csproj"/>
     </Folder>
-<Folder Name="/tests/">
+    <Folder Name="/tests/">
         <Project Path="tests/Arrr.Tests/Arrr.Tests.csproj"/>
+    </Folder>
+    <Folder Name="/plugins/">
+        <Project Path="plugins/WebSocketSink/WebSocketSink.csproj"/>
+        <Project Path="plugins/SignalRSink/SignalRSink.csproj"/>
     </Folder>
 </Solution>
