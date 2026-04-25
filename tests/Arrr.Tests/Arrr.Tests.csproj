@@ -37,6 +37,9 @@
         <ProjectReference Include="..\..\plugins\SmtpSink\SmtpSink.csproj"/>
         <ProjectReference Include="..\..\plugins\CalDavSource\CalDavSource.csproj"/>
         <ProjectReference Include="..\..\plugins\WebhookSink\WebhookSink.csproj"/>
+        <ProjectReference Include="..\..\plugins\GotifySink\GotifySink.csproj"/>
+        <ProjectReference Include="..\..\plugins\HomeAssistantSink\HomeAssistantSink.csproj"/>
+        <ProjectReference Include="..\..\plugins\MqttSource\MqttSource.csproj"/>
     </ItemGroup>
 
 </Project>

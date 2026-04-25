@@ -13,5 +13,8 @@
         <Project Path="plugins/SmtpSink/SmtpSink.csproj"/>
         <Project Path="plugins/CalDavSource/CalDavSource.csproj"/>
         <Project Path="plugins/WebhookSink/WebhookSink.csproj"/>
+        <Project Path="plugins/GotifySink/GotifySink.csproj"/>
+        <Project Path="plugins/HomeAssistantSink/HomeAssistantSink.csproj"/>
+        <Project Path="plugins/MqttSource/MqttSource.csproj"/>
     </Folder>
 </Solution>
