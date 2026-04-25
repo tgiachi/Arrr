@@ -30,6 +30,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\Arrr.Core\Arrr.Core.csproj"/>
         <ProjectReference Include="..\..\src\Arrr.Service\Arrr.Service.csproj"/>
+        <ProjectReference Include="..\..\plugins\WebSocketSink\WebSocketSink.csproj"/>
     </ItemGroup>
 
 </Project>
