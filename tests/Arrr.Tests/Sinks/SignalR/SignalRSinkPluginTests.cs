@@ -59,6 +59,7 @@ public class SignalRSinkPluginTests
         await _sink!.StartAsync(ctx, cts.Token);
 
         var tcs = new TaskCompletionSource<Notification>();
+        cts.Token.Register(() => tcs.TrySetCanceled(cts.Token));
 
         await using var conn = new HubConnectionBuilder()
             .WithUrl($"http://localhost:{_port}/notifications")
@@ -66,7 +67,6 @@ public class SignalRSinkPluginTests
 
         conn.On<Notification>("ReceiveNotification", n => tcs.TrySetResult(n));
         await conn.StartAsync(cts.Token);
-        await Task.Delay(100, cts.Token);
 
         var notification = new Notification(Guid.NewGuid(), "test", "Title", "Body", DateTimeOffset.UtcNow, null);
         await _sink.ConsumeAsync(notification, cts.Token);

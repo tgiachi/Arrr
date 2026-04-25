@@ -61,6 +61,7 @@ public class SignalRSinkPlugin : ISinkPlugin, IConfigurablePlugin
             await _app.StopAsync();
             await _app.DisposeAsync();
             _app = null;
+            _hubContext = null;
         }
     }
 }
