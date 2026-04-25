@@ -11,16 +11,19 @@ internal static class ApiAuth
         if (key == "")
         {
             error = Results.Problem("API key not configured", statusCode: 503);
+
             return false;
         }
 
         if (!ctx.Request.Headers.TryGetValue("X-Api-Key", out var provided) || provided != key)
         {
             error = Results.Unauthorized();
+
             return false;
         }
 
         error = null;
+
         return true;
     }
 }

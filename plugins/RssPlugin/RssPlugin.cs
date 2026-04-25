@@ -2,6 +2,7 @@ using System.ServiceModel.Syndication;
 using System.Xml;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
+using Arrr.Core.Utils;
 using Microsoft.Extensions.Logging;
 using RssPlugin.Data;
 
@@ -20,8 +21,8 @@ public class RssPlugin : IPollingPlugin, IConfigurablePlugin
 
     public string Id => "com.arrr.rss";
     public string Name => "RSS";
-    public string Version => "1.0.0";
-    public string Author => "Tom";
+    public string Version => VersionUtils.Get(typeof(RssPlugin));
+    public string Author => "tom (tom@orivega.io)";
     public string Description => "Polls RSS/Atom feeds and publishes notifications for new items.";
     public string[] Categories => ["rss", "news"];
     public string Icon => "";

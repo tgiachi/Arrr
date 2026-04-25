@@ -14,13 +14,20 @@ internal static class PluginsEndpoint
             (HttpContext ctx, IConfigService configService, IPluginRegistry registry) =>
             {
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
                     return error!;
+                }
 
                 var plugins = registry.GetAll()
                                       .Select(
                                           p => new PluginInfoResponse(
-                                              p.Id, p.Name, p.Version, p.Author,
-                                              p.Description, p.Categories, p.Icon
+                                              p.Id,
+                                              p.Name,
+                                              p.Version,
+                                              p.Author,
+                                              p.Description,
+                                              p.Categories,
+                                              p.Icon
                                           )
                                       )
                                       .ToList();
@@ -34,7 +41,9 @@ internal static class PluginsEndpoint
             (HttpContext ctx, IConfigService configService, IPluginManager manager) =>
             {
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
                     return error!;
+                }
 
                 return Results.Ok(manager.GetAvailable());
             }
@@ -42,12 +51,21 @@ internal static class PluginsEndpoint
 
         app.MapPost(
             "/api/plugins/{pluginId}/enable",
-            async (HttpContext ctx, string pluginId, IConfigService configService, IPluginManager manager, CancellationToken ct) =>
+            async (
+                HttpContext ctx,
+                string pluginId,
+                IConfigService configService,
+                IPluginManager manager,
+                CancellationToken ct
+            ) =>
             {
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
                     return error!;
+                }
 
                 await manager.EnableAsync(pluginId, ct);
+
                 return Results.Ok(new { pluginId, enabled = true });
             }
         );
@@ -57,21 +75,33 @@ internal static class PluginsEndpoint
             async (HttpContext ctx, string pluginId, IConfigService configService, IPluginManager manager) =>
             {
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
                     return error!;
+                }
 
                 await manager.DisableAsync(pluginId);
+
                 return Results.Ok(new { pluginId, enabled = false });
             }
         );
 
         app.MapPost(
             "/api/plugins/{pluginId}/reload",
-            async (HttpContext ctx, string pluginId, IConfigService configService, IPluginManager manager, CancellationToken ct) =>
+            async (
+                HttpContext ctx,
+                string pluginId,
+                IConfigService configService,
+                IPluginManager manager,
+                CancellationToken ct
+            ) =>
             {
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
                     return error!;
+                }
 
                 await manager.ReloadAsync(pluginId, ct);
+
                 return Results.Ok(new { pluginId, reloaded = true });
             }
         );
@@ -81,61 +111,101 @@ internal static class PluginsEndpoint
             async (HttpContext ctx, IConfigService configService, IPluginManager manager, CancellationToken ct) =>
             {
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
                     return error!;
+                }
 
                 await manager.ReloadAllAsync(ct);
+
                 return Results.Ok(new { reloaded = true });
             }
         );
 
         app.MapPost(
             "/api/plugins/install",
-            async (HttpContext ctx, InstallPluginRequest request, IConfigService configService, IPluginInstaller installer, CancellationToken ct) =>
+            async (
+                HttpContext ctx,
+                InstallPluginRequest request,
+                IConfigService configService,
+                IPluginInstaller installer,
+                CancellationToken ct
+            ) =>
             {
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
                     return error!;
+                }
 
                 await installer.InstallAsync(request.PackageId, request.Version, ct);
+
                 return Results.Ok(new { request.PackageId, installed = true });
             }
         );
 
         app.MapPost(
             "/api/plugins/{packageId}/uninstall",
-            async (HttpContext ctx, string packageId, IConfigService configService, IPluginInstaller installer, CancellationToken ct) =>
+            async (
+                HttpContext ctx,
+                string packageId,
+                IConfigService configService,
+                IPluginInstaller installer,
+                CancellationToken ct
+            ) =>
             {
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
                     return error!;
+                }
 
                 await installer.UninstallAsync(packageId, ct);
+
                 return Results.Ok(new { packageId, uninstalled = true });
             }
         );
 
         app.MapGet(
             "/api/plugins/{pluginId}/config",
-            async (HttpContext ctx, string pluginId, IConfigService configService, IPluginManager manager, CancellationToken ct) =>
+            async (
+                HttpContext ctx,
+                string pluginId,
+                IConfigService configService,
+                IPluginManager manager,
+                CancellationToken ct
+            ) =>
             {
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
                     return error!;
+                }
 
                 var response = await manager.GetPluginConfigAsync(pluginId, ct);
+
                 return response is null
-                    ? Results.NotFound(new { pluginId, error = "Plugin not found or has no config." })
-                    : Results.Ok(response);
+                           ? Results.NotFound(new { pluginId, error = "Plugin not found or has no config." })
+                           : Results.Ok(response);
             }
         );
 
         app.MapPost(
             "/api/plugins/{pluginId}/config",
-            async (HttpContext ctx, string pluginId, JsonElement body, IConfigService configService, IPluginManager manager, CancellationToken ct) =>
+            async (
+                HttpContext ctx,
+                string pluginId,
+                JsonElement body,
+                IConfigService configService,
+                IPluginManager manager,
+                CancellationToken ct
+            ) =>
             {
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
                     return error!;
+                }
 
                 try
                 {
                     await manager.SavePluginConfigAsync(pluginId, body, ct);
+
                     return Results.Ok(new { pluginId, saved = true });
                 }
                 catch (KeyNotFoundException)
@@ -151,18 +221,30 @@ internal static class PluginsEndpoint
 
         app.MapPost(
             "/api/plugins/{pluginId}/callback",
-            async (HttpContext ctx, string pluginId, IConfigService configService, IPluginManager manager, CancellationToken ct) =>
+            async (
+                HttpContext ctx,
+                string pluginId,
+                IConfigService configService,
+                IPluginManager manager,
+                CancellationToken ct
+            ) =>
             {
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
                     return error!;
+                }
 
                 string body;
-                using (var reader = new System.IO.StreamReader(ctx.Request.Body))
+
+                using (var reader = new StreamReader(ctx.Request.Body))
+                {
                     body = await reader.ReadToEndAsync(ct);
+                }
 
                 try
                 {
                     await manager.DeliverCallbackAsync(pluginId, body, ct);
+
                     return Results.Ok(new { pluginId, delivered = true });
                 }
                 catch (KeyNotFoundException)
@@ -181,14 +263,17 @@ internal static class PluginsEndpoint
             (HttpContext ctx, string pluginId, IConfigService configService, IPluginManager manager) =>
             {
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
                     return error!;
+                }
 
                 try
                 {
                     var code = manager.GetPendingQrCode(pluginId);
+
                     return code is null
-                        ? Results.NoContent()
-                        : Results.Ok(new { code });
+                               ? Results.NoContent()
+                               : Results.Ok(new { code });
                 }
                 catch (KeyNotFoundException)
                 {

@@ -17,6 +17,57 @@ public static class EncryptionUtils
 
     private static readonly Lazy<byte[]> _key = new(DeriveKey);
 
+    /// <summary>
+    /// Walks all public string properties decorated with <c>[Sensitive]</c> and
+    /// either encrypts or decrypts them in-place.
+    /// </summary>
+    public static void ApplySensitiveFields(object config, bool decrypt)
+    {
+        var props = config.GetType()
+                          .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                          .Where(
+                              p => p.PropertyType == typeof(string) &&
+                                   p.CanRead &&
+                                   p.CanWrite &&
+                                   p.GetCustomAttribute<SensitiveAttribute>() is not null
+                          );
+
+        foreach (var prop in props)
+        {
+            var value = prop.GetValue(config) as string;
+
+            if (string.IsNullOrEmpty(value))
+            {
+                continue;
+            }
+
+            prop.SetValue(
+                config,
+                decrypt ? Decrypt(value) :
+                IsEncrypted(value) ? value : Encrypt(value)
+            );
+        }
+    }
+
+    public static string Decrypt(string value)
+    {
+        if (!value.StartsWith(Prefix, StringComparison.Ordinal))
+        {
+            return value;
+        }
+
+        var blob = Convert.FromBase64String(value[Prefix.Length..]);
+        var nonce = blob[..NonceSize];
+        var tag = blob[^TagSize..];
+        var ciphertext = blob[NonceSize..^TagSize];
+        var plaintext = new byte[ciphertext.Length];
+
+        using var aes = new AesGcm(_key.Value, TagSize);
+        aes.Decrypt(nonce, ciphertext, tag, plaintext);
+
+        return Encoding.UTF8.GetString(plaintext);
+    }
+
     public static string Encrypt(string plaintext)
     {
         var data = Encoding.UTF8.GetBytes(plaintext);
@@ -35,56 +86,17 @@ public static class EncryptionUtils
         return Prefix + Convert.ToBase64String(blob);
     }
 
-    public static string Decrypt(string value)
-    {
-        if (!value.StartsWith(Prefix, StringComparison.Ordinal))
-            return value;
-
-        var blob = Convert.FromBase64String(value[Prefix.Length..]);
-        var nonce = blob[..NonceSize];
-        var tag = blob[^TagSize..];
-        var ciphertext = blob[NonceSize..^TagSize];
-        var plaintext = new byte[ciphertext.Length];
-
-        using var aes = new AesGcm(_key.Value, TagSize);
-        aes.Decrypt(nonce, ciphertext, tag, plaintext);
-
-        return Encoding.UTF8.GetString(plaintext);
-    }
-
-    public static bool IsEncrypted(string value) =>
-        value.StartsWith(Prefix, StringComparison.Ordinal);
-
-    /// <summary>
-    /// Walks all public string properties decorated with <c>[Sensitive]</c> and
-    /// either encrypts or decrypts them in-place.
-    /// </summary>
-    public static void ApplySensitiveFields(object config, bool decrypt)
-    {
-        var props = config.GetType()
-                          .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-                          .Where(p => p.PropertyType == typeof(string)
-                                   && p.CanRead && p.CanWrite
-                                   && p.GetCustomAttribute<SensitiveAttribute>() is not null);
-
-        foreach (var prop in props)
-        {
-            var value = prop.GetValue(config) as string;
-            if (string.IsNullOrEmpty(value)) continue;
-
-            prop.SetValue(config, decrypt
-                ? Decrypt(value)
-                : IsEncrypted(value) ? value : Encrypt(value));
-        }
-    }
+    public static bool IsEncrypted(string value)
+        => value.StartsWith(Prefix, StringComparison.Ordinal);
 
     private static byte[] DeriveKey()
     {
         var machineId = File.Exists("/etc/machine-id")
-            ? File.ReadAllText("/etc/machine-id").Trim()
-            : Environment.MachineName;
+                            ? File.ReadAllText("/etc/machine-id").Trim()
+                            : Environment.MachineName;
 
         var salt = "arrr-plugin-config-v1"u8.ToArray();
+
         return Rfc2898DeriveBytes.Pbkdf2(machineId, salt, 100_000, HashAlgorithmName.SHA256, 32);
     }
 }

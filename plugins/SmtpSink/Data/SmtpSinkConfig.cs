@@ -15,8 +15,7 @@ public class SmtpSinkConfig
     [Description("SMTP username")]
     public string Username { get; set; } = "";
 
-    [Description("SMTP password")]
-    [Sensitive]
+    [Description("SMTP password"), Sensitive]
     public string Password { get; set; } = "";
 
     [Description("Use STARTTLS/SSL")]

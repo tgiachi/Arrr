@@ -1,5 +1,6 @@
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
+using Arrr.Core.Utils;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
@@ -15,8 +16,8 @@ public class TelegramBotSinkPlugin : ISinkPlugin, IConfigurablePlugin
 
     public string Id          => "com.arrr.sink.telegram-bot";
     public string Name        => "Telegram Bot";
-    public string Version     => "1.0.0";
-    public string Author      => "Arrr";
+    public string Version     => VersionUtils.Get(typeof(TelegramBotSinkPlugin));
+    public string Author      => "tom (tom@orivega.io)";
     public string Description => "Delivers notifications to a Telegram chat or group via Bot API.";
     public string Icon        => "✈️";
     public Type   ConfigType  => typeof(TelegramBotSinkConfig);

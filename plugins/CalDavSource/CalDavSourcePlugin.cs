@@ -1,7 +1,7 @@
-using System.Net.Http.Headers;
 using System.Text;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
+using Arrr.Core.Utils;
 using CalDavSource.Data;
 using Ical.Net;
 using Microsoft.Extensions.Logging;
@@ -11,55 +11,56 @@ namespace CalDavSource;
 public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposable
 {
     private readonly HashSet<string> _notifiedKeys = [];
-    private readonly HttpClient      _httpClient;
-    private readonly TimeProvider    _timeProvider;
+    private readonly HttpClient _httpClient;
+    private readonly TimeProvider _timeProvider;
 
-    private CalDavSourceConfig _config       = new();
-    private IPluginContext?    _context;
-    private DateTimeOffset     _lastPollTime;
-    private bool               _firstPoll    = true;
+    private CalDavSourceConfig _config = new();
+    private IPluginContext? _context;
+    private DateTimeOffset _lastPollTime;
+    private bool _firstPoll = true;
 
-    public string   Id          => "com.arrr.plugin.caldav";
-    public string   Name        => "CalDAV";
-    public string   Version     => "1.0.0";
-    public string   Author      => "Arrr";
-    public string   Description => "Polls CalDAV/ICS calendars and publishes upcoming event notifications.";
-    public string[] Categories  => ["calendar"];
-    public string   Icon        => "📅";
-    public Type     ConfigType  => typeof(CalDavSourceConfig);
-    public TimeSpan Interval    => TimeSpan.FromMinutes(_config.PollIntervalMinutes);
+    public string Id => "com.arrr.plugin.caldav";
+    public string Name => "CalDAV";
+    public string Version => VersionUtils.Get(typeof(CalDavSourcePlugin));
+    public string Author => "tom (tom@orivega.io)";
+    public string Description => "Polls CalDAV/ICS calendars and publishes upcoming event notifications.";
+    public string[] Categories => ["calendar"];
+    public string Icon => "📅";
+    public Type ConfigType => typeof(CalDavSourceConfig);
+    public TimeSpan Interval => TimeSpan.FromMinutes(_config.PollIntervalMinutes);
 
     public CalDavSourcePlugin()
     {
-        _httpClient   = new HttpClient();
+        _httpClient = new();
         _timeProvider = TimeProvider.System;
     }
 
     internal CalDavSourcePlugin(HttpMessageHandler handler, TimeProvider timeProvider)
     {
-        _httpClient   = new HttpClient(handler);
+        _httpClient = new(handler);
         _timeProvider = timeProvider;
     }
 
-    public async Task StartAsync(IPluginContext context, CancellationToken ct)
-    {
-        _context = context;
-        _config  = await context.LoadConfigAsync<CalDavSourceConfig>(ct);
-        context.Logger.LogInformation("CalDAV plugin loaded, calendar: {Url}", _config.CalendarUrl);
-    }
+    public void Dispose()
+        => _httpClient.Dispose();
 
     public async Task PollAsync(IPluginContext context, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(_config.CalendarUrl))
+        {
             return;
+        }
 
-        var now        = _timeProvider.GetUtcNow();
+        var now = _timeProvider.GetUtcNow();
         var icsContent = await FetchIcsAsync(ct);
 
         if (icsContent is null)
+        {
             return;
+        }
 
         Calendar calendar;
+
         try
         {
             calendar = Calendar.Load(icsContent);
@@ -67,6 +68,7 @@ public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
         catch (Exception ex)
         {
             _context?.Logger.LogError(ex, "CalDAV: failed to parse ICS content");
+
             return;
         }
 
@@ -77,17 +79,22 @@ public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
             var start = evt.DtStart.AsDateTimeOffset;
 
             if (start < now || start > lookahead)
+            {
                 continue;
+            }
 
             foreach (var alertMin in _config.AlertMinutes)
             {
                 var triggerTime = start - TimeSpan.FromMinutes(alertMin);
-                var key         = $"{evt.Uid}_{alertMin}";
+                var key = $"{evt.Uid}_{alertMin}";
 
                 if (_firstPoll)
                 {
                     if (triggerTime <= now)
+                    {
                         _notifiedKeys.Add(key);
+                    }
+
                     continue;
                 }
 
@@ -109,14 +116,24 @@ public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
         }
 
         if (_firstPoll)
+        {
             _firstPoll = false;
+        }
 
         _lastPollTime = now;
+    }
+
+    public async Task StartAsync(IPluginContext context, CancellationToken ct)
+    {
+        _context = context;
+        _config = await context.LoadConfigAsync<CalDavSourceConfig>(ct);
+        context.Logger.LogInformation("CalDAV plugin loaded, calendar: {Url}", _config.CalendarUrl);
     }
 
     private static string BuildBody(string summary, string? description, int alertMinutes)
     {
         var desc = string.IsNullOrWhiteSpace(description) ? "" : $"\n{description}";
+
         return $"In {alertMinutes} minutes: {summary}{desc}";
     }
 
@@ -126,15 +143,15 @@ public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
 
         if (!string.IsNullOrEmpty(_config.Username) && !string.IsNullOrEmpty(_config.Password))
         {
-            var credentials = Convert.ToBase64String(
-                Encoding.UTF8.GetBytes($"{_config.Username}:{_config.Password}"));
-            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
+            var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_config.Username}:{_config.Password}"));
+            request.Headers.Authorization = new("Basic", credentials);
         }
 
         try
         {
             var response = await _httpClient.SendAsync(request, ct);
             response.EnsureSuccessStatusCode();
+
             return await response.Content.ReadAsStringAsync(ct);
         }
         catch (OperationCanceledException)
@@ -144,12 +161,8 @@ public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
         catch (Exception ex)
         {
             _context?.Logger.LogError(ex, "CalDAV fetch failed for {Url}", _config.CalendarUrl);
+
             return null;
         }
-    }
-
-    public void Dispose()
-    {
-        _httpClient.Dispose();
     }
 }

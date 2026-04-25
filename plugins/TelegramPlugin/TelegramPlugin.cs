@@ -1,5 +1,6 @@
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
+using Arrr.Core.Utils;
 using Microsoft.Extensions.Logging;
 using TelegramPlugin.Data;
 using TL;
@@ -11,8 +12,8 @@ public class TelegramPlugin : ISourcePlugin, IConfigurablePlugin, ICallbackPlugi
 {
     public string Id => "com.arrr.telegram";
     public string Name => "Telegram";
-    public string Version => "1.0.0";
-    public string Author => "Tom";
+    public string Version => VersionUtils.Get(typeof(TelegramPlugin));
+    public string Author => "tom (tom@orivega.io)";
     public string Description => "Receives Telegram messages via MTProto user account and publishes notifications.";
     public string[] Categories => ["telegram", "messages"];
     public string Icon => "";

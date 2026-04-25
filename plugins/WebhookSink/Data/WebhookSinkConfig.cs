@@ -8,8 +8,7 @@ public class WebhookSinkConfig
     [Description("Webhook endpoint URL — required")]
     public string Url { get; set; } = "";
 
-    [Description("Bearer token for authentication (optional)")]
-    [Sensitive]
+    [Description("Bearer token for authentication (optional)"), Sensitive]
     public string AuthToken { get; set; } = "";
 
     [Description("HTTP request timeout in seconds")]

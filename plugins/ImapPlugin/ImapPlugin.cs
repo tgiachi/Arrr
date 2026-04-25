@@ -1,5 +1,6 @@
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
+using Arrr.Core.Utils;
 using ImapPlugin.Data;
 using MailKit;
 using MailKit.Net.Imap;
@@ -17,8 +18,8 @@ public class ImapPlugin : IPollingPlugin, IConfigurablePlugin
 
     public string Id => "com.arrr.imap";
     public string Name => "IMAP";
-    public string Version => "1.0.0";
-    public string Author => "Tom";
+    public string Version => VersionUtils.Get(typeof(ImapPlugin));
+    public string Author => "tom (tom@orivega.io)";
     public string Description => "Polls an IMAP mailbox and publishes notifications for new messages.";
     public string[] Categories => ["email", "imap"];
     public string Icon => "";

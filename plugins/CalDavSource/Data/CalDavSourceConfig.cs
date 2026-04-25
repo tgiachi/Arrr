@@ -11,8 +11,7 @@ public class CalDavSourceConfig
     [Description("HTTP Basic Auth username (optional)")]
     public string Username { get; set; } = "";
 
-    [Description("HTTP Basic Auth password (optional)")]
-    [Sensitive]
+    [Description("HTTP Basic Auth password (optional)"), Sensitive]
     public string Password { get; set; } = "";
 
     [Description("List of advance alert times in minutes, e.g. [10, 15, 30]")]

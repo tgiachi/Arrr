@@ -6,5 +6,5 @@ public class ArrrConfig
     public bool IsDebug { get; set; } = false;
     public ArrrWebConfig Web { get; set; } = new();
     public List<PluginEntry> Plugins { get; set; } = [];
-    public List<SinkEntry>   Sinks   { get; set; } = [];
+    public List<SinkEntry> Sinks { get; set; } = [];
 }

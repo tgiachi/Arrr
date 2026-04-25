@@ -2,10 +2,10 @@ using System.Runtime.InteropServices;
 using Arrr.Core.Directories;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Types;
-using Arrr.Service.Data.Internal;
 using NuGet.Common;
 using NuGet.Frameworks;
 using NuGet.Packaging;
+using NuGet.Packaging.Core;
 using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
 using NuGet.Versioning;
@@ -38,6 +38,7 @@ internal class NuGetPluginInstaller : IPluginInstaller
         var metaResource = await source.GetResourceAsync<PackageMetadataResource>(ct);
 
         NuGetVersion pkgVersion;
+
         if (version is not null)
         {
             pkgVersion = NuGetVersion.Parse(version);
@@ -46,21 +47,28 @@ internal class NuGetPluginInstaller : IPluginInstaller
         {
             var versions = (await resource.GetAllVersionsAsync(packageId, cache, NullLogger.Instance, ct)).ToList();
             pkgVersion = versions.Count > 0
-                ? versions.Max()!
-                : throw new InvalidOperationException($"Package '{packageId}' not found on NuGet.org");
+                             ? versions.Max()!
+                             : throw new InvalidOperationException($"Package '{packageId}' not found on NuGet.org");
         }
 
-        var identity = new NuGet.Packaging.Core.PackageIdentity(packageId, pkgVersion);
+        var identity = new PackageIdentity(packageId, pkgVersion);
         var metadata = await metaResource.GetMetadataAsync(identity, cache, NullLogger.Instance, ct);
 
         if (metadata is null)
+        {
             throw new InvalidOperationException($"Package '{packageId}' v{pkgVersion} not found on NuGet.org");
+        }
 
         var tags = metadata.Tags?.Split([' ', ',', ';'], StringSplitOptions.RemoveEmptyEntries) ?? [];
         var isPlugin = tags.Contains("arrr-plugin", StringComparer.OrdinalIgnoreCase);
-        var isSink   = tags.Contains("arrr-sink",   StringComparer.OrdinalIgnoreCase);
+        var isSink = tags.Contains("arrr-sink", StringComparer.OrdinalIgnoreCase);
+
         if (!isPlugin && !isSink)
-            throw new InvalidOperationException($"Package '{packageId}' is not an Arrr plugin or sink (missing 'arrr-plugin' / 'arrr-sink' tag)");
+        {
+            throw new InvalidOperationException(
+                $"Package '{packageId}' is not an Arrr plugin or sink (missing 'arrr-plugin' / 'arrr-sink' tag)"
+            );
+        }
 
         _logger.Information("Installing {PackageId} v{Version}...", packageId, pkgVersion);
 
@@ -68,9 +76,14 @@ internal class NuGetPluginInstaller : IPluginInstaller
         var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         await DownloadPackageAsync(resource, cache, packageId, pkgVersion, installedFiles, visited, ct);
 
-        _manifest.Add(new InstalledPluginEntry(packageId, pkgVersion.ToString(), installedFiles.ToArray()));
+        _manifest.Add(new(packageId, pkgVersion.ToString(), installedFiles.ToArray()));
 
-        _logger.Information("Installed {PackageId} v{Version} — {Count} file(s)", packageId, pkgVersion, installedFiles.Count);
+        _logger.Information(
+            "Installed {PackageId} v{Version} — {Count} file(s)",
+            packageId,
+            pkgVersion,
+            installedFiles.Count
+        );
 
         await _pluginManager.ReloadAllAsync(ct);
     }
@@ -78,9 +91,11 @@ internal class NuGetPluginInstaller : IPluginInstaller
     public async Task UninstallAsync(string packageId, CancellationToken ct)
     {
         var entry = _manifest.Remove(packageId);
+
         if (entry is null)
         {
             _logger.Warning("Package '{PackageId}' not found in manifest", packageId);
+
             return;
         }
 
@@ -89,6 +104,7 @@ internal class NuGetPluginInstaller : IPluginInstaller
         foreach (var file in entry.Files)
         {
             var path = Path.Combine(_pluginsPath, file);
+
             if (File.Exists(path))
             {
                 File.Delete(path);
@@ -106,15 +122,25 @@ internal class NuGetPluginInstaller : IPluginInstaller
         NuGetVersion version,
         List<string> installedFiles,
         HashSet<string> visited,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
-        if (!visited.Add($"{packageId}:{version}")) return;
-        if (IsHostProvided(packageId)) return;
+        if (!visited.Add($"{packageId}:{version}"))
+        {
+            return;
+        }
+
+        if (IsHostProvided(packageId))
+        {
+            return;
+        }
 
         using var ms = new MemoryStream();
+
         if (!await resource.CopyNupkgToStreamAsync(packageId, version, ms, cache, NullLogger.Instance, ct))
         {
             _logger.Warning("Could not download {PackageId} v{Version}", packageId, version);
+
             return;
         }
 
@@ -136,12 +162,15 @@ internal class NuGetPluginInstaller : IPluginInstaller
                 await src.CopyToAsync(dst, ct);
 
                 if (!installedFiles.Contains(fileName))
+                {
                     installedFiles.Add(fileName);
+                }
             }
         }
 
         // Extract native tool binaries matching the current runtime (e.g. whatsapp-bridge)
         var toolFiles = reader.GetFiles(GetNativeToolsPath()).ToList();
+
         foreach (var item in toolFiles)
         {
             var fileName = Path.GetFileName(item);
@@ -153,23 +182,35 @@ internal class NuGetPluginInstaller : IPluginInstaller
 
             if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
             {
-                File.SetUnixFileMode(dest,
-                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
-                    UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
-                    UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+                File.SetUnixFileMode(
+                    dest,
+                    UnixFileMode.UserRead |
+                    UnixFileMode.UserWrite |
+                    UnixFileMode.UserExecute |
+                    UnixFileMode.GroupRead |
+                    UnixFileMode.GroupExecute |
+                    UnixFileMode.OtherRead |
+                    UnixFileMode.OtherExecute
+                );
             }
 
             if (!installedFiles.Contains(fileName))
+            {
                 installedFiles.Add(fileName);
+            }
         }
 
         var nuspec = await reader.GetNuspecReaderAsync(ct);
+
         foreach (var dep in nuspec.GetDependencyGroups().SelectMany(g => g.Packages))
         {
             var depVersions = await resource.GetAllVersionsAsync(dep.Id, cache, NullLogger.Instance, ct);
             var best = depVersions.FindBestMatch(dep.VersionRange, v => v);
+
             if (best is not null)
+            {
                 await DownloadPackageAsync(resource, cache, dep.Id, best, installedFiles, visited, ct);
+            }
         }
     }
 
@@ -177,26 +218,27 @@ internal class NuGetPluginInstaller : IPluginInstaller
     {
         var reducer = new FrameworkReducer();
         var best = reducer.GetNearest(_targetFramework, groups.Select(g => g.TargetFramework));
+
         return best is null ? null : groups.FirstOrDefault(g => g.TargetFramework == best);
     }
 
-    private static bool IsHostProvided(string id) =>
-        id.StartsWith("Microsoft.", StringComparison.OrdinalIgnoreCase) ||
-        id.StartsWith("System.", StringComparison.OrdinalIgnoreCase) ||
-        id.StartsWith("runtime.", StringComparison.OrdinalIgnoreCase) ||
-        id.Equals("Arrr.Core", StringComparison.OrdinalIgnoreCase) ||
-        id.Equals("NETStandard.Library", StringComparison.OrdinalIgnoreCase);
-
     private static string GetNativeToolsPath()
     {
-        var os = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win"
-               : RuntimeInformation.IsOSPlatform(OSPlatform.OSX)     ? "osx"
-               :                                                         "linux";
+        var os = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win" :
+                 RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "osx" : "linux";
         var arch = RuntimeInformation.OSArchitecture switch
         {
             Architecture.Arm64 => "arm64",
             _                  => "x64"
         };
+
         return $"tools/{os}-{arch}";
     }
+
+    private static bool IsHostProvided(string id)
+        => id.StartsWith("Microsoft.", StringComparison.OrdinalIgnoreCase) ||
+           id.StartsWith("System.", StringComparison.OrdinalIgnoreCase) ||
+           id.StartsWith("runtime.", StringComparison.OrdinalIgnoreCase) ||
+           id.Equals("Arrr.Core", StringComparison.OrdinalIgnoreCase) ||
+           id.Equals("NETStandard.Library", StringComparison.OrdinalIgnoreCase);
 }

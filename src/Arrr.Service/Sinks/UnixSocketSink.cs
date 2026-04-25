@@ -4,7 +4,6 @@ using System.Text;
 using System.Text.Json;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
-using Microsoft.Extensions.Logging;
 
 namespace Arrr.Service.Sinks;
 
@@ -25,32 +24,13 @@ internal class UnixSocketSink : ISinkPlugin, IConfigurablePlugin
     private CancellationTokenSource? _acceptCts;
     private Task? _acceptTask;
 
-    public string Id          => "com.arrr.sink.socket";
-    public string Name        => "Unix Socket";
-    public string Version     => "1.0.0";
-    public string Author      => "Arrr";
+    public string Id => "com.arrr.sink.socket";
+    public string Name => "Unix Socket";
+    public string Version => "1.0.0";
+    public string Author => "Arrr";
     public string Description => "Broadcasts notifications as newline-delimited JSON on a Unix domain socket.";
-    public string Icon        => "🔌";
-    public Type   ConfigType  => typeof(UnixSocketSinkConfig);
-
-    public async Task StartAsync(ISinkContext context, CancellationToken ct)
-    {
-        _context = context;
-        var config = await context.LoadConfigAsync<UnixSocketSinkConfig>(ct);
-        _socketPath = config.SocketPath;
-
-        if (File.Exists(_socketPath))
-            File.Delete(_socketPath);
-
-        _listener = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-        _listener.Bind(new UnixDomainSocketEndPoint(_socketPath));
-        _listener.Listen(10);
-
-        context.Logger.LogInformation("Unix socket sink listening on {Path}", _socketPath);
-
-        _acceptCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        _acceptTask = AcceptClientsAsync(_acceptCts.Token);
-    }
+    public string Icon => "🔌";
+    public Type ConfigType => typeof(UnixSocketSinkConfig);
 
     public async Task ConsumeAsync(Notification notification, CancellationToken ct)
     {
@@ -74,18 +54,45 @@ internal class UnixSocketSink : ISinkPlugin, IConfigurablePlugin
         _clientsLock.Release();
     }
 
+    public async Task StartAsync(ISinkContext context, CancellationToken ct)
+    {
+        _context = context;
+        var config = await context.LoadConfigAsync<UnixSocketSinkConfig>(ct);
+        _socketPath = config.SocketPath;
+
+        if (File.Exists(_socketPath))
+        {
+            File.Delete(_socketPath);
+        }
+
+        _listener = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+        _listener.Bind(new UnixDomainSocketEndPoint(_socketPath));
+        _listener.Listen(10);
+
+        context.Logger.LogInformation("Unix socket sink listening on {Path}", _socketPath);
+
+        _acceptCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        _acceptTask = AcceptClientsAsync(_acceptCts.Token);
+    }
+
     public async Task StopAsync()
     {
         if (_acceptCts is not null)
         {
             await _acceptCts.CancelAsync();
+
             if (_acceptTask is not null)
+            {
                 await _acceptTask.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+            }
         }
 
         await _clientsLock.WaitAsync();
+
         foreach (var client in _clients)
+        {
             client.Dispose();
+        }
         _clients.Clear();
         _clientsLock.Release();
 
@@ -93,7 +100,9 @@ internal class UnixSocketSink : ISinkPlugin, IConfigurablePlugin
         _listener = null;
 
         if (File.Exists(_socketPath))
+        {
             File.Delete(_socketPath);
+        }
     }
 
     private async Task AcceptClientsAsync(CancellationToken ct)

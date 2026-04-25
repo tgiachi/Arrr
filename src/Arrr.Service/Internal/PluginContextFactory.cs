@@ -20,9 +20,6 @@ internal class PluginContextFactory
         _directoriesConfig = directoriesConfig;
     }
 
-    public string GetConfigPath(string pluginId) =>
-        Path.Combine(_directoriesConfig[DirectoryType.Configs], $"{pluginId}.config");
-
     public IPluginContext Create(ISourcePlugin plugin)
     {
         var configPath = GetConfigPath(plugin.Id);
@@ -35,13 +32,19 @@ internal class PluginContextFactory
                             .WriteTo
                             .File(logPath, rollingInterval: RollingInterval.Day)
                             .WriteTo
-                            .Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
+                            .Console(
+                                outputTemplate:
+                                "[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}"
+                            )
                             .CreateLogger();
 
         var logger = new SerilogLoggerFactory(serilogLogger).CreateLogger(plugin.Id);
 
         return new PluginContext(configPath, logger, callbackUrl, _eventBus);
     }
+
+    public string GetConfigPath(string pluginId)
+        => Path.Combine(_directoriesConfig[DirectoryType.Configs], $"{pluginId}.config");
 }
 
 internal sealed class PluginContext : IPluginContext
@@ -70,23 +73,28 @@ internal sealed class PluginContext : IPluginContext
         if (!File.Exists(ConfigPath))
         {
             Logger.LogWarning("Config not found at {Path}, using defaults", ConfigPath);
-            return new T();
+
+            return new();
         }
 
         await using var stream = File.OpenRead(ConfigPath);
         var config = await JsonSerializer.DeserializeAsync<T>(stream, _jsonOptions, ct) ?? new T();
 
-        EncryptionUtils.ApplySensitiveFields(config, decrypt: true);
+        EncryptionUtils.ApplySensitiveFields(config, true);
+
         return config;
     }
 
     public async Task SaveConfigAsync<T>(T config, CancellationToken ct = default)
     {
-        EncryptionUtils.ApplySensitiveFields(config!, decrypt: false);
+        EncryptionUtils.ApplySensitiveFields(config!, false);
 
         var dir = Path.GetDirectoryName(ConfigPath);
+
         if (dir is not null)
+        {
             Directory.CreateDirectory(dir);
+        }
 
         await using var stream = File.Create(ConfigPath);
         await JsonSerializer.SerializeAsync(stream, config, _jsonOptions, ct);

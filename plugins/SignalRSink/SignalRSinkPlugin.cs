@@ -1,5 +1,6 @@
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
+using Arrr.Core.Utils;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,18 +15,30 @@ public class SignalRSinkPlugin : ISinkPlugin, IConfigurablePlugin
     private IHubContext<NotificationHub>? _hubContext;
     private ISinkContext? _context;
 
-    public string Id          => "com.arrr.sink.signalr";
-    public string Name        => "SignalR";
-    public string Version     => "1.0.0";
-    public string Author      => "Arrr";
+    public string Id => "com.arrr.sink.signalr";
+    public string Name => "SignalR";
+    public string Version => VersionUtils.Get(typeof(SignalRSinkPlugin));
+    public string Author => "tom (tom@orivega.io)";
     public string Description => "Broadcasts notifications to SignalR clients via a hub.";
-    public string Icon        => "📡";
-    public Type   ConfigType  => typeof(SignalRSinkConfig);
+    public string Icon => "📡";
+    public Type ConfigType => typeof(SignalRSinkConfig);
+
+    public async Task ConsumeAsync(Notification notification, CancellationToken ct)
+    {
+        if (_hubContext is null)
+        {
+            return;
+        }
+
+        await _hubContext.Clients.All.SendAsync("ReceiveNotification", notification, ct);
+    }
 
     public async Task StartAsync(ISinkContext context, CancellationToken ct)
     {
         if (_app is not null)
+        {
             await StopAsync();
+        }
 
         _context = context;
         var config = await context.LoadConfigAsync<SignalRSinkConfig>(ct);
@@ -43,15 +56,11 @@ public class SignalRSinkPlugin : ISinkPlugin, IConfigurablePlugin
         await _app.StartAsync(ct);
         _hubContext = _app.Services.GetRequiredService<IHubContext<NotificationHub>>();
 
-        context.Logger.LogInformation("SignalR sink hub at http://0.0.0.0:{Port}/{HubPath}", config.Port, config.HubPath.TrimStart('/'));
-    }
-
-    public async Task ConsumeAsync(Notification notification, CancellationToken ct)
-    {
-        if (_hubContext is null)
-            return;
-
-        await _hubContext.Clients.All.SendAsync("ReceiveNotification", notification, ct);
+        context.Logger.LogInformation(
+            "SignalR sink hub at http://0.0.0.0:{Port}/{HubPath}",
+            config.Port,
+            config.HubPath.TrimStart('/')
+        );
     }
 
     public async Task StopAsync()

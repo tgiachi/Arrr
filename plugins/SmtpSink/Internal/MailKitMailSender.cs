@@ -18,13 +18,15 @@ internal class MailKitMailSender : IMailSender
     {
         using var client = new SmtpClient();
         var socketOptions = _config.UseSsl
-            ? SecureSocketOptions.StartTls
-            : SecureSocketOptions.None;
+                                ? SecureSocketOptions.StartTls
+                                : SecureSocketOptions.None;
 
         await client.ConnectAsync(_config.Host, _config.Port, socketOptions, ct);
 
         if (!string.IsNullOrEmpty(_config.Username))
+        {
             await client.AuthenticateAsync(_config.Username, _config.Password, ct);
+        }
 
         await client.SendAsync(message, ct);
         await client.DisconnectAsync(true, ct);

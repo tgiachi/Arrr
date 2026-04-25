@@ -11,8 +11,7 @@ public class NtfySinkConfig
     [Description("ntfy topic name — required")]
     public string Topic { get; set; } = "";
 
-    [Description("Bearer token for authentication (optional)")]
-    [Sensitive]
+    [Description("Bearer token for authentication (optional)"), Sensitive]
     public string AuthToken { get; set; } = "";
 
     [Description("Message priority: 1=min 2=low 3=default 4=high 5=max")]

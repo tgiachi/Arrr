@@ -25,7 +25,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Arrr.Core" Version="1.2.1" />
+        <PackageReference Include="Arrr.Core" Version="*" />
     </ItemGroup>
 
     <ItemGroup>

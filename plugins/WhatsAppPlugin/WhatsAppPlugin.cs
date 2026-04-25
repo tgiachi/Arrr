@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
+using Arrr.Core.Utils;
 using Microsoft.Extensions.Logging;
 using WhatsAppPlugin.Data;
 
@@ -11,8 +12,8 @@ public class WhatsAppPlugin : ISourcePlugin, IConfigurablePlugin, IQrPlugin
 {
     public string Id => "com.arrr.whatsapp";
     public string Name => "WhatsApp";
-    public string Version => "1.0.0";
-    public string Author => "Tom";
+    public string Version => VersionUtils.Get(typeof(WhatsAppPlugin));
+    public string Author => "tom (tom@orivega.io)";
     public string Description => "Receives WhatsApp messages via whatsapp-bridge (whatsmeow) and publishes notifications.";
     public string[] Categories => ["whatsapp", "messages"];
     public string Icon => "";

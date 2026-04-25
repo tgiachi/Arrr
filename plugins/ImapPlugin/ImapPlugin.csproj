@@ -24,7 +24,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Arrr.Core" Version="1.2.1" />
+        <PackageReference Include="Arrr.Core" Version="*" />
         <PackageReference Include="MailKit" Version="4.16.0" />
     </ItemGroup>
 

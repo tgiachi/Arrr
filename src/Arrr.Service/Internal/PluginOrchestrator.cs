@@ -25,7 +25,7 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
     private static readonly JsonSerializerOptions _jsonOpts = new()
     {
         WriteIndented = true,
-        PropertyNameCaseInsensitive = true,
+        PropertyNameCaseInsensitive = true
     };
 
     private readonly Dictionary<string, PluginHost> _hosts = new();
@@ -46,10 +46,260 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
         _pluginsPath = directoriesConfig[DirectoryType.Plugins];
     }
 
+    public async Task DeliverCallbackAsync(string pluginId, string body, CancellationToken ct = default)
+    {
+        if (!_hosts.TryGetValue(pluginId, out var host))
+        {
+            throw new KeyNotFoundException($"Plugin '{pluginId}' is not running.");
+        }
+
+        if (host.Plugin is not ICallbackPlugin callbackPlugin)
+        {
+            throw new InvalidOperationException($"Plugin '{pluginId}' does not support callbacks.");
+        }
+
+        await callbackPlugin.HandleCallbackAsync(body, ct);
+    }
+
+    public async Task DisableAsync(string pluginId)
+    {
+        var entry = _config.Plugins.FirstOrDefault(p => p.Id == pluginId);
+
+        if (entry is not null)
+        {
+            entry.Enabled = false;
+        }
+
+        _configService.Save();
+
+        if (_hosts.TryGetValue(pluginId, out var host))
+        {
+            await host.StopAsync();
+            _hosts.Remove(pluginId);
+            _registry.Unregister(pluginId);
+            _logger.Information("Disabled plugin: {Id}", pluginId);
+        }
+    }
+
     public override void Dispose()
     {
         _watcher?.Dispose();
         base.Dispose();
+    }
+
+    public async Task EnableAsync(string pluginId, CancellationToken ct)
+    {
+        var entry = _config.Plugins.FirstOrDefault(p => p.Id == pluginId);
+
+        if (entry is null)
+        {
+            _config.Plugins.Add(new() { Id = pluginId, Enabled = true });
+        }
+        else
+        {
+            entry.Enabled = true;
+        }
+
+        _configService.Save();
+
+        if (_dllPaths.TryGetValue(pluginId, out var dll))
+        {
+            await TryLoadPluginAsync(dll, ct);
+        }
+        else
+        {
+            _logger.Warning("DLL for plugin {Id} not found in cache, rescanning", pluginId);
+            await LoadAllPluginsAsync(ct);
+        }
+    }
+
+    public IReadOnlyList<AvailablePluginResponse> GetAvailable()
+    {
+        var result = new List<AvailablePluginResponse>();
+
+        foreach (var dll in Directory.EnumerateFiles(_pluginsPath, "*.dll"))
+        {
+            try
+            {
+                var ctx = new PluginLoadContext(dll);
+                var assembly = ctx.LoadFromAssemblyPath(dll);
+                var pluginType = assembly.GetTypes()
+                                         .FirstOrDefault(t => !t.IsAbstract && t.IsAssignableTo(typeof(ISourcePlugin)));
+
+                if (pluginType is null)
+                {
+                    ctx.Unload();
+
+                    continue;
+                }
+
+                if (Activator.CreateInstance(pluginType) is not ISourcePlugin plugin)
+                {
+                    ctx.Unload();
+
+                    continue;
+                }
+
+                var entry = _config.Plugins.FirstOrDefault(p => p.Id == plugin.Id);
+
+                result.Add(
+                    new(
+                        plugin.Id,
+                        plugin.Name,
+                        plugin.Version,
+                        plugin.Author,
+                        plugin.Description,
+                        plugin.Categories,
+                        plugin.Icon,
+                        entry is { Enabled: true },
+                        _hosts.ContainsKey(plugin.Id),
+                        plugin is ICallbackPlugin,
+                        plugin is IQrPlugin
+                    )
+                );
+
+                ctx.Unload();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to inspect plugin at {Path}", dll);
+            }
+        }
+
+        return result;
+    }
+
+    public string? GetPendingQrCode(string pluginId)
+    {
+        if (!_hosts.TryGetValue(pluginId, out var host))
+        {
+            throw new KeyNotFoundException($"Plugin '{pluginId}' is not running.");
+        }
+
+        if (host.Plugin is not IQrPlugin qrPlugin)
+        {
+            throw new InvalidOperationException($"Plugin '{pluginId}' does not support QR pairing.");
+        }
+
+        return qrPlugin.PendingQrCode;
+    }
+
+    public async Task<PluginConfigResponse?> GetPluginConfigAsync(string pluginId, CancellationToken ct = default)
+    {
+        var dll = ResolveDllPath(pluginId);
+
+        if (dll is null)
+        {
+            return null;
+        }
+
+        var ctx = new PluginLoadContext(dll);
+
+        try
+        {
+            var assembly = ctx.LoadFromAssemblyPath(dll);
+            var pluginType = assembly.GetTypes()
+                                     .FirstOrDefault(t => !t.IsAbstract && t.IsAssignableTo(typeof(ISourcePlugin)));
+
+            if (pluginType is null || Activator.CreateInstance(pluginType) is not IConfigurablePlugin configurable)
+            {
+                return null;
+            }
+
+            var configType = configurable.ConfigType;
+            var configPath = _contextFactory.GetConfigPath(pluginId);
+
+            object config;
+
+            if (File.Exists(configPath))
+            {
+                await using var stream = File.OpenRead(configPath);
+                config = await JsonSerializer.DeserializeAsync(stream, configType, _jsonOpts, ct) ??
+                         Activator.CreateInstance(configType)!;
+            }
+            else
+            {
+                config = Activator.CreateInstance(configType)!;
+            }
+
+            EncryptionUtils.ApplySensitiveFields(config, true);
+
+            var values = JsonSerializer.SerializeToElement(config, configType, _jsonOpts);
+            var schema = BuildSchema(configType);
+
+            return new(values, schema);
+        }
+        finally
+        {
+            ctx.Unload();
+        }
+    }
+
+    public async Task ReloadAllAsync(CancellationToken ct)
+    {
+        _logger.Information("Reloading all plugins...");
+        await StopAllPluginsAsync();
+        _dllPaths.Clear();
+        await LoadAllPluginsAsync(ct);
+    }
+
+    public async Task ReloadAsync(string pluginId, CancellationToken ct)
+    {
+        if (_hosts.TryGetValue(pluginId, out var host))
+        {
+            await host.StopAsync();
+            _hosts.Remove(pluginId);
+            _registry.Unregister(pluginId);
+        }
+
+        if (_dllPaths.TryGetValue(pluginId, out var dll))
+        {
+            await TryLoadPluginAsync(dll, ct);
+            _logger.Information("Reloaded plugin: {Id}", pluginId);
+        }
+        else
+        {
+            _logger.Warning("Cannot reload {Id}: DLL not found in cache", pluginId);
+        }
+    }
+
+    public async Task SavePluginConfigAsync(string pluginId, JsonElement incoming, CancellationToken ct = default)
+    {
+        var dll = ResolveDllPath(pluginId) ?? throw new KeyNotFoundException($"Plugin '{pluginId}' not found.");
+
+        var ctx = new PluginLoadContext(dll);
+
+        try
+        {
+            var assembly = ctx.LoadFromAssemblyPath(dll);
+            var pluginType = assembly.GetTypes()
+                                     .FirstOrDefault(t => !t.IsAbstract && t.IsAssignableTo(typeof(ISourcePlugin)));
+
+            if (pluginType is null || Activator.CreateInstance(pluginType) is not IConfigurablePlugin configurable)
+            {
+                throw new InvalidOperationException($"Plugin '{pluginId}' does not expose a config type.");
+            }
+
+            var configType = configurable.ConfigType;
+            var config = incoming.Deserialize(configType, _jsonOpts) ?? Activator.CreateInstance(configType)!;
+
+            EncryptionUtils.ApplySensitiveFields(config, false);
+
+            var configPath = _contextFactory.GetConfigPath(pluginId);
+            var dir = Path.GetDirectoryName(configPath);
+
+            if (dir is not null)
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            await using var stream = File.Create(configPath);
+            await JsonSerializer.SerializeAsync(stream, config, configType, _jsonOpts, ct);
+        }
+        finally
+        {
+            ctx.Unload();
+        }
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -61,6 +311,18 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
 
         await StopAllPluginsAsync();
     }
+
+    private static ConfigFieldInfo[] BuildSchema(Type configType)
+        => configType
+           .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+           .Select(
+               p => new ConfigFieldInfo(
+                   p.Name,
+                   p.GetCustomAttribute<DescriptionAttribute>()?.Description,
+                   p.GetCustomAttribute<SensitiveAttribute>() is not null
+               )
+           )
+           .ToArray();
 
     private async Task LoadAllPluginsAsync(CancellationToken ct)
     {
@@ -77,6 +339,50 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
             _hosts.Count,
             dlls.Count
         );
+    }
+
+    private string? ResolveDllPath(string pluginId)
+    {
+        if (_dllPaths.TryGetValue(pluginId, out var cached))
+        {
+            return cached;
+        }
+
+        foreach (var dll in Directory.EnumerateFiles(_pluginsPath, "*.dll"))
+        {
+            try
+            {
+                var ctx = new PluginLoadContext(dll);
+
+                try
+                {
+                    var asm = ctx.LoadFromAssemblyPath(dll);
+                    var t = asm.GetTypes().FirstOrDefault(t => !t.IsAbstract && t.IsAssignableTo(typeof(ISourcePlugin)));
+
+                    if (t is null)
+                    {
+                        continue;
+                    }
+
+                    if (Activator.CreateInstance(t) is not ISourcePlugin p)
+                    {
+                        continue;
+                    }
+
+                    if (p.Id == pluginId)
+                    {
+                        return dll;
+                    }
+                }
+                finally { ctx.Unload(); }
+            }
+            catch
+            {
+                /* ignore load errors for individual DLLs */
+            }
+        }
+
+        return null;
     }
 
     private async Task StartPluginAsync(ISourcePlugin plugin, PluginLoadContext loadContext, CancellationToken ct)
@@ -225,247 +531,5 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
         _hosts.Remove(host.PluginId);
         _registry.Unregister(host.PluginId);
         _logger.Information("Unloaded plugin: {Id}", host.PluginId);
-    }
-
-    public IReadOnlyList<AvailablePluginResponse> GetAvailable()
-    {
-        var result = new List<AvailablePluginResponse>();
-
-        foreach (var dll in Directory.EnumerateFiles(_pluginsPath, "*.dll"))
-        {
-            try
-            {
-                var ctx = new PluginLoadContext(dll);
-                var assembly = ctx.LoadFromAssemblyPath(dll);
-                var pluginType = assembly.GetTypes()
-                                         .FirstOrDefault(t => !t.IsAbstract && t.IsAssignableTo(typeof(ISourcePlugin)));
-
-                if (pluginType is null) { ctx.Unload(); continue; }
-
-                if (Activator.CreateInstance(pluginType) is not ISourcePlugin plugin) { ctx.Unload(); continue; }
-
-                var entry = _config.Plugins.FirstOrDefault(p => p.Id == plugin.Id);
-
-                result.Add(new AvailablePluginResponse(
-                    plugin.Id, plugin.Name, plugin.Version, plugin.Author,
-                    plugin.Description, plugin.Categories, plugin.Icon,
-                    Enabled: entry is { Enabled: true },
-                    Running: _hosts.ContainsKey(plugin.Id),
-                    HasCallback: plugin is ICallbackPlugin,
-                    HasQr: plugin is IQrPlugin
-                ));
-
-                ctx.Unload();
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Failed to inspect plugin at {Path}", dll);
-            }
-        }
-
-        return result;
-    }
-
-    public async Task EnableAsync(string pluginId, CancellationToken ct)
-    {
-        var entry = _config.Plugins.FirstOrDefault(p => p.Id == pluginId);
-
-        if (entry is null)
-            _config.Plugins.Add(new PluginEntry { Id = pluginId, Enabled = true });
-        else
-            entry.Enabled = true;
-
-        _configService.Save();
-
-        if (_dllPaths.TryGetValue(pluginId, out var dll))
-        {
-            await TryLoadPluginAsync(dll, ct);
-        }
-        else
-        {
-            _logger.Warning("DLL for plugin {Id} not found in cache, rescanning", pluginId);
-            await LoadAllPluginsAsync(ct);
-        }
-    }
-
-    public async Task DisableAsync(string pluginId)
-    {
-        var entry = _config.Plugins.FirstOrDefault(p => p.Id == pluginId);
-
-        if (entry is not null)
-            entry.Enabled = false;
-
-        _configService.Save();
-
-        if (_hosts.TryGetValue(pluginId, out var host))
-        {
-            await host.StopAsync();
-            _hosts.Remove(pluginId);
-            _registry.Unregister(pluginId);
-            _logger.Information("Disabled plugin: {Id}", pluginId);
-        }
-    }
-
-    public async Task ReloadAsync(string pluginId, CancellationToken ct)
-    {
-        if (_hosts.TryGetValue(pluginId, out var host))
-        {
-            await host.StopAsync();
-            _hosts.Remove(pluginId);
-            _registry.Unregister(pluginId);
-        }
-
-        if (_dllPaths.TryGetValue(pluginId, out var dll))
-        {
-            await TryLoadPluginAsync(dll, ct);
-            _logger.Information("Reloaded plugin: {Id}", pluginId);
-        }
-        else
-        {
-            _logger.Warning("Cannot reload {Id}: DLL not found in cache", pluginId);
-        }
-    }
-
-    public async Task ReloadAllAsync(CancellationToken ct)
-    {
-        _logger.Information("Reloading all plugins...");
-        await StopAllPluginsAsync();
-        _dllPaths.Clear();
-        await LoadAllPluginsAsync(ct);
-    }
-
-    private string? ResolveDllPath(string pluginId)
-    {
-        if (_dllPaths.TryGetValue(pluginId, out var cached))
-            return cached;
-
-        foreach (var dll in Directory.EnumerateFiles(_pluginsPath, "*.dll"))
-        {
-            try
-            {
-                var ctx = new PluginLoadContext(dll);
-                try
-                {
-                    var asm = ctx.LoadFromAssemblyPath(dll);
-                    var t = asm.GetTypes().FirstOrDefault(t => !t.IsAbstract && t.IsAssignableTo(typeof(ISourcePlugin)));
-                    if (t is null) continue;
-                    if (Activator.CreateInstance(t) is not ISourcePlugin p) continue;
-                    if (p.Id == pluginId) return dll;
-                }
-                finally { ctx.Unload(); }
-            }
-            catch { /* ignore load errors for individual DLLs */ }
-        }
-
-        return null;
-    }
-
-    public async Task<PluginConfigResponse?> GetPluginConfigAsync(string pluginId, CancellationToken ct = default)
-    {
-        var dll = ResolveDllPath(pluginId);
-        if (dll is null)
-            return null;
-
-        var ctx = new PluginLoadContext(dll);
-        try
-        {
-            var assembly = ctx.LoadFromAssemblyPath(dll);
-            var pluginType = assembly.GetTypes()
-                                     .FirstOrDefault(t => !t.IsAbstract && t.IsAssignableTo(typeof(ISourcePlugin)));
-
-            if (pluginType is null || Activator.CreateInstance(pluginType) is not IConfigurablePlugin configurable)
-                return null;
-
-            var configType = configurable.ConfigType;
-            var configPath = _contextFactory.GetConfigPath(pluginId);
-
-            object config;
-            if (File.Exists(configPath))
-            {
-                await using var stream = File.OpenRead(configPath);
-                config = (await JsonSerializer.DeserializeAsync(stream, configType, _jsonOpts, ct))
-                         ?? Activator.CreateInstance(configType)!;
-            }
-            else
-            {
-                config = Activator.CreateInstance(configType)!;
-            }
-
-            EncryptionUtils.ApplySensitiveFields(config, decrypt: true);
-
-            var values = JsonSerializer.SerializeToElement(config, configType, _jsonOpts);
-            var schema = BuildSchema(configType);
-            return new PluginConfigResponse(values, schema);
-        }
-        finally
-        {
-            ctx.Unload();
-        }
-    }
-
-    private static ConfigFieldInfo[] BuildSchema(Type configType) =>
-        configType
-            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Select(p => new ConfigFieldInfo(
-                p.Name,
-                p.GetCustomAttribute<DescriptionAttribute>()?.Description,
-                p.GetCustomAttribute<SensitiveAttribute>() is not null
-            ))
-            .ToArray();
-
-    public async Task SavePluginConfigAsync(string pluginId, JsonElement incoming, CancellationToken ct = default)
-    {
-        var dll = ResolveDllPath(pluginId)
-                  ?? throw new KeyNotFoundException($"Plugin '{pluginId}' not found.");
-
-        var ctx = new PluginLoadContext(dll);
-        try
-        {
-            var assembly = ctx.LoadFromAssemblyPath(dll);
-            var pluginType = assembly.GetTypes()
-                                     .FirstOrDefault(t => !t.IsAbstract && t.IsAssignableTo(typeof(ISourcePlugin)));
-
-            if (pluginType is null || Activator.CreateInstance(pluginType) is not IConfigurablePlugin configurable)
-                throw new InvalidOperationException($"Plugin '{pluginId}' does not expose a config type.");
-
-            var configType = configurable.ConfigType;
-            var config = incoming.Deserialize(configType, _jsonOpts)
-                         ?? Activator.CreateInstance(configType)!;
-
-            EncryptionUtils.ApplySensitiveFields(config, decrypt: false);
-
-            var configPath = _contextFactory.GetConfigPath(pluginId);
-            var dir = Path.GetDirectoryName(configPath);
-            if (dir is not null) Directory.CreateDirectory(dir);
-
-            await using var stream = File.Create(configPath);
-            await JsonSerializer.SerializeAsync(stream, config, configType, _jsonOpts, ct);
-        }
-        finally
-        {
-            ctx.Unload();
-        }
-    }
-
-    public async Task DeliverCallbackAsync(string pluginId, string body, CancellationToken ct = default)
-    {
-        if (!_hosts.TryGetValue(pluginId, out var host))
-            throw new KeyNotFoundException($"Plugin '{pluginId}' is not running.");
-
-        if (host.Plugin is not ICallbackPlugin callbackPlugin)
-            throw new InvalidOperationException($"Plugin '{pluginId}' does not support callbacks.");
-
-        await callbackPlugin.HandleCallbackAsync(body, ct);
-    }
-
-    public string? GetPendingQrCode(string pluginId)
-    {
-        if (!_hosts.TryGetValue(pluginId, out var host))
-            throw new KeyNotFoundException($"Plugin '{pluginId}' is not running.");
-
-        if (host.Plugin is not IQrPlugin qrPlugin)
-            throw new InvalidOperationException($"Plugin '{pluginId}' does not support QR pairing.");
-
-        return qrPlugin.PendingQrCode;
     }
 }
