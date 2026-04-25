@@ -66,6 +66,12 @@ jobs:
           dotnet build plugins/WhatsAppPlugin/WhatsAppPlugin.csproj -c Release --no-restore
           dotnet build plugins/WebSocketSink/WebSocketSink.csproj -c Release --no-restore
           dotnet build plugins/SignalRSink/SignalRSink.csproj -c Release --no-restore
+          dotnet restore plugins/NtfySink/NtfySink.csproj
+          dotnet restore plugins/SmtpSink/SmtpSink.csproj
+          dotnet restore plugins/CalDavSource/CalDavSource.csproj
+          dotnet build plugins/NtfySink/NtfySink.csproj     -c Release --no-restore
+          dotnet build plugins/SmtpSink/SmtpSink.csproj     -c Release --no-restore
+          dotnet build plugins/CalDavSource/CalDavSource.csproj -c Release --no-restore
 
       - name: Test
         run: dotnet test tests/Arrr.Tests/Arrr.Tests.csproj -c Release --filter "Category!=Integration"
@@ -108,6 +114,21 @@ jobs:
             -p:Version="$VERSION" \
             -o ./nupkg
           dotnet pack plugins/SignalRSink/SignalRSink.csproj \
+            -c Release \
+            --no-build \
+            -p:Version="$VERSION" \
+            -o ./nupkg
+          dotnet pack plugins/NtfySink/NtfySink.csproj \
+            -c Release \
+            --no-build \
+            -p:Version="$VERSION" \
+            -o ./nupkg
+          dotnet pack plugins/SmtpSink/SmtpSink.csproj \
+            -c Release \
+            --no-build \
+            -p:Version="$VERSION" \
+            -o ./nupkg
+          dotnet pack plugins/CalDavSource/CalDavSource.csproj \
             -c Release \
             --no-build \
             -p:Version="$VERSION" \

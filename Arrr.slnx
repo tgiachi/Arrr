@@ -9,5 +9,8 @@
     <Folder Name="/plugins/">
         <Project Path="plugins/WebSocketSink/WebSocketSink.csproj"/>
         <Project Path="plugins/SignalRSink/SignalRSink.csproj"/>
+        <Project Path="plugins/NtfySink/NtfySink.csproj"/>
+        <Project Path="plugins/SmtpSink/SmtpSink.csproj"/>
+        <Project Path="plugins/CalDavSource/CalDavSource.csproj"/>
     </Folder>
 </Solution>
