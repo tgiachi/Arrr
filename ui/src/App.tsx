@@ -42,7 +42,7 @@ function loadSettings(): AppSettings {
 }
 
 const TAB_LABELS: Record<Tab, string> = {
-  configurazione: 'Configurazione',
+  configurazione: 'Configuration',
   install: 'Install',
   logs: 'Logs',
 }
