@@ -46,8 +46,13 @@ public class SignalRSinkPlugin : ISinkPlugin, IConfigurablePlugin
         context.Logger.LogInformation("SignalR sink hub at http://0.0.0.0:{Port}/{HubPath}", config.Port, config.HubPath.TrimStart('/'));
     }
 
-    public Task ConsumeAsync(Notification notification, CancellationToken ct)
-        => throw new NotImplementedException();
+    public async Task ConsumeAsync(Notification notification, CancellationToken ct)
+    {
+        if (_hubContext is null)
+            return;
+
+        await _hubContext.Clients.All.SendAsync("ReceiveNotification", notification, ct);
+    }
 
     public async Task StopAsync()
     {

@@ -50,6 +50,34 @@ public class SignalRSinkPluginTests
         await conn.StopAsync();
     }
 
+    [Test]
+    public async Task ConsumeAsync_ClientReceivesNotification()
+    {
+        var ctx = new FakeSinkContext(configFactory: _ => new SignalRSinkConfig { Port = _port, HubPath = "notifications" });
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        await _sink!.StartAsync(ctx, cts.Token);
+
+        var tcs = new TaskCompletionSource<Notification>();
+
+        await using var conn = new HubConnectionBuilder()
+            .WithUrl($"http://localhost:{_port}/notifications")
+            .Build();
+
+        conn.On<Notification>("ReceiveNotification", n => tcs.TrySetResult(n));
+        await conn.StartAsync(cts.Token);
+        await Task.Delay(100, cts.Token);
+
+        var notification = new Notification(Guid.NewGuid(), "test", "Title", "Body", DateTimeOffset.UtcNow, null);
+        await _sink.ConsumeAsync(notification, cts.Token);
+
+        var received = await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.That(received, Is.EqualTo(notification));
+
+        await conn.StopAsync();
+    }
+
     private static int GetFreePort()
     {
         using var l = new TcpListener(IPAddress.Loopback, 0);
