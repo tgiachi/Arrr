@@ -20,6 +20,7 @@ import { QrModal } from './components/QrModal'
 import { InstallPanel } from './components/InstallPanel'
 import { SettingsPanel } from './components/SettingsPanel'
 import { LogsView } from './components/LogsView'
+import { ThemeToggle } from './components/ThemeToggle'
 import type { Plugin, Sink, Settings as AppSettings } from './types'
 
 const STORAGE_KEY = 'arrr-settings'
@@ -216,17 +217,17 @@ export default function App() {
   const runningCount = plugins.filter((p) => p.running).length
 
   return (
-    <Box minH="100vh" bg="#080c14" p={0}>
+    <Box minH="100vh" bg="app.bg" p={0}>
       {/* Sticky header: brand row + tab row */}
       <Box
         as="header"
         position="sticky"
         top={0}
         zIndex={10}
-        bg="rgba(8,12,20,0.92)"
+        bg="app.headerBg"
         backdropFilter="blur(12px)"
         borderBottomWidth="1px"
-        borderColor="whiteAlpha.50"
+        borderColor="app.border"
       >
         {/* Brand row */}
         <Flex align="center" justify="space-between" px={6} py={3}>
@@ -243,7 +244,7 @@ export default function App() {
             </Text>
             <Text
               fontSize="xs"
-              color="gray.700"
+              color="app.textDim"
               fontFamily="mono"
               textTransform="uppercase"
               letterSpacing="widest"
@@ -255,7 +256,7 @@ export default function App() {
 
           <HStack gap={2}>
             {plugins.length > 0 && (
-              <Text fontSize="xs" color="gray.700" fontFamily="mono" mr={1}>
+              <Text fontSize="xs" color="app.textDim" fontFamily="mono" mr={1}>
                 {runningCount}/{plugins.length} running
               </Text>
             )}
@@ -263,7 +264,7 @@ export default function App() {
               <Button
                 size="sm"
                 variant="ghost"
-                color="gray.500"
+                color="app.textMuted"
                 _hover={{ color: 'amber.300', bg: 'whiteAlpha.50' }}
                 onClick={handleReloadAll}
                 loading={reloadingAll}
@@ -273,11 +274,12 @@ export default function App() {
                 Reload all
               </Button>
             )}
+            <ThemeToggle />
             <IconButton
               aria-label="Settings"
               size="sm"
               variant="ghost"
-              color={settingsOpen ? 'amber.400' : 'gray.500'}
+              color={settingsOpen ? 'amber.400' : 'app.textMuted'}
               _hover={{ color: 'amber.300', bg: 'whiteAlpha.50' }}
               onClick={handleSettingsClick}
             >
@@ -287,7 +289,7 @@ export default function App() {
               aria-label="Refresh"
               size="sm"
               variant="ghost"
-              color="gray.600"
+              color="app.textMuted"
               _hover={{ color: 'white', bg: 'whiteAlpha.50' }}
               onClick={fetchPlugins}
               loading={loading}
@@ -298,7 +300,7 @@ export default function App() {
         </Flex>
 
         {/* Tab row */}
-        <Flex px={4} gap={0} borderTopWidth="1px" borderColor="whiteAlpha.50">
+        <Flex px={4} gap={0} borderTopWidth="1px" borderColor="app.border">
           {(Object.keys(TAB_LABELS) as Tab[]).map((tab) => {
             const active = activeTab === tab
             return (
@@ -361,7 +363,7 @@ export default function App() {
               <Text
                 fontSize="xs"
                 fontFamily="mono"
-                color="gray.600"
+                color="app.textMuted"
                 textTransform="uppercase"
                 letterSpacing="widest"
                 mb={3}
@@ -375,7 +377,7 @@ export default function App() {
                 <Spinner color="amber.500" size="lg" />
               </Flex>
             ) : plugins.length === 0 && !loading && !error && settings.apiKey ? (
-              <Flex direction="column" align="center" justify="center" h="200px" gap={2} color="gray.700">
+              <Flex direction="column" align="center" justify="center" h="200px" gap={2} color="app.textDim">
                 <Skull size={28} />
                 <Text fontSize="sm" fontFamily="mono">
                   No plugins found
@@ -405,7 +407,7 @@ export default function App() {
                 <Text
                   fontSize="xs"
                   fontFamily="mono"
-                  color="gray.600"
+                  color="app.textMuted"
                   textTransform="uppercase"
                   letterSpacing="widest"
                   mb={3}
@@ -454,7 +456,7 @@ export default function App() {
           <InstallPanel onInstall={handleInstall} />
         )}
         {activeTab === 'install' && !settings.apiKey && (
-          <Flex direction="column" align="center" justify="center" h="300px" gap={3} color="gray.700">
+          <Flex direction="column" align="center" justify="center" h="300px" gap={3} color="app.textDim">
             <Settings size={28} />
             <Text fontFamily="mono" fontSize="sm">
               Configure API key first
@@ -475,7 +477,7 @@ export default function App() {
           <LogsView api={api()} />
         )}
         {activeTab === 'logs' && !settings.apiKey && (
-          <Flex direction="column" align="center" justify="center" h="300px" gap={3} color="gray.700">
+          <Flex direction="column" align="center" justify="center" h="300px" gap={3} color="app.textDim">
             <Settings size={28} />
             <Text fontFamily="mono" fontSize="sm">
               Configure API key first
