@@ -33,6 +33,7 @@
         <ProjectReference Include="..\..\src\Arrr.Service\Arrr.Service.csproj"/>
         <ProjectReference Include="..\..\plugins\WebSocketSink\WebSocketSink.csproj"/>
         <ProjectReference Include="..\..\plugins\SignalRSink\SignalRSink.csproj"/>
+        <ProjectReference Include="..\..\plugins\NtfySink\NtfySink.csproj"/>
     </ItemGroup>
 
 </Project>
