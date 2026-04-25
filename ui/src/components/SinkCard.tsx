@@ -26,13 +26,13 @@ export function SinkCard({ sink, busy, onToggle, onReload, onConfigure }: Props)
 
   return (
     <Card.Root
-      bg="whiteAlpha.50"
+      bg="app.cardBg"
       borderWidth="1px"
-      borderColor="whiteAlpha.100"
+      borderColor="app.cardBorder"
       borderRadius="xl"
       overflow="hidden"
       transition="all 0.2s"
-      _hover={{ borderColor: 'whiteAlpha.200', bg: 'whiteAlpha.100', transform: 'translateY(-2px)' }}
+      _hover={{ borderColor: 'app.cardBorderHover', bg: 'app.cardBgHover', transform: 'translateY(-2px)' }}
       opacity={busy ? 0.6 : 1}
     >
       <Card.Body p={5}>
@@ -60,7 +60,7 @@ export function SinkCard({ sink, busy, onToggle, onReload, onConfigure }: Props)
               fontWeight="700"
               fontSize="md"
               fontFamily="heading"
-              color="white"
+              color="app.text"
               overflow="hidden"
               textOverflow="ellipsis"
               whiteSpace="nowrap"
@@ -77,8 +77,8 @@ export function SinkCard({ sink, busy, onToggle, onReload, onConfigure }: Props)
                     aria-label="Configure sink"
                     size="xs"
                     variant="ghost"
-                    color="gray.400"
-                    _hover={{ color: 'amber.300', bg: 'whiteAlpha.100' }}
+                    color="app.iconColor"
+                    _hover={{ color: 'amber.300', bg: 'app.cardBgHover' }}
                     onClick={() => onConfigure(sink)}
                     disabled={busy}
                   >
@@ -97,8 +97,8 @@ export function SinkCard({ sink, busy, onToggle, onReload, onConfigure }: Props)
                   aria-label="Reload sink"
                   size="xs"
                   variant="ghost"
-                  color="gray.400"
-                  _hover={{ color: 'amber.300', bg: 'whiteAlpha.100' }}
+                  color="app.iconColor"
+                  _hover={{ color: 'amber.300', bg: 'app.cardBgHover' }}
                   onClick={() => onReload(sink)}
                   disabled={busy}
                 >
@@ -115,7 +115,7 @@ export function SinkCard({ sink, busy, onToggle, onReload, onConfigure }: Props)
         <Text
           fontFamily="mono"
           fontSize="xs"
-          color="gray.500"
+          color="app.textMuted"
           mb={2}
           overflow="hidden"
           textOverflow="ellipsis"
@@ -125,7 +125,7 @@ export function SinkCard({ sink, busy, onToggle, onReload, onConfigure }: Props)
         </Text>
 
         {sink.description && (
-          <Text fontSize="sm" color="gray.400" mb={3} lineHeight="1.5">
+          <Text fontSize="sm" color="app.textMuted" mb={3} lineHeight="1.5">
             {sink.description}
           </Text>
         )}
@@ -147,7 +147,7 @@ export function SinkCard({ sink, busy, onToggle, onReload, onConfigure }: Props)
         )}
 
         <Flex justify="space-between" align="center">
-          <Text fontSize="xs" color="gray.600">
+          <Text fontSize="xs" color="app.textMuted">
             {statusLabel}
           </Text>
           <Switch.Root

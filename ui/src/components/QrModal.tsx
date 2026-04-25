@@ -23,7 +23,6 @@ export function QrModal({ plugin, api, onClose }: Props) {
         const qr = await api.getQrCode(plugin.id).catch(() => null)
         if (!active) break
         if (qr === null && code !== null) {
-          // code disappeared → pairing complete
           setConnected(true)
           setTimeout(onClose, 2000)
           return
@@ -42,9 +41,9 @@ export function QrModal({ plugin, api, onClose }: Props) {
       <Dialog.Backdrop bg="blackAlpha.700" backdropFilter="blur(4px)" />
       <Dialog.Positioner>
         <Dialog.Content
-          bg="gray.900"
+          bg="app.panelBg"
           borderWidth="1px"
-          borderColor="whiteAlpha.100"
+          borderColor="app.panelBorder"
           borderRadius="xl"
           maxW="380px"
           w="full"
@@ -53,16 +52,16 @@ export function QrModal({ plugin, api, onClose }: Props) {
           <Dialog.Header px={5} pt={5} pb={3}>
             <Flex justify="space-between" align="center">
               <Box>
-                <Dialog.Title fontFamily="heading" fontWeight="700" fontSize="lg" color="white">
+                <Dialog.Title fontFamily="heading" fontWeight="700" fontSize="lg" color="app.text">
                   Link {plugin.name}
                 </Dialog.Title>
-                <Text fontFamily="mono" fontSize="xs" color="gray.500" mt={0.5}>
+                <Text fontFamily="mono" fontSize="xs" color="app.textMuted" mt={0.5}>
                   WhatsApp → Settings → Linked Devices → Link a Device
                 </Text>
               </Box>
               <Dialog.CloseTrigger asChild>
-                <IconButton aria-label="Close" size="sm" variant="ghost" color="gray.500"
-                  _hover={{ color: 'white', bg: 'whiteAlpha.100' }}>
+                <IconButton aria-label="Close" size="sm" variant="ghost" color="app.iconColor"
+                  _hover={{ color: 'app.text', bg: 'app.cardBgHover' }}>
                   <X size={16} />
                 </IconButton>
               </Dialog.CloseTrigger>
@@ -80,12 +79,12 @@ export function QrModal({ plugin, api, onClose }: Props) {
               ) : (
                 <Flex direction="column" align="center" gap={2} py={8}>
                   <Spinner color="amber.500" />
-                  <Text color="gray.500" fontSize="xs" fontFamily="mono">Waiting for QR code…</Text>
+                  <Text color="app.textMuted" fontSize="xs" fontFamily="mono">Waiting for QR code…</Text>
                 </Flex>
               )}
 
               {!connected && (
-                <Text fontSize="xs" color="gray.600" textAlign="center">
+                <Text fontSize="xs" color="app.textDim" textAlign="center">
                   QR code refreshes automatically. Keep this window open until connected.
                 </Text>
               )}
@@ -94,7 +93,7 @@ export function QrModal({ plugin, api, onClose }: Props) {
 
           <Dialog.Footer px={5} pb={5} pt={0}>
             <Flex justify="flex-end" w="full">
-              <Button size="sm" variant="ghost" color="gray.500" onClick={onClose}>
+              <Button size="sm" variant="ghost" color="app.textMuted" onClick={onClose}>
                 Cancel
               </Button>
             </Flex>

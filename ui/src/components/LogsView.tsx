@@ -99,14 +99,14 @@ export function LogsView({ api }: Props) {
           <Text
             fontSize="xs"
             fontFamily="mono"
-            color="gray.500"
+            color="app.textMuted"
             textTransform="uppercase"
             letterSpacing="widest"
           >
             Service Logs
           </Text>
           {loading && <Spinner size="xs" color="amber.500" />}
-          <Text fontSize="xs" fontFamily="mono" color="gray.700">
+          <Text fontSize="xs" fontFamily="mono" color="app.textDim">
             {lines.length} lines
           </Text>
         </Flex>
@@ -115,11 +115,11 @@ export function LogsView({ api }: Props) {
           <Text
             fontSize="xs"
             fontFamily="mono"
-            color={autoScroll ? 'amber.500' : 'gray.600'}
+            color={autoScroll ? 'amber.500' : 'app.textMuted'}
             cursor="pointer"
             userSelect="none"
             onClick={() => setAutoScroll((v) => !v)}
-            _hover={{ color: autoScroll ? 'amber.400' : 'gray.400' }}
+            _hover={{ color: autoScroll ? 'amber.400' : 'app.text' }}
           >
             {autoScroll ? '↓ auto' : '⊘ paused'}
           </Text>
@@ -127,8 +127,8 @@ export function LogsView({ api }: Props) {
             aria-label="Refresh logs"
             size="xs"
             variant="ghost"
-            color="gray.600"
-            _hover={{ color: 'amber.400', bg: 'whiteAlpha.50' }}
+            color="app.iconColor"
+            _hover={{ color: 'amber.400', bg: 'app.cardBgHover' }}
             onClick={fetchLogs}
           >
             <RefreshCcw size={11} />
@@ -138,9 +138,9 @@ export function LogsView({ api }: Props) {
 
       <Box
         ref={scrollRef}
-        bg="blackAlpha.600"
+        bg="app.termBg"
         borderWidth="1px"
-        borderColor="whiteAlpha.50"
+        borderColor="app.cardBorder"
         borderRadius="xl"
         p={4}
         h="calc(100vh - 230px)"
@@ -157,8 +157,8 @@ export function LogsView({ api }: Props) {
       >
         {lines.length === 0 && !loading ? (
           <Flex align="center" justify="center" h="200px" direction="column" gap={3}>
-            <Terminal size={24} color="#374151" />
-            <Text fontFamily="mono" fontSize="xs" color="gray.700">
+            <Terminal size={24} color="currentColor" style={{ opacity: 0.3 }} />
+            <Text fontFamily="mono" fontSize="xs" color="app.textDim">
               No log entries found
             </Text>
           </Flex>
@@ -172,7 +172,7 @@ export function LogsView({ api }: Props) {
                 py="1px"
                 borderRadius="sm"
                 bg={levelBg(level)}
-                _hover={{ bg: 'whiteAlpha.50' }}
+                _hover={{ bg: 'app.cardBgHover' }}
                 align="baseline"
                 gap={2}
                 minH="20px"

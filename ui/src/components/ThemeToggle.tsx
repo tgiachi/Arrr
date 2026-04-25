@@ -12,7 +12,7 @@ export function ThemeToggle() {
       size="sm"
       variant="ghost"
       color="app.textMuted"
-      _hover={{ color: 'amber.300', bg: 'whiteAlpha.50' }}
+      _hover={{ color: 'amber.300', bg: 'app.cardBgHover' }}
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
       style={{ transition: 'color 0.2s' }}
     >

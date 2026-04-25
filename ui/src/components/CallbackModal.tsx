@@ -42,9 +42,9 @@ export function CallbackModal({ plugin, api, onClose, onToast }: Props) {
       <Dialog.Backdrop bg="blackAlpha.700" backdropFilter="blur(4px)" />
       <Dialog.Positioner>
         <Dialog.Content
-          bg="gray.900"
+          bg="app.panelBg"
           borderWidth="1px"
-          borderColor="whiteAlpha.100"
+          borderColor="app.panelBorder"
           borderRadius="xl"
           maxW="480px"
           w="full"
@@ -53,10 +53,10 @@ export function CallbackModal({ plugin, api, onClose, onToast }: Props) {
           <Dialog.Header px={5} pt={5} pb={3}>
             <Flex justify="space-between" align="center">
               <Box>
-                <Dialog.Title fontFamily="heading" fontWeight="700" fontSize="lg" color="white">
+                <Dialog.Title fontFamily="heading" fontWeight="700" fontSize="lg" color="app.text">
                   Send callback
                 </Dialog.Title>
-                <Text fontFamily="mono" fontSize="xs" color="gray.500" mt={0.5}>
+                <Text fontFamily="mono" fontSize="xs" color="app.textMuted" mt={0.5}>
                   {plugin.id}
                 </Text>
               </Box>
@@ -65,8 +65,8 @@ export function CallbackModal({ plugin, api, onClose, onToast }: Props) {
                   aria-label="Close"
                   size="sm"
                   variant="ghost"
-                  color="gray.500"
-                  _hover={{ color: 'white', bg: 'whiteAlpha.100' }}
+                  color="app.iconColor"
+                  _hover={{ color: 'app.text', bg: 'app.cardBgHover' }}
                 >
                   <X size={16} />
                 </IconButton>
@@ -81,21 +81,22 @@ export function CallbackModal({ plugin, api, onClose, onToast }: Props) {
               placeholder="Payload (plain text — e.g. verification code)"
               fontFamily="mono"
               fontSize="sm"
-              bg="blackAlpha.400"
-              borderColor="whiteAlpha.100"
-              color="gray.100"
+              bg="app.inputBg"
+              borderColor="app.inputBorder"
+              color="app.inputColor"
               rows={4}
               resize="vertical"
+              _placeholder={{ color: 'app.placeholder' }}
               _focus={{ borderColor: 'amber.500', boxShadow: '0 0 0 1px var(--chakra-colors-amber-500)' }}
             />
-            <Text fontSize="xs" color="gray.600" mt={2}>
+            <Text fontSize="xs" color="app.textDim" mt={2}>
               The payload is delivered as-is to the plugin's callback handler.
             </Text>
           </Dialog.Body>
 
           <Dialog.Footer px={5} pb={5} pt={3}>
             <Flex gap={2} justify="flex-end" w="full">
-              <Button size="sm" variant="ghost" color="gray.500" onClick={onClose} disabled={sending}>
+              <Button size="sm" variant="ghost" color="app.textMuted" onClick={onClose} disabled={sending}>
                 Cancel
               </Button>
               <Button

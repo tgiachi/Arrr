@@ -29,13 +29,13 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
 
   return (
     <Card.Root
-      bg="whiteAlpha.50"
+      bg="app.cardBg"
       borderWidth="1px"
-      borderColor="whiteAlpha.100"
+      borderColor="app.cardBorder"
       borderRadius="xl"
       overflow="hidden"
       transition="all 0.2s"
-      _hover={{ borderColor: 'whiteAlpha.200', bg: 'whiteAlpha.100', transform: 'translateY(-2px)' }}
+      _hover={{ borderColor: 'app.cardBorderHover', bg: 'app.cardBgHover', transform: 'translateY(-2px)' }}
       opacity={busy ? 0.6 : 1}
     >
       <Card.Body p={5}>
@@ -58,7 +58,7 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
               fontWeight="700"
               fontSize="md"
               fontFamily="heading"
-              color="white"
+              color="app.text"
               overflow="hidden"
               textOverflow="ellipsis"
               whiteSpace="nowrap"
@@ -74,8 +74,8 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
                   aria-label="Configure plugin"
                   size="xs"
                   variant="ghost"
-                  color="gray.400"
-                  _hover={{ color: 'amber.300', bg: 'whiteAlpha.100' }}
+                  color="app.iconColor"
+                  _hover={{ color: 'amber.300', bg: 'app.cardBgHover' }}
                   onClick={() => onConfigure(plugin)}
                   disabled={busy}
                 >
@@ -94,8 +94,8 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
                     aria-label="Send callback"
                     size="xs"
                     variant="ghost"
-                    color="gray.400"
-                    _hover={{ color: 'cyan.300', bg: 'whiteAlpha.100' }}
+                    color="app.iconColor"
+                    _hover={{ color: 'cyan.300', bg: 'app.cardBgHover' }}
                     onClick={() => onCallback(plugin)}
                     disabled={busy}
                   >
@@ -115,8 +115,8 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
                     aria-label="Scan QR code"
                     size="xs"
                     variant="ghost"
-                    color="gray.400"
-                    _hover={{ color: 'green.300', bg: 'whiteAlpha.100' }}
+                    color="app.iconColor"
+                    _hover={{ color: 'green.300', bg: 'app.cardBgHover' }}
                     onClick={() => onQr(plugin)}
                     disabled={busy}
                   >
@@ -135,8 +135,8 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
                   aria-label="Reload plugin"
                   size="xs"
                   variant="ghost"
-                  color="gray.400"
-                  _hover={{ color: 'amber.300', bg: 'whiteAlpha.100' }}
+                  color="app.iconColor"
+                  _hover={{ color: 'amber.300', bg: 'app.cardBgHover' }}
                   onClick={() => onReload(plugin)}
                   disabled={busy}
                 >
@@ -154,8 +154,8 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
                   aria-label="Uninstall plugin"
                   size="xs"
                   variant="ghost"
-                  color="gray.600"
-                  _hover={{ color: 'red.400', bg: 'whiteAlpha.100' }}
+                  color="app.textDim"
+                  _hover={{ color: 'red.400', bg: 'app.cardBgHover' }}
                   onClick={() => onUninstall(plugin)}
                   disabled={busy}
                 >
@@ -172,7 +172,7 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
         <Text
           fontFamily="mono"
           fontSize="xs"
-          color="gray.500"
+          color="app.textMuted"
           mb={2}
           overflow="hidden"
           textOverflow="ellipsis"
@@ -182,7 +182,7 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
         </Text>
 
         {plugin.description && (
-          <Text fontSize="sm" color="gray.400" mb={3} lineHeight="1.5">
+          <Text fontSize="sm" color="app.textMuted" mb={3} lineHeight="1.5">
             {plugin.description}
           </Text>
         )}
@@ -207,7 +207,7 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
         )}
 
         <Flex justify="space-between" align="center">
-          <Text fontSize="xs" color="gray.600">
+          <Text fontSize="xs" color="app.textMuted">
             {statusLabel}
           </Text>
           <Switch.Root

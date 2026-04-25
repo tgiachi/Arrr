@@ -58,12 +58,12 @@ function PackageCard({
 }) {
   return (
     <Box
-      bg="blackAlpha.400"
+      bg="app.cardBg"
       borderWidth="1px"
-      borderColor="whiteAlpha.100"
+      borderColor="app.cardBorder"
       borderRadius="lg"
       p={3}
-      _hover={{ borderColor: 'whiteAlpha.200' }}
+      _hover={{ borderColor: 'app.cardBorderHover' }}
       transition="all 0.15s"
     >
       <Flex justify="space-between" align="flex-start" gap={2}>
@@ -87,7 +87,7 @@ function PackageCard({
             <Text
               fontSize="sm"
               fontWeight="600"
-              color="white"
+              color="app.text"
               fontFamily="mono"
               overflow="hidden"
               textOverflow="ellipsis"
@@ -97,13 +97,13 @@ function PackageCard({
             </Text>
 
             <HStack gap={2} mt={0.5} mb={1}>
-              <Text fontSize="10px" color="gray.500" fontFamily="mono">
+              <Text fontSize="10px" color="app.textMuted" fontFamily="mono">
                 v{pkg.version}
               </Text>
               {pkg.totalDownloads > 0 && (
                 <HStack gap={0.5}>
                   <Download size={10} color="#6b7280" />
-                  <Text fontSize="10px" color="gray.500" fontFamily="mono">
+                  <Text fontSize="10px" color="app.textMuted" fontFamily="mono">
                     {formatDownloads(pkg.totalDownloads)}
                   </Text>
                 </HStack>
@@ -124,7 +124,7 @@ function PackageCard({
             {pkg.description && (
               <Text
                 fontSize="xs"
-                color="gray.500"
+                color="app.textMuted"
                 lineHeight="1.4"
                 style={{
                   display: '-webkit-box',
@@ -177,7 +177,7 @@ function PackageSection({
         <Text
           fontSize="xs"
           fontWeight="600"
-          color="gray.500"
+          color="app.textMuted"
           textTransform="uppercase"
           letterSpacing="wider"
           fontFamily="mono"
@@ -190,7 +190,7 @@ function PackageSection({
       </HStack>
 
       {filtered.length === 0 ? (
-        <Text fontSize="xs" color="gray.600" fontFamily="mono" mb={1}>
+        <Text fontSize="xs" color="app.textMuted" fontFamily="mono" mb={1}>
           {query ? 'No matches' : 'None available'}
         </Text>
       ) : (
@@ -270,9 +270,9 @@ export function InstallPanel({ onInstall }: Props) {
 
   return (
     <Box
-      bg="whiteAlpha.50"
+      bg="app.cardBg"
       borderWidth="1px"
-      borderColor="whiteAlpha.100"
+      borderColor="app.cardBorder"
       borderRadius="xl"
       p={4}
     >
@@ -281,7 +281,7 @@ export function InstallPanel({ onInstall }: Props) {
         <Text
           fontSize="xs"
           fontWeight="600"
-          color="gray.500"
+          color="app.textMuted"
           textTransform="uppercase"
           letterSpacing="wider"
           fontFamily="mono"
@@ -291,8 +291,8 @@ export function InstallPanel({ onInstall }: Props) {
         <Button
           size="xs"
           variant="ghost"
-          color="gray.500"
-          _hover={{ color: 'amber.300', bg: 'whiteAlpha.50' }}
+          color="app.textMuted"
+          _hover={{ color: 'amber.300', bg: 'app.cardBgHover' }}
           onClick={fetchAll}
           loading={loading}
           gap={1}
@@ -309,11 +309,11 @@ export function InstallPanel({ onInstall }: Props) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           size="sm"
-          bg="whiteAlpha.50"
-          borderColor="whiteAlpha.100"
-          color="white"
+          bg="app.inputBg"
+          borderColor="app.inputBorder"
+          color="app.inputColor"
           fontFamily="mono"
-          _placeholder={{ color: 'gray.600' }}
+          _placeholder={{ color: 'app.placeholder' }}
           _focus={{
             borderColor: 'amber.500',
             boxShadow: '0 0 0 1px var(--chakra-colors-amber-500)',
@@ -349,8 +349,8 @@ export function InstallPanel({ onInstall }: Props) {
       )}
 
       {/* Manual install */}
-      <Box borderTopWidth="1px" borderColor="whiteAlpha.50" pt={3}>
-        <Text fontSize="xs" color="gray.600" fontFamily="mono" mb={2}>
+      <Box borderTopWidth="1px" borderColor="app.cardBorder" pt={3}>
+        <Text fontSize="xs" color="app.textMuted" fontFamily="mono" mb={2}>
           Manual install
         </Text>
         <Flex as="form" onSubmit={handleManualInstall} gap={2} align="center">
@@ -359,11 +359,11 @@ export function InstallPanel({ onInstall }: Props) {
             value={packageId}
             onChange={(e) => setPackageId(e.target.value)}
             size="sm"
-            bg="whiteAlpha.50"
-            borderColor="whiteAlpha.100"
-            color="white"
+            bg="app.inputBg"
+            borderColor="app.inputBorder"
+            color="app.inputColor"
             fontFamily="mono"
-            _placeholder={{ color: 'gray.600' }}
+            _placeholder={{ color: 'app.placeholder' }}
             _focus={{
               borderColor: 'amber.500',
               boxShadow: '0 0 0 1px var(--chakra-colors-amber-500)',
@@ -375,11 +375,11 @@ export function InstallPanel({ onInstall }: Props) {
             value={version}
             onChange={(e) => setVersion(e.target.value)}
             size="sm"
-            bg="whiteAlpha.50"
-            borderColor="whiteAlpha.100"
-            color="white"
+            bg="app.inputBg"
+            borderColor="app.inputBorder"
+            color="app.inputColor"
             fontFamily="mono"
-            _placeholder={{ color: 'gray.600' }}
+            _placeholder={{ color: 'app.placeholder' }}
             _focus={{
               borderColor: 'amber.500',
               boxShadow: '0 0 0 1px var(--chakra-colors-amber-500)',
