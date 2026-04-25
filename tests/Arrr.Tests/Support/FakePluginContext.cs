@@ -1,3 +1,4 @@
+using Arrr.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 

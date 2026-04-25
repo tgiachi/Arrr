@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Arrr.Core.Data.Config;
 using Arrr.Core.Data.Events;
 using Arrr.Core.Data.Notifications;
@@ -8,6 +9,7 @@ using Arrr.Core.Json;
 using Arrr.Core.Services;
 using Arrr.Core.Types;
 using Arrr.Service.Api;
+using Arrr.Service.Hubs;
 using Arrr.Service.Internal;
 using Arrr.Service.Services;
 using ConsoleAppFramework;
@@ -67,6 +69,16 @@ await ConsoleApp.RunAsync(
         builder.Services.AddSingleton<IConfigBackupService, ConfigBackupService>();
         builder.Services.AddHostedService<EventBusHostedService>();
 
+        builder.Services.AddCors(opt =>
+            opt.AddDefaultPolicy(p =>
+                p.SetIsOriginAllowed(_ => true).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
+
+        builder.Services.AddSignalR()
+            .AddJsonProtocol(opt =>
+                opt.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase);
+
+        builder.Services.AddHostedService<NotificationStreamService>();
+
         builder.Services.AddOpenApi();
         builder.Logging.ClearProviders().AddSerilog();
 
@@ -99,8 +111,13 @@ await ConsoleApp.RunAsync(
 
         app.Urls.Add($"http://0.0.0.0:{configService.Config.Web.Port}");
 
+        app.UseCors();
+
         app.UseDefaultFiles();
         app.UseStaticFiles();
+        app.UseWebSockets();
+
+        app.MapHub<NotificationStreamHub>("/stream");
 
         app.MapExternalApi();
         app.MapSinksApi();

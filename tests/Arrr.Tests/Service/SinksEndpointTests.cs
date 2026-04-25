@@ -1,9 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
+using Arrr.Core.Data.Api;
+using Arrr.Core.Interfaces;
+using Arrr.Core.Services;
 using Arrr.Service.Api;
 using Arrr.Tests.Support;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Arrr.Tests.Service;
 

@@ -20,12 +20,13 @@ import { QrModal } from './components/QrModal'
 import { InstallPanel } from './components/InstallPanel'
 import { SettingsPanel } from './components/SettingsPanel'
 import { LogsView } from './components/LogsView'
+import { StreamView } from './components/StreamView'
 import { ThemeToggle } from './components/ThemeToggle'
 import type { Plugin, Sink, Settings as AppSettings } from './types'
 
 const STORAGE_KEY = 'arrr-settings'
 
-type Tab = 'configurazione' | 'install' | 'logs'
+type Tab = 'configurazione' | 'stream' | 'install' | 'logs'
 
 interface Toast {
   id: number
@@ -43,6 +44,7 @@ function loadSettings(): AppSettings {
 
 const TAB_LABELS: Record<Tab, string> = {
   configurazione: 'Configuration',
+  stream: 'Stream',
   install: 'Install',
   logs: 'Logs',
 }
@@ -470,6 +472,11 @@ export default function App() {
               Open Settings
             </Button>
           </Flex>
+        )}
+
+        {/* ── TAB: Stream ── */}
+        {activeTab === 'stream' && (
+          <StreamView settings={settings} onOpenSettings={handleSettingsClick} />
         )}
 
         {/* ── TAB: Logs ── */}

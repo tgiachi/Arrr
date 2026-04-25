@@ -40,3 +40,13 @@ export interface Settings {
   apiKey: string
   baseUrl: string
 }
+
+export interface NotificationItem {
+  id: string
+  source: string
+  title: string
+  body: string
+  timestamp: string
+  iconUrl: string | null
+  _fresh?: boolean
+}

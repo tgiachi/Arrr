@@ -1,3 +1,5 @@
+using Arrr.Core.Data.Notifications;
+using Arrr.Core.Services;
 using Arrr.Tests.Support;
 
 namespace Arrr.Tests.Service;

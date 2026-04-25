@@ -1,3 +1,6 @@
+using Arrr.Core.Data.Notifications;
+using Arrr.Core.Interfaces;
+
 namespace Arrr.Tests.Support;
 
 internal class FakeSink : ISinkPlugin

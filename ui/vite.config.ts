@@ -22,6 +22,11 @@ export default defineConfig({
         target: 'http://localhost:5150',
         changeOrigin: true,
       },
+      '/stream': {
+        target: 'http://localhost:5150',
+        changeOrigin: true,
+        ws: true,
+      },
     },
   },
 })
