@@ -51,22 +51,38 @@ internal class NuGetPluginInstaller : IPluginInstaller
                              : throw new InvalidOperationException($"Package '{packageId}' not found on NuGet.org");
         }
 
-        var identity = new PackageIdentity(packageId, pkgVersion);
-        var metadata = await metaResource.GetMetadataAsync(identity, cache, NullLogger.Instance, ct);
+        // Verify the package exists via flat container (more reliable than registration during indexing)
+        var knownVersions = (await resource.GetAllVersionsAsync(packageId, cache, NullLogger.Instance, ct)).ToList();
 
-        if (metadata is null)
+        if (!knownVersions.Contains(pkgVersion))
         {
             throw new InvalidOperationException($"Package '{packageId}' v{pkgVersion} not found on NuGet.org");
         }
 
-        var tags = metadata.Tags?.Split([' ', ',', ';'], StringSplitOptions.RemoveEmptyEntries) ?? [];
-        var isPlugin = tags.Contains("arrr-plugin", StringComparer.OrdinalIgnoreCase);
-        var isSink = tags.Contains("arrr-sink", StringComparer.OrdinalIgnoreCase);
+        // Tag check via registration endpoint — may be null if NuGet indexing is still in progress.
+        // The UI already pre-filters by arrr-plugin/arrr-sink tags, so a transient null is safe to skip.
+        var identity = new PackageIdentity(packageId, pkgVersion);
+        var metadata = await metaResource.GetMetadataAsync(identity, cache, NullLogger.Instance, ct);
 
-        if (!isPlugin && !isSink)
+        if (metadata is not null)
         {
-            throw new InvalidOperationException(
-                $"Package '{packageId}' is not an Arrr plugin or sink (missing 'arrr-plugin' / 'arrr-sink' tag)"
+            var tags = metadata.Tags?.Split([' ', ',', ';'], StringSplitOptions.RemoveEmptyEntries) ?? [];
+            var isPlugin = tags.Contains("arrr-plugin", StringComparer.OrdinalIgnoreCase);
+            var isSink = tags.Contains("arrr-sink", StringComparer.OrdinalIgnoreCase);
+
+            if (!isPlugin && !isSink)
+            {
+                throw new InvalidOperationException(
+                    $"Package '{packageId}' is not an Arrr plugin or sink (missing 'arrr-plugin' / 'arrr-sink' tag)"
+                );
+            }
+        }
+        else
+        {
+            _logger.Warning(
+                "Metadata for {PackageId} v{Version} not yet indexed — skipping tag check",
+                packageId,
+                pkgVersion
             );
         }
 
