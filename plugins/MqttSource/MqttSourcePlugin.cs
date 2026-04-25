@@ -33,21 +33,27 @@ public class MqttSourcePlugin : ISourcePlugin, IConfigurablePlugin, IDisposable
         _injectedClient = client;
     }
 
+    public void Dispose()
+    {
+        _client?.Dispose();
+        _client = null;
+    }
+
     public async Task StartAsync(IPluginContext context, CancellationToken ct)
     {
         _context = context;
         _config = await context.LoadConfigAsync<MqttSourceConfig>(ct);
 
         var clientId = string.IsNullOrEmpty(_config.ClientId)
-            ? $"arrr-{Guid.NewGuid():N}"
-            : _config.ClientId;
+                           ? $"arrr-{Guid.NewGuid():N}"
+                           : _config.ClientId;
 
         _client = _injectedClient ?? new MqttFactory().CreateMqttClient();
         _client.ApplicationMessageReceivedAsync += HandleMessageAsync;
 
         var optionsBuilder = new MqttClientOptionsBuilder()
-            .WithTcpServer(_config.BrokerHost, _config.BrokerPort)
-            .WithClientId(clientId);
+                             .WithTcpServer(_config.BrokerHost, _config.BrokerPort)
+                             .WithClientId(clientId);
 
         if (!string.IsNullOrEmpty(_config.Username))
         {
@@ -71,14 +77,19 @@ public class MqttSourcePlugin : ISourcePlugin, IConfigurablePlugin, IDisposable
         }
         catch (Exception ex)
         {
-            context.Logger.LogError(ex, "MQTT plugin failed to connect to {Host}:{Port}", _config.BrokerHost, _config.BrokerPort);
+            context.Logger.LogError(
+                ex,
+                "MQTT plugin failed to connect to {Host}:{Port}",
+                _config.BrokerHost,
+                _config.BrokerPort
+            );
 
             return;
         }
 
         var subscribeOptions = new MqttFactory().CreateSubscribeOptionsBuilder()
-            .WithTopicFilter(f => f.WithTopic(_config.Topic))
-            .Build();
+                                                .WithTopicFilter(f => f.WithTopic(_config.Topic))
+                                                .Build();
 
         await _client.SubscribeAsync(subscribeOptions, ct);
 
@@ -94,12 +105,6 @@ public class MqttSourcePlugin : ISourcePlugin, IConfigurablePlugin, IDisposable
         await _client.DisconnectAsync(cancellationToken: CancellationToken.None);
     }
 
-    public void Dispose()
-    {
-        _client?.Dispose();
-        _client = null;
-    }
-
     private Task HandleMessageAsync(MqttApplicationMessageReceivedEventArgs e)
     {
         if (_context is null)
@@ -111,8 +116,8 @@ public class MqttSourcePlugin : ISourcePlugin, IConfigurablePlugin, IDisposable
         var payload = Encoding.UTF8.GetString(e.ApplicationMessage.PayloadSegment);
 
         var title = _config.TitleTemplate
-            .Replace("{topic}", topic)
-            .Replace("{payload}", payload);
+                           .Replace("{topic}", topic)
+                           .Replace("{payload}", payload);
 
         var notification = new Notification(
             Guid.NewGuid(),

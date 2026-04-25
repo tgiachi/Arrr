@@ -1,6 +1,4 @@
 using System.Text.Json;
-using Arrr.Core.Directories;
-using Arrr.Core.Types;
 using Arrr.Service.Internal;
 
 namespace Arrr.Tests.Services;
@@ -11,21 +9,6 @@ public class ConfigBackupServiceTests
     private string _tempRoot = "";
     private DirectoriesConfig _directoriesConfig = null!;
     private ConfigBackupService _service = null!;
-
-    [SetUp]
-    public void SetUp()
-    {
-        _tempRoot = Path.Combine(Path.GetTempPath(), $"arrr_backup_test_{Guid.NewGuid()}");
-        _directoriesConfig = new(_tempRoot, Enum.GetNames<DirectoryType>());
-        _service = new ConfigBackupService(_directoriesConfig);
-    }
-
-    [TearDown]
-    public void TearDown()
-    {
-        if (Directory.Exists(_tempRoot))
-            Directory.Delete(_tempRoot, true);
-    }
 
     [Test]
     public async Task ExportAsync_ReadsAllConfigFiles()
@@ -48,7 +31,7 @@ public class ConfigBackupServiceTests
         var configs = new Dictionary<string, JsonElement>
         {
             ["com.arrr.sink.smtp"] = JsonDocument.Parse("""{"from":"a@b.com"}""").RootElement,
-            ["com.arrr.rss"]       = JsonDocument.Parse("""{"feeds":[]}""").RootElement,
+            ["com.arrr.rss"] = JsonDocument.Parse("""{"feeds":[]}""").RootElement
         };
 
         var count = await _service.ImportAsync(configs, CancellationToken.None);
@@ -59,5 +42,22 @@ public class ConfigBackupServiceTests
         Assert.That(File.Exists(Path.Combine(configsDir, "com.arrr.rss.config")), Is.True);
         var written = await File.ReadAllTextAsync(Path.Combine(configsDir, "com.arrr.sink.smtp.config"));
         Assert.That(written, Does.Contain("a@b.com"));
+    }
+
+    [SetUp]
+    public void SetUp()
+    {
+        _tempRoot = Path.Combine(Path.GetTempPath(), $"arrr_backup_test_{Guid.NewGuid()}");
+        _directoriesConfig = new(_tempRoot, Enum.GetNames<DirectoryType>());
+        _service = new ConfigBackupService(_directoriesConfig);
+    }
+
+    [TearDown]
+    public void TearDown()
+    {
+        if (Directory.Exists(_tempRoot))
+        {
+            Directory.Delete(_tempRoot, true);
+        }
     }
 }

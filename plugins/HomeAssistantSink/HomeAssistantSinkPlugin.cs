@@ -39,20 +39,20 @@ public class HomeAssistantSinkPlugin : ISinkPlugin, IConfigurablePlugin
         }
 
         var title = _config.TitleTemplate
-            .Replace("{source}", notification.Source)
-            .Replace("{title}", notification.Title)
-            .Replace("{body}", notification.Body);
+                           .Replace("{source}", notification.Source)
+                           .Replace("{title}", notification.Title)
+                           .Replace("{body}", notification.Body);
 
         var payload = new
         {
             title,
-            message = notification.Body,
+            message = notification.Body
         };
 
         var url = $"{_config.BaseUrl.TrimEnd('/')}/api/services/notify/{_config.NotifyService}";
         var request = new HttpRequestMessage(HttpMethod.Post, url)
         {
-            Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
+            Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
         };
         request.Headers.Authorization = new("Bearer", _config.AccessToken);
 

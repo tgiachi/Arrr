@@ -1,5 +1,3 @@
-using System.Reflection;
-
 namespace Arrr.Core.Utils;
 
 public static class VersionUtils

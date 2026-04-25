@@ -39,21 +39,21 @@ public class GotifySinkPlugin : ISinkPlugin, IConfigurablePlugin
         }
 
         var title = _config.TitleTemplate
-            .Replace("{source}", notification.Source)
-            .Replace("{title}", notification.Title)
-            .Replace("{body}", notification.Body);
+                           .Replace("{source}", notification.Source)
+                           .Replace("{title}", notification.Title)
+                           .Replace("{body}", notification.Body);
 
         var payload = new
         {
             title,
             message = notification.Body,
-            priority = _config.DefaultPriority,
+            priority = _config.DefaultPriority
         };
 
         var url = $"{_config.ServerUrl.TrimEnd('/')}/message";
         var request = new HttpRequestMessage(HttpMethod.Post, url)
         {
-            Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
+            Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json")
         };
         request.Headers.Add("X-Gotify-Key", _config.AppToken);
 

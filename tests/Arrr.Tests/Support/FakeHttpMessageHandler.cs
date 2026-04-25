@@ -11,9 +11,12 @@ internal class FakeHttpMessageHandler : HttpMessageHandler
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
     {
         LastRequest = request;
-        return Task.FromResult(new HttpResponseMessage(ResponseStatusCode)
-        {
-            Content = new StringContent(ResponseContent)
-        });
+
+        return Task.FromResult(
+            new HttpResponseMessage(ResponseStatusCode)
+            {
+                Content = new StringContent(ResponseContent)
+            }
+        );
     }
 }

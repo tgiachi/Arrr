@@ -1,7 +1,6 @@
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
-using Arrr.Core.Data.Notifications;
 using Arrr.Service.Sinks;
 using Arrr.Tests.Support;
 
@@ -11,31 +10,6 @@ namespace Arrr.Tests.Sinks;
 public class UnixSocketSinkTests
 {
     private string _socketPath = "";
-
-    [SetUp]
-    public void SetUp()
-        => _socketPath = Path.Combine(Path.GetTempPath(), $"arrr_sink_test_{Guid.NewGuid()}.sock");
-
-    [TearDown]
-    public void TearDown()
-    {
-        if (File.Exists(_socketPath))
-            File.Delete(_socketPath);
-    }
-
-    [Test]
-    public async Task StartAsync_CreatesSocketFile()
-    {
-        var sink = new UnixSocketSink();
-        var ctx = new FakeSinkContext(configFactory: _ => new UnixSocketSinkConfig { SocketPath = _socketPath });
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        await sink.StartAsync(ctx, cts.Token);
-
-        Assert.That(File.Exists(_socketPath), Is.True);
-
-        await sink.StopAsync();
-    }
 
     [Test]
     public async Task ConsumeAsync_BroadcastsJsonLine_ToConnectedClient()
@@ -65,6 +39,24 @@ public class UnixSocketSinkTests
         await sink.StopAsync();
     }
 
+    [SetUp]
+    public void SetUp()
+        => _socketPath = Path.Combine(Path.GetTempPath(), $"arrr_sink_test_{Guid.NewGuid()}.sock");
+
+    [Test]
+    public async Task StartAsync_CreatesSocketFile()
+    {
+        var sink = new UnixSocketSink();
+        var ctx = new FakeSinkContext(configFactory: _ => new UnixSocketSinkConfig { SocketPath = _socketPath });
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await sink.StartAsync(ctx, cts.Token);
+
+        Assert.That(File.Exists(_socketPath), Is.True);
+
+        await sink.StopAsync();
+    }
+
     [Test]
     public async Task StopAsync_RemovesSocketFile()
     {
@@ -85,9 +77,20 @@ public class UnixSocketSinkTests
         Assert.DoesNotThrowAsync(() => sink.StopAsync());
     }
 
+    [TearDown]
+    public void TearDown()
+    {
+        if (File.Exists(_socketPath))
+        {
+            File.Delete(_socketPath);
+        }
+    }
+
     private static async Task WaitForSocketAsync(string path, CancellationToken ct)
     {
         while (!File.Exists(path))
+        {
             await Task.Delay(20, ct);
+        }
     }
 }

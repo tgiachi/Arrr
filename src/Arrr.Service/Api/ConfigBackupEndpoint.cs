@@ -17,9 +17,12 @@ internal static class ConfigBackupEndpoint
             ) =>
             {
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
                     return error!;
+                }
 
                 var configs = await backupService.ExportAsync(ct);
+
                 return Results.Ok(configs);
             }
         );
@@ -35,9 +38,12 @@ internal static class ConfigBackupEndpoint
             ) =>
             {
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
                     return error!;
+                }
 
                 var count = await backupService.ImportAsync(body, ct);
+
                 return Results.Ok(new { restored = count });
             }
         );

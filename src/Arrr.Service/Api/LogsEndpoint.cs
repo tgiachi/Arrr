@@ -20,20 +20,26 @@ internal static class LogsEndpoint
             ) =>
             {
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
                     return error!;
+                }
 
                 var logsDir = directoriesConfig[DirectoryType.Logs];
 
                 if (!Directory.Exists(logsDir))
+                {
                     return Results.Ok(Array.Empty<string>());
+                }
 
                 var latest = Directory
-                    .EnumerateFiles(logsDir, "*.txt")
-                    .OrderByDescending(f => f)
-                    .FirstOrDefault();
+                             .EnumerateFiles(logsDir, "*.txt")
+                             .OrderByDescending(f => f)
+                             .FirstOrDefault();
 
                 if (latest is null)
+                {
                     return Results.Ok(Array.Empty<string>());
+                }
 
                 // FileShare.ReadWrite so Serilog can keep writing while we read
                 await using var fs = new FileStream(
@@ -46,9 +52,9 @@ internal static class LogsEndpoint
                 var text = await reader.ReadToEndAsync(ct);
 
                 var lines = text
-                    .Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                    .TakeLast(MaxLines)
-                    .ToArray();
+                            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                            .TakeLast(MaxLines)
+                            .ToArray();
 
                 return Results.Ok(lines);
             }

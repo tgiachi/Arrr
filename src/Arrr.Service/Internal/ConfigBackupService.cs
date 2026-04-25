@@ -20,7 +20,9 @@ internal class ConfigBackupService : IConfigBackupService
         var configsDir = _directoriesConfig[DirectoryType.Configs];
 
         if (!Directory.Exists(configsDir))
+        {
             return result;
+        }
 
         foreach (var file in Directory.EnumerateFiles(configsDir, "*.config"))
         {

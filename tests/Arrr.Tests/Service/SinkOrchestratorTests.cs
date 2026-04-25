@@ -1,5 +1,3 @@
-using Arrr.Core.Data.Notifications;
-using Arrr.Core.Services;
 using Arrr.Service.Internal;
 using Arrr.Tests.Support;
 
@@ -10,21 +8,6 @@ public class SinkOrchestratorTests
 {
     private EventBusService _bus = null!;
     private CancellationTokenSource _cts = null!;
-
-    [SetUp]
-    public async Task SetUp()
-    {
-        _bus = new EventBusService();
-        _cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-        await _bus.StartAsync(_cts.Token);
-    }
-
-    [TearDown]
-    public async Task TearDown()
-    {
-        await _bus.StopAsync(_cts.Token);
-        _cts.Dispose();
-    }
 
     [Test]
     public async Task Notification_DeliveredToAllRunningSinks()
@@ -63,5 +46,20 @@ public class SinkOrchestratorTests
         await Task.Delay(100, _cts.Token);
 
         Assert.That(goodSink.Received, Has.Count.EqualTo(1));
+    }
+
+    [SetUp]
+    public async Task SetUp()
+    {
+        _bus = new EventBusService();
+        _cts = new(TimeSpan.FromSeconds(3));
+        await _bus.StartAsync(_cts.Token);
+    }
+
+    [TearDown]
+    public async Task TearDown()
+    {
+        await _bus.StopAsync(_cts.Token);
+        _cts.Dispose();
     }
 }

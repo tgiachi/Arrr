@@ -1,4 +1,4 @@
-using Arrr.Core.Data.Notifications;
+using System.Net;
 using Arrr.Tests.Support;
 using GotifySink;
 using GotifySink.Data;
@@ -11,43 +11,18 @@ public class GotifySinkPluginTests
     private FakeHttpMessageHandler _handler = null!;
     private GotifySinkPlugin? _sink;
 
-    [SetUp]
-    public void SetUp()
-    {
-        _handler = new FakeHttpMessageHandler();
-        _sink = new GotifySinkPlugin(_handler);
-    }
-
-    [TearDown]
-    public async Task TearDown()
-    {
-        if (_sink is not null)
-        {
-            await _sink.StopAsync();
-            _sink = null;
-        }
-
-        _handler.Dispose();
-    }
-
-    [Test]
-    public async Task StartAsync_WithValidConfig_DoesNotThrow()
-    {
-        var ctx = new FakeSinkContext(configFactory: _ => new GotifySinkConfig { AppToken = "tok" });
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        await _sink!.StartAsync(ctx, cts.Token);
-    }
-
     [Test]
     public async Task ConsumeAsync_SendsCorrectRequest()
     {
-        var ctx = new FakeSinkContext(configFactory: _ => new GotifySinkConfig
-        {
-            ServerUrl       = "http://gotify.example.com",
-            AppToken        = "mytoken",
-            DefaultPriority = 7,
-            TitleTemplate   = "[{source}] {title}",
-        });
+        var ctx = new FakeSinkContext(
+            configFactory: _ => new GotifySinkConfig
+            {
+                ServerUrl = "http://gotify.example.com",
+                AppToken = "mytoken",
+                DefaultPriority = 7,
+                TitleTemplate = "[{source}] {title}"
+            }
+        );
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await _sink!.StartAsync(ctx, cts.Token);
 
@@ -80,16 +55,45 @@ public class GotifySinkPluginTests
     [Test]
     public async Task ConsumeAsync_WhenServerReturnsError_DoesNotThrow()
     {
-        _handler.ResponseStatusCode = System.Net.HttpStatusCode.InternalServerError;
-        var ctx = new FakeSinkContext(configFactory: _ => new GotifySinkConfig
-        {
-            ServerUrl = "http://gotify.example.com",
-            AppToken  = "tok",
-        });
+        _handler.ResponseStatusCode = HttpStatusCode.InternalServerError;
+        var ctx = new FakeSinkContext(
+            configFactory: _ => new GotifySinkConfig
+            {
+                ServerUrl = "http://gotify.example.com",
+                AppToken = "tok"
+            }
+        );
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await _sink!.StartAsync(ctx, cts.Token);
 
         var notification = new Notification(Guid.NewGuid(), "rss", "Title", "Body", DateTimeOffset.UtcNow, null);
         Assert.DoesNotThrowAsync(() => _sink.ConsumeAsync(notification, cts.Token));
+    }
+
+    [SetUp]
+    public void SetUp()
+    {
+        _handler = new();
+        _sink = new(_handler);
+    }
+
+    [Test]
+    public async Task StartAsync_WithValidConfig_DoesNotThrow()
+    {
+        var ctx = new FakeSinkContext(configFactory: _ => new GotifySinkConfig { AppToken = "tok" });
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await _sink!.StartAsync(ctx, cts.Token);
+    }
+
+    [TearDown]
+    public async Task TearDown()
+    {
+        if (_sink is not null)
+        {
+            await _sink.StopAsync();
+            _sink = null;
+        }
+
+        _handler.Dispose();
     }
 }

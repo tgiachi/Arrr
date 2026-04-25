@@ -10,9 +10,8 @@ internal class FakeTimeProvider : TimeProvider
     }
 
     public void Advance(TimeSpan by)
-    {
-        _utcNow += by;
-    }
+        => _utcNow += by;
 
-    public override DateTimeOffset GetUtcNow() => _utcNow;
+    public override DateTimeOffset GetUtcNow()
+        => _utcNow;
 }
