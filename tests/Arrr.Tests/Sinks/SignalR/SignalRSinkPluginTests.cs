@@ -78,6 +78,46 @@ public class SignalRSinkPluginTests
         await conn.StopAsync();
     }
 
+    [Test]
+    public async Task ConsumeAsync_BeforeStartAsync_DoesNotThrow()
+    {
+        var notification = new Notification(Guid.NewGuid(), "test", "Title", "Body", DateTimeOffset.UtcNow, null);
+        await _sink!.ConsumeAsync(notification, CancellationToken.None);
+    }
+
+    [Test]
+    public async Task StopAsync_DisconnectsClients()
+    {
+        var ctx = new FakeSinkContext(configFactory: _ => new SignalRSinkConfig { Port = _port, HubPath = "notifications" });
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        await _sink!.StartAsync(ctx, cts.Token);
+
+        var disconnectedTcs = new TaskCompletionSource();
+        cts.Token.Register(() => disconnectedTcs.TrySetCanceled(cts.Token));
+
+        await using var conn = new HubConnectionBuilder()
+            .WithUrl($"http://localhost:{_port}/notifications")
+            .Build();
+
+        conn.Closed += _ => { disconnectedTcs.TrySetResult(); return Task.CompletedTask; };
+        await conn.StartAsync(cts.Token);
+        Assert.That(conn.State, Is.EqualTo(HubConnectionState.Connected));
+
+        await _sink.StopAsync();
+
+        await disconnectedTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.That(conn.State, Is.EqualTo(HubConnectionState.Disconnected));
+
+        await conn.StopAsync();
+    }
+
+    [Test]
+    public void StopAsync_WhenNeverStarted_DoesNotThrow()
+    {
+        Assert.DoesNotThrowAsync(() => _sink!.StopAsync());
+    }
+
     private static int GetFreePort()
     {
         using var l = new TcpListener(IPAddress.Loopback, 0);
