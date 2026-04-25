@@ -34,6 +34,7 @@
         <ProjectReference Include="..\..\plugins\WebSocketSink\WebSocketSink.csproj"/>
         <ProjectReference Include="..\..\plugins\SignalRSink\SignalRSink.csproj"/>
         <ProjectReference Include="..\..\plugins\NtfySink\NtfySink.csproj"/>
+        <ProjectReference Include="..\..\plugins\SmtpSink\SmtpSink.csproj"/>
     </ItemGroup>
 
 </Project>
