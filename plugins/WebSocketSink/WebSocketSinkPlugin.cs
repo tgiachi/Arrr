@@ -11,7 +11,7 @@ using WebSocketSink.Data;
 
 namespace WebSocketSink;
 
-public class WebSocketSinkPlugin : ISinkPlugin, IConfigurablePlugin
+public class WebSocketSinkPlugin : ISinkPlugin, IConfigurablePlugin, IDisposable
 {
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -65,7 +65,12 @@ public class WebSocketSinkPlugin : ISinkPlugin, IConfigurablePlugin
                     if (result.MessageType == WebSocketMessageType.Close)
                         break;
                 }
-                catch { break; }
+                catch (OperationCanceledException) { break; }
+                catch (Exception ex)
+                {
+                    _context?.Logger.LogDebug(ex, "WebSocket receive error for client {Id}, closing connection", id);
+                    break;
+                }
             }
 
             _clients.TryRemove(id, out _);
@@ -135,5 +140,10 @@ public class WebSocketSinkPlugin : ISinkPlugin, IConfigurablePlugin
 
         _stopCts.Dispose();
         _stopCts = new CancellationTokenSource();
+    }
+
+    public void Dispose()
+    {
+        _stopCts.Dispose();
     }
 }
