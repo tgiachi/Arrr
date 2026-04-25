@@ -105,6 +105,7 @@ await ConsoleApp.RunAsync(
         app.MapExternalApi();
         app.MapSinksApi();
         app.MapConfigBackupApi();
+        app.MapLogsApi();
 
         if (configService.Config.IsDebug)
         {

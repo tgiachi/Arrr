@@ -102,6 +102,10 @@ export class ArrrApi {
     })
   }
 
+  async getLogs(): Promise<string[]> {
+    return (await this.req('/api/logs')).json()
+  }
+
   async getQrCode(pluginId: string): Promise<string | null> {
     const r = await fetch(`${this.baseUrl}/api/plugins/${encodeURIComponent(pluginId)}/qr`, {
       headers: this.headers(),
