@@ -108,8 +108,6 @@ public class SignalRSinkPluginTests
 
         await disconnectedTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.That(conn.State, Is.EqualTo(HubConnectionState.Disconnected));
-
-        await conn.StopAsync();
     }
 
     [Test]
