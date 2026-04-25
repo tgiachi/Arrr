@@ -19,6 +19,11 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      - name: Pack Arrr.Core into local feed
+        run: |
+          mkdir -p local-packages
+          dotnet pack src/Arrr.Core/Arrr.Core.csproj -c Release -o ./local-packages
+
       - name: Restore
         run: dotnet restore
 
