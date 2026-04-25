@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/tgiachi/Arrr/compare/v1.5.0...v1.5.1) (2026-04-25)
+
+### Bug Fixes
+
+* **ci:** create local-packages dir before dotnet restore to avoid NU1301 ([1fc20e0](https://github.com/tgiachi/Arrr/commit/1fc20e02c1b90974564e2d21e1b1f0fa56ddc940))
+* **ci:** pack Arrr.Core into local-packages before restore ([1faf921](https://github.com/tgiachi/Arrr/commit/1faf9219da8d98fa213329933fec088782815abb))
+
 ## [1.4.1](https://github.com/tgiachi/Arrr/compare/v1.4.0...v1.4.1) (2026-04-24)
 
 ### Bug Fixes
