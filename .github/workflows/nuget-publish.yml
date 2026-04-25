@@ -54,17 +54,7 @@ jobs:
 
       - name: Restore & build plugins
         run: |
-          for plugin in \
-            plugins/RssPlugin/RssPlugin.csproj \
-            plugins/ImapPlugin/ImapPlugin.csproj \
-            plugins/TelegramBotSink/TelegramBotSink.csproj \
-            plugins/WhatsAppPlugin/WhatsAppPlugin.csproj \
-            plugins/WebSocketSink/WebSocketSink.csproj \
-            plugins/SignalRSink/SignalRSink.csproj \
-            plugins/NtfySink/NtfySink.csproj \
-            plugins/SmtpSink/SmtpSink.csproj \
-            plugins/CalDavSource/CalDavSource.csproj \
-            plugins/WebhookSink/WebhookSink.csproj; do
+          for plugin in $(find plugins -name "*.csproj"); do
             dotnet restore "$plugin"
             dotnet build "$plugin" -c Release --no-restore
           done
@@ -84,17 +74,7 @@ jobs:
             -c Release \
             -p:Version="$VERSION" \
             -o ./nupkg
-          for plugin in \
-            plugins/RssPlugin/RssPlugin.csproj \
-            plugins/ImapPlugin/ImapPlugin.csproj \
-            plugins/TelegramBotSink/TelegramBotSink.csproj \
-            plugins/WhatsAppPlugin/WhatsAppPlugin.csproj \
-            plugins/WebSocketSink/WebSocketSink.csproj \
-            plugins/SignalRSink/SignalRSink.csproj \
-            plugins/NtfySink/NtfySink.csproj \
-            plugins/SmtpSink/SmtpSink.csproj \
-            plugins/CalDavSource/CalDavSource.csproj \
-            plugins/WebhookSink/WebhookSink.csproj; do
+          for plugin in $(find plugins -name "*.csproj"); do
             dotnet pack "$plugin" -c Release --no-build -p:Version="$VERSION" -o ./nupkg
           done
 
