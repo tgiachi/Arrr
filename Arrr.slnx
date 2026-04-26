@@ -24,5 +24,6 @@
         <Project Path="plugins/Arrr.Sink.Pushover/Arrr.Sink.Pushover.csproj"/>
         <Project Path="plugins/Arrr.Plugin.Github/Arrr.Plugin.Github.csproj"/>
         <Project Path="plugins/Arrr.Plugin.Systemd/Arrr.Plugin.Systemd.csproj"/>
+        <Project Path="plugins/Arrr.Sink.Bark/Arrr.Sink.Bark.csproj"/>
     </Folder>
 </Solution>

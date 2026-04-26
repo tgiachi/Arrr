@@ -43,6 +43,7 @@
         <ProjectReference Include="..\..\plugins\Arrr.Sink.Pushover\Arrr.Sink.Pushover.csproj"/>
         <ProjectReference Include="..\..\plugins\Arrr.Plugin.Github\Arrr.Plugin.Github.csproj"/>
         <ProjectReference Include="..\..\plugins\Arrr.Plugin.Systemd\Arrr.Plugin.Systemd.csproj"/>
+        <ProjectReference Include="..\..\plugins\Arrr.Sink.Bark\Arrr.Sink.Bark.csproj"/>
     </ItemGroup>
 
 </Project>
