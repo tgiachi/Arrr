@@ -25,10 +25,14 @@ jobs:
           dotnet pack src/Arrr.Core/Arrr.Core.csproj -c Release -o ./local-packages
 
       - name: Restore
-        run: dotnet restore
+        run: |
+          dotnet restore src/Arrr.Service/Arrr.Service.csproj
+          dotnet restore tests/Arrr.Tests/Arrr.Tests.csproj
 
       - name: Build
-        run: dotnet build --no-restore -c Release
+        run: |
+          dotnet build src/Arrr.Service/Arrr.Service.csproj --no-restore -c Release
+          dotnet build tests/Arrr.Tests/Arrr.Tests.csproj --no-restore -c Release
 
       - name: Test
         run: dotnet test tests/Arrr.Tests/Arrr.Tests.csproj -c Release --no-build --filter "Category!=Integration" --logger "console;verbosity=normal"
