@@ -3,7 +3,7 @@
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
         <PackageId>Arrr.Templates</PackageId>
-        <Version>1.1.0</Version>
+        <Version>1.5.1</Version>
         <Authors>Tom</Authors>
         <Company>orivega.io</Company>
         <Description>dotnet new templates for writing Arrr notification plugins and sinks.</Description>

@@ -1,3 +1,74 @@
+## [1.5.1](https://github.com/tgiachi/Arrr/compare/v1.5.0...v1.5.1) (2026-04-25)
+
+### Bug Fixes
+
+* **ci:** create local-packages dir before dotnet restore to avoid NU1301 ([1fc20e0](https://github.com/tgiachi/Arrr/commit/1fc20e02c1b90974564e2d21e1b1f0fa56ddc940))
+* **ci:** pack Arrr.Core into local-packages before restore ([1faf921](https://github.com/tgiachi/Arrr/commit/1faf9219da8d98fa213329933fec088782815abb))
+
+## [1.4.1](https://github.com/tgiachi/Arrr/compare/v1.4.0...v1.4.1) (2026-04-24)
+
+### Bug Fixes
+
+* **bridge:** replace go-sqlite3 (CGO) with modernc.org/sqlite (pure Go) ([c571c85](https://github.com/tgiachi/Arrr/commit/c571c855178b5d0871f9039f1df8dc2e8ed7ebae))
+
+## [1.4.0](https://github.com/tgiachi/Arrr/compare/v1.3.0...v1.4.0) (2026-04-24)
+
+### Features
+
+* **ci:** add multi-platform whatsapp-bridge build and TelegramBotSink/WhatsApp NuGet publishing ([eadf5d1](https://github.com/tgiachi/Arrr/commit/eadf5d10bbe8128fd37e06e260bffa374e3a11fa))
+* **sink:** add Arrr.Sink.Telegram — delivers notifications via Telegram Bot API ([38044fc](https://github.com/tgiachi/Arrr/commit/38044fcb0e10b5b7aa58ea4aee63d58652e18ce7))
+
+## [1.3.0](https://github.com/tgiachi/Arrr/compare/v1.2.1...v1.3.0) (2026-04-24)
+
+### Features
+
+* add pluggable sink system (output connectors) ([4de27ef](https://github.com/tgiachi/Arrr/commit/4de27ef810b3ff6989209c723816162ddf64b2f4))
+* **sink:** add DbusNotifySink replacing DBusNotifySubscriber ([07be0ae](https://github.com/tgiachi/Arrr/commit/07be0ae94cd6190f5cb7b8219e7024cd30f71923))
+* **sink:** add ISinkPlugin, ISinkContext, ISinkManager, AvailableSinkResponse, SinkEntry ([8e9bb7e](https://github.com/tgiachi/Arrr/commit/8e9bb7e93359de049c32774346047b9641787a4c))
+* **sink:** add SinksEndpoint + FakeSinkManager with full test coverage ([39a29a7](https://github.com/tgiachi/Arrr/commit/39a29a7d69b6cd3c98b576b135f513a2c02b6f3b))
+* **sink:** add UnixSocketSink replacing UnixSocketServer, remove old subscribers ([1781c74](https://github.com/tgiachi/Arrr/commit/1781c74f069b3c8ed7fa44db8f2babe102bea6e5))
+* **ui:** show available NuGet plugins with install button ([be4e370](https://github.com/tgiachi/Arrr/commit/be4e3707d1007ea5928e038aed4e35c97a7a3958))
+* **ui:** split NuGet panel into plugins/sinks sections with search ([254d5e9](https://github.com/tgiachi/Arrr/commit/254d5e97466a87c13fe23d0663be886ec09a9bbb))
+
+### Bug Fixes
+
+* add arrr-plugin tag to WhatsApp plugin, show icon in NuGet card ([1d8ccf5](https://github.com/tgiachi/Arrr/commit/1d8ccf53b36dc54db8cf055b60430b9fe1c64952))
+* **ui:** search NuGet by tag arrr-plugin instead of name prefix ([17d9fdf](https://github.com/tgiachi/Arrr/commit/17d9fdf47ffd4a053acab1be8ee4449436092943))
+
+## [1.2.1](https://github.com/tgiachi/Arrr/compare/v1.2.0...v1.2.1) (2026-04-24)
+
+### Bug Fixes
+
+* **tests:** implement GetPendingQrCode in FakePluginManager ([d58e017](https://github.com/tgiachi/Arrr/commit/d58e017db60d47913754fdf1cc402fa00521b6a7))
+
+## [1.2.0](https://github.com/tgiachi/Arrr/compare/v1.1.1...v1.2.0) (2026-04-24)
+
+### Features
+
+* **callback:** add ICallbackPlugin + POST /api/plugins/{id}/callback endpoint ([4ec00eb](https://github.com/tgiachi/Arrr/commit/4ec00eb5c8b157f42b1fbaa553244170db2637b5))
+* **config-schema:** expose field descriptions in config API and UI ([f7e7e3a](https://github.com/tgiachi/Arrr/commit/f7e7e3a1de403be051fa99829c6396f83288296d))
+* **config:** add plugin config GET/POST endpoints with sensitive field encryption ([8093217](https://github.com/tgiachi/Arrr/commit/809321789b52b5dd815b7980ef836c3fe4b6b6f8))
+* **docker:** add Dockerfile and build-docker.sh ([b5e4843](https://github.com/tgiachi/Arrr/commit/b5e4843cfca3d6c0a724ff5a303c86dd4f629d33))
+* **qr:** add generic IQrPlugin system for in-UI QR code pairing ([17a6220](https://github.com/tgiachi/Arrr/commit/17a622049e90d636f1c7a31281b9769aca7c443d))
+* **telegram:** add TelegramPlugin via MTProto user account (WTelegramClient) ([1994ad4](https://github.com/tgiachi/Arrr/commit/1994ad496ffda449762505113dd16a53e39425f9))
+* **ui:** add Vite + React + Chakra UI plugin manager ([be0597b](https://github.com/tgiachi/Arrr/commit/be0597bb7ad2390dbceb30a37a3db4c86fab6fbf))
+* **whatsapp:** add WhatsApp plugin via whatsmeow Go bridge ([1a96aa8](https://github.com/tgiachi/Arrr/commit/1a96aa80c1fb542e0cfb7cf0af082a038ea592c7))
+
+### Bug Fixes
+
+* **ci:** create local-packages dir before dotnet restore to avoid NU1301 ([5a3b293](https://github.com/tgiachi/Arrr/commit/5a3b293e4991f01458d885257e890b7c1f055758))
+* **config:** scan plugins dir as fallback when dllPaths cache misses ([126a58c](https://github.com/tgiachi/Arrr/commit/126a58cba70656182bbd7a9267973189245bc739))
+* **rss:** set User-Agent header to avoid 403 from Reddit and similar feeds ([644fdb5](https://github.com/tgiachi/Arrr/commit/644fdb513362d027583eba537b4032903d370881))
+* **telegram:** return null from ConfigCallback for unknown keys ([ab1134d](https://github.com/tgiachi/Arrr/commit/ab1134df0dc366df3c999e121ddb31b64c989769))
+
+## [1.1.0](https://github.com/tgiachi/Arrr/compare/v1.0.0...v1.1.0) (2026-04-24)
+
+### Features
+
+* **core:** add plugin config service with sensitive field encryption ([3d43ba2](https://github.com/tgiachi/Arrr/commit/3d43ba285c1c1a4259acfa8f4b2c10c579d88dca))
+* **plugins:** add IPluginManager with enable/disable/reload endpoints ([ad3556e](https://github.com/tgiachi/Arrr/commit/ad3556e17af48a10c082dac4494e94a283a7114f))
+* **plugins:** install/uninstall plugins from NuGet + RSS first-poll seeding ([76d925c](https://github.com/tgiachi/Arrr/commit/76d925cc6020436ee178fe14861e08086f3bd0d1))
+
 ## 1.0.0 (2026-04-24)
 
 ### Features
