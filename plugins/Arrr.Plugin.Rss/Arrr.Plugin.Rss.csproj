@@ -4,8 +4,8 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <AssemblyName>RssPlugin</AssemblyName>
-        <RootNamespace>RssPlugin</RootNamespace>
+        <AssemblyName>Arrr.Plugin.Rss</AssemblyName>
+        <RootNamespace>Arrr.Plugin.Rss</RootNamespace>
 
         <PackageId>Arrr.Plugin.Rss</PackageId>
         <Version>1.1.0</Version>

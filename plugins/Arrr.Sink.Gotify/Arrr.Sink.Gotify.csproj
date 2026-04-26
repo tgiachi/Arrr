@@ -4,8 +4,8 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <AssemblyName>GotifySink</AssemblyName>
-        <RootNamespace>GotifySink</RootNamespace>
+        <AssemblyName>Arrr.Sink.Gotify</AssemblyName>
+        <RootNamespace>Arrr.Sink.Gotify</RootNamespace>
 
         <PackageId>Arrr.Sink.Gotify</PackageId>
         <Version>1.0.0</Version>

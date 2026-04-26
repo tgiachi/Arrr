@@ -4,8 +4,8 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <AssemblyName>NtfySink</AssemblyName>
-        <RootNamespace>NtfySink</RootNamespace>
+        <AssemblyName>Arrr.Sink.Ntfy</AssemblyName>
+        <RootNamespace>Arrr.Sink.Ntfy</RootNamespace>
 
         <PackageId>Arrr.Sink.Ntfy</PackageId>
         <Version>1.0.0</Version>

@@ -4,8 +4,8 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <AssemblyName>TelegramBotSink</AssemblyName>
-        <RootNamespace>TelegramBotSink</RootNamespace>
+        <AssemblyName>Arrr.Sink.Telegram</AssemblyName>
+        <RootNamespace>Arrr.Sink.Telegram</RootNamespace>
 
         <PackageId>Arrr.Sink.Telegram</PackageId>
         <Version>1.0.0</Version>

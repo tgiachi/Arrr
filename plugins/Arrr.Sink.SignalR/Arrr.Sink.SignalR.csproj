@@ -4,8 +4,8 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <AssemblyName>SignalRSink</AssemblyName>
-        <RootNamespace>SignalRSink</RootNamespace>
+        <AssemblyName>Arrr.Sink.SignalR</AssemblyName>
+        <RootNamespace>Arrr.Sink.SignalR</RootNamespace>
 
         <PackageId>Arrr.Sink.SignalR</PackageId>
         <Version>1.0.0</Version>

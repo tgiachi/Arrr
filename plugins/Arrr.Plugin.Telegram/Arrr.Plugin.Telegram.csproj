@@ -4,8 +4,8 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <AssemblyName>TelegramPlugin</AssemblyName>
-        <RootNamespace>TelegramPlugin</RootNamespace>
+        <AssemblyName>Arrr.Plugin.Telegram</AssemblyName>
+        <RootNamespace>Arrr.Plugin.Telegram</RootNamespace>
 
         <PackageId>Arrr.Plugin.Telegram</PackageId>
         <Version>1.1.0</Version>

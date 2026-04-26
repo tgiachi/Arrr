@@ -4,8 +4,8 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <AssemblyName>ImapPlugin</AssemblyName>
-        <RootNamespace>ImapPlugin</RootNamespace>
+        <AssemblyName>Arrr.Plugin.Imap</AssemblyName>
+        <RootNamespace>Arrr.Plugin.Imap</RootNamespace>
 
         <PackageId>Arrr.Plugin.Imap</PackageId>
         <Version>1.1.0</Version>

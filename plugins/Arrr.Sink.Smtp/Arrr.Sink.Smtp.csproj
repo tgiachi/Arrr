@@ -4,8 +4,8 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <AssemblyName>SmtpSink</AssemblyName>
-        <RootNamespace>SmtpSink</RootNamespace>
+        <AssemblyName>Arrr.Sink.Smtp</AssemblyName>
+        <RootNamespace>Arrr.Sink.Smtp</RootNamespace>
 
         <PackageId>Arrr.Sink.Smtp</PackageId>
         <Version>1.0.0</Version>

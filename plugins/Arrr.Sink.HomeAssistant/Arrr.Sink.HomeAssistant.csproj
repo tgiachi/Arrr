@@ -4,8 +4,8 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <AssemblyName>HomeAssistantSink</AssemblyName>
-        <RootNamespace>HomeAssistantSink</RootNamespace>
+        <AssemblyName>Arrr.Sink.HomeAssistant</AssemblyName>
+        <RootNamespace>Arrr.Sink.HomeAssistant</RootNamespace>
 
         <PackageId>Arrr.Sink.HomeAssistant</PackageId>
         <Version>1.0.0</Version>
