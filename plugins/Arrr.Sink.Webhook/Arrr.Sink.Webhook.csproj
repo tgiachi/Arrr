@@ -8,7 +8,7 @@
         <RootNamespace>Arrr.Sink.Webhook</RootNamespace>
 
         <PackageId>Arrr.Sink.Webhook</PackageId>
-        <Version>1.5.1</Version>
+        <Version>1.6.0</Version>
         <Authors>Tom</Authors>
         <Company>orivega.io</Company>
         <Description>Webhook sink for Arrr — POSTs notifications as JSON to any HTTP endpoint.</Description>

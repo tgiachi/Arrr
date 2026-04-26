@@ -1,3 +1,45 @@
+## [1.6.0](https://github.com/tgiachi/Arrr/compare/v1.5.1...v1.6.0) (2026-04-26)
+
+### Features
+
+* add /api/version endpoint and footer in UI ([8c904b4](https://github.com/tgiachi/Arrr/commit/8c904b4c8a1ff16aed7c6b008be94ef976ce2f78))
+* add Arrr.Plugin.Healthcheck source plugin ([0e00817](https://github.com/tgiachi/Arrr/commit/0e00817346117dcdee1853e1a43caadc718365c0))
+* add Bark sink plugin ([978121b](https://github.com/tgiachi/Arrr/commit/978121baaa5bda8cdc6ac8a0ff8b07786cd42e13))
+* add Daemon Config page — edit ArrrConfig from the UI ([c984fff](https://github.com/tgiachi/Arrr/commit/c984fff9fbc3807945c58400c8d18fe7b072fad0))
+* add deduplication filter and macOS notification sink ([10fd0d4](https://github.com/tgiachi/Arrr/commit/10fd0d4cab80fb24caedb4abae7a6d8d319f1e7a))
+* add GotifySink, HomeAssistantSink, and MqttSource plugins ([eb3e446](https://github.com/tgiachi/Arrr/commit/eb3e4468444b621f8a01012e2efa4ea2ba7ceda6))
+* add platform compatibility check for plugins and sinks ([5dc093e](https://github.com/tgiachi/Arrr/commit/5dc093e9ba10abee673f10dd20a80ff381749bf1))
+* add Pushover sink, GitHub source, and systemd journal source plugins ([ef477ea](https://github.com/tgiachi/Arrr/commit/ef477eaec6ef46bba664f2a45bb89c55a5bb0aa2))
+* add real-time notification stream via SignalR ([85566da](https://github.com/tgiachi/Arrr/commit/85566dab98243771be457820c7266546310a42f7))
+* automate AUR package update on release ([d7066f4](https://github.com/tgiachi/Arrr/commit/d7066f4e4fb6efbb8d65145308ec989f1d537283))
+* **core:** enrich Notification with Priority, Url, and Extras ([8845634](https://github.com/tgiachi/Arrr/commit/88456340265e0722f56ffbfe7db5441ea05c7a15))
+* encrypt history SQLite DB with SQLCipher ([398ce46](https://github.com/tgiachi/Arrr/commit/398ce468f39ef8587b135314574be0aad127bb51))
+* implement full plugin/sink lifecycle management and VersionUtils ([1aebbcf](https://github.com/tgiachi/Arrr/commit/1aebbcfd68de188c418bf61776ee6c2a22f64ba1))
+* notification history with opt-in toggle ([207e7e1](https://github.com/tgiachi/Arrr/commit/207e7e1815babf09e6ba1e0223b907aebc4b8440))
+* **plugins:** add update-to-latest for installed plugins ([f9f3ef7](https://github.com/tgiachi/Arrr/commit/f9f3ef7ac4996254d5a48a9d402da1cb72a943cc))
+* **sink:** add Windows toast notification sink ([135edce](https://github.com/tgiachi/Arrr/commit/135edce51377c8a2119bd34c050eae56119c56e6))
+* **ui:** add light/dark mode toggle with pirate parchment theme ([9fa91b0](https://github.com/tgiachi/Arrr/commit/9fa91b03a13a6b109b0321e6aafa92ae755d3901)), closes [#080c14](https://github.com/tgiachi/Arrr/issues/080c14)
+* **ui:** add platform filter to install panel + nuget platform tags ([ec744a8](https://github.com/tgiachi/Arrr/commit/ec744a83a608d4f605ca1f4aa5334c054ed0e49b))
+* **ui:** add top navbar with Configurazione / Install / Logs tabs ([6c67ae9](https://github.com/tgiachi/Arrr/commit/6c67ae9c8ee76ae0f6cf8f8d1a0c5d37e34d4e49))
+* **ui:** replace parchment theme with Steel Mist; add semantic tokens for all surfaces ([d66c741](https://github.com/tgiachi/Arrr/commit/d66c7410a8d6b7802e088bfcc37f01d3c7f6f562)), closes [#f0f4f8](https://github.com/tgiachi/Arrr/issues/f0f4f8)
+* **ui:** replace skull icon with logo PNG, fix logs light theme colors ([c6bebc2](https://github.com/tgiachi/Arrr/commit/c6bebc221a96c87f2d31f601ffe69392ffb0bc81))
+
+### Bug Fixes
+
+* clear SQLite connection pool before retrying encrypted DB open ([3e8dbc6](https://github.com/tgiachi/Arrr/commit/3e8dbc6328116c82707a5af97c86bf75bf9c677d))
+* correct ExecStart path in arrr.service and add AUR packaging ([4e67244](https://github.com/tgiachi/Arrr/commit/4e672446f300a8ddee98400f8250f352a863c063))
+* **installer:** use flat container for version existence check ([78e0daa](https://github.com/tgiachi/Arrr/commit/78e0daab84ea73a822ac8ec369032b07b7e89d38))
+* make history search inputs transparent to blend with their containers ([091e9d8](https://github.com/tgiachi/Arrr/commit/091e9d815b7ffb1d69d7ace8dee078067d4c86c4))
+* **plugin-loader:** resolve Arrr.Core version mismatch on plugin load ([afce3ba](https://github.com/tgiachi/Arrr/commit/afce3baccfb76c0c48a2d097943e3a8024f8e5d2))
+* **plugins:** migrate to MQTTnet v5 and Ical.Net v5 breaking changes ([72c73e9](https://github.com/tgiachi/Arrr/commit/72c73e99f1b0b1dba1511a74192d48002f0c4b28))
+* stretch search and source inputs to fill their containers in HistoryView ([5d44068](https://github.com/tgiachi/Arrr/commit/5d440685a3b6edd63bcde985498eda90afb9eac6))
+* **ui:** rename tab label Configurazione to Configuration ([d5021a2](https://github.com/tgiachi/Arrr/commit/d5021a2d009f22a2222f02e466d23daea470c86e))
+* **ui:** use class attribute for next-themes to match Chakra v3 color mode ([64e84b4](https://github.com/tgiachi/Arrr/commit/64e84b470453bcf30d12cee00df4d0a31c5b0f53))
+
+### Performance Improvements
+
+* **eventbus:** dispatch handlers concurrently with Task.WhenAll ([1bb6bba](https://github.com/tgiachi/Arrr/commit/1bb6bbaf72d612a4a34afb93501e86a90ba4a8f2))
+
 ## [1.5.1](https://github.com/tgiachi/Arrr/compare/v1.5.0...v1.5.1) (2026-04-25)
 
 ### Bug Fixes
