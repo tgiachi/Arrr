@@ -5,11 +5,10 @@ After=default.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/arrr
+ExecStart=/usr/bin/arrr
 Restart=on-failure
 RestartSec=5
 
-# stdout/stderr go to systemd journal (journalctl --user -u arrr -f)
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=arrr
