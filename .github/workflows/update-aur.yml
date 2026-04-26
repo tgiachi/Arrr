@@ -1,0 +1,23 @@
+name: Update AUR package
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish to AUR (without v prefix, e.g. 1.6.0)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  update-aur:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update AUR package
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: bash scripts/update-aur.sh "${{ github.event.inputs.version }}"
