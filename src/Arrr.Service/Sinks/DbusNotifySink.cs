@@ -1,5 +1,6 @@
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
+using Arrr.Core.Types;
 using Arrr.Service.DBus;
 using Tmds.DBus;
 
@@ -17,7 +18,7 @@ internal class DbusNotifySink : ISinkPlugin
     public string Author => "Arrr";
     public string Description => "Delivers notifications as native desktop popups via org.freedesktop.Notifications.";
     public string Icon => "🔔";
-    public string[] Platforms => ["Linux"];
+    public PlatformType[] Platforms => [PlatformType.Linux];
 
     public async Task ConsumeAsync(Notification notification, CancellationToken ct)
     {

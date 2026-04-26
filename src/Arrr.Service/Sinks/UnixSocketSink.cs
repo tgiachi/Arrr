@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
+using Arrr.Core.Types;
 
 namespace Arrr.Service.Sinks;
 
@@ -30,7 +31,7 @@ internal class UnixSocketSink : ISinkPlugin, IConfigurablePlugin
     public string Author => "Arrr";
     public string Description => "Broadcasts notifications as newline-delimited JSON on a Unix domain socket.";
     public string Icon => "🔌";
-    public string[] Platforms => ["Linux", "OSX"];
+    public PlatformType[] Platforms => [PlatformType.Linux, PlatformType.Osx];
     public Type ConfigType => typeof(UnixSocketSinkConfig);
 
     public async Task ConsumeAsync(Notification notification, CancellationToken ct)

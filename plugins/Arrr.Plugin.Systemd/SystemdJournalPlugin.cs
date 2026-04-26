@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
+using Arrr.Core.Types;
 using Arrr.Core.Utils;
 using Arrr.Plugin.Systemd.Data;
 using Microsoft.Extensions.Logging;
@@ -22,7 +23,7 @@ public class SystemdJournalPlugin : ISourcePlugin, IConfigurablePlugin
     public string Description => "Tails the systemd journal and publishes log events as notifications.";
     public string[] Categories => ["system", "linux"];
     public string Icon => "🐧";
-    public string[] Platforms => ["Linux"];
+    public PlatformType[] Platforms => [PlatformType.Linux];
     public Type ConfigType => typeof(SystemdConfig);
 
     public SystemdJournalPlugin() { }

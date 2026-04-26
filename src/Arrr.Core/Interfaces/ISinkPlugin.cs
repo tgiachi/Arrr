@@ -1,4 +1,5 @@
 using Arrr.Core.Data.Notifications;
+using Arrr.Core.Types;
 
 namespace Arrr.Core.Interfaces;
 
@@ -14,9 +15,8 @@ public interface ISinkPlugin
 
     /// <summary>
     /// Supported OS platforms. Empty array means compatible with all platforms.
-    /// Use OS names from <see cref="System.Runtime.InteropServices.OSPlatform"/>: "Linux", "Windows", "OSX".
     /// </summary>
-    string[] Platforms => [];
+    PlatformType[] Platforms => [];
 
     Task ConsumeAsync(Notification notification, CancellationToken ct);
 
