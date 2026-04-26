@@ -26,7 +26,7 @@
 
     <ItemGroup>
         <PackageReference Include="Arrr.Core" Version="*"/>
-        <PackageReference Include="Ical.Net" Version="4.*"/>
+        <PackageReference Include="Ical.Net" Version="5.2.1" />
     </ItemGroup>
 
     <ItemGroup>

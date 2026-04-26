@@ -143,6 +143,27 @@ internal static class PluginsEndpoint
         );
 
         app.MapPost(
+            "/api/plugins/{packageId}/update",
+            async (
+                HttpContext ctx,
+                string packageId,
+                IConfigService configService,
+                IPluginInstaller installer,
+                CancellationToken ct
+            ) =>
+            {
+                if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
+                    return error!;
+                }
+
+                await installer.UpdateAsync(packageId, ct);
+
+                return Results.Ok(new { packageId, updated = true });
+            }
+        );
+
+        app.MapPost(
             "/api/plugins/{packageId}/uninstall",
             async (
                 HttpContext ctx,

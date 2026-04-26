@@ -177,6 +177,13 @@ export default function App() {
       await fetchPlugins()
     })
 
+  const handleUpdate = (plugin: Plugin) =>
+    withBusy(plugin.id, async () => {
+      await api().update(plugin.id)
+      toast(`${plugin.name} updated to latest`, 'success')
+      await fetchPlugins()
+    })
+
   const handleReloadAll = async () => {
     setReloadingAll(true)
     try {
@@ -404,6 +411,7 @@ export default function App() {
                     busy={busyIds.has(plugin.id)}
                     onToggle={handleToggle}
                     onReload={handleReload}
+                    onUpdate={handleUpdate}
                     onUninstall={handleUninstall}
                     onConfigure={setConfiguringPlugin}
                     onCallback={setCallbackPlugin}

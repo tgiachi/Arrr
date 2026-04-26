@@ -78,53 +78,53 @@ public class TelegramPlugin : ISourcePlugin, IConfigurablePlugin, ICallbackPlugi
             self.username
         );
 
-        client.OnUpdate += async updates =>
-                           {
-                               foreach (var update in updates.UpdateList)
-                               {
-                                   if (update is not UpdateNewMessage unm)
-                                   {
-                                       continue;
-                                   }
+        client.OnUpdates += async updates =>
+                            {
+                                foreach (var update in updates.UpdateList)
+                                {
+                                    if (update is not UpdateNewMessage unm)
+                                    {
+                                        continue;
+                                    }
 
-                                   if (unm.message is not Message msg)
-                                   {
-                                       continue;
-                                   }
+                                    if (unm.message is not Message msg)
+                                    {
+                                        continue;
+                                    }
 
-                                   if (msg.flags.HasFlag(Message.Flags.out_))
-                                   {
-                                       continue;
-                                   }
+                                    if (msg.flags.HasFlag(Message.Flags.out_))
+                                    {
+                                        continue;
+                                    }
 
-                                   var (senderName, chatName) = ResolvePeer(updates, msg);
+                                    var (senderName, chatName) = ResolvePeer(updates, msg);
 
-                                   if (filter.Count > 0 && !filter.Contains(chatName.ToLowerInvariant()))
-                                   {
-                                       continue;
-                                   }
+                                    if (filter.Count > 0 && !filter.Contains(chatName.ToLowerInvariant()))
+                                    {
+                                        continue;
+                                    }
 
-                                   var title = msg.message.Length > 80 ? msg.message[..80] + "…" : msg.message;
-                                   var body = string.IsNullOrEmpty(chatName) ? senderName : $"{senderName} → {chatName}";
+                                    var title = msg.message.Length > 80 ? msg.message[..80] + "…" : msg.message;
+                                    var body = string.IsNullOrEmpty(chatName) ? senderName : $"{senderName} → {chatName}";
 
-                                   await context.EventBus.PublishAsync(
-                                       new Notification(
-                                           Guid.NewGuid(),
-                                           Id,
-                                           title,
-                                           body,
-                                           new(msg.date.ToUniversalTime()),
-                                           null,
-                                           Extras: new Dictionary<string, string>
-                                           {
-                                               ["telegram.sender"] = senderName,
-                                               ["telegram.chat"]   = chatName,
-                                           }
-                                       ),
-                                       ct
-                                   );
-                               }
-                           };
+                                    await context.EventBus.PublishAsync(
+                                        new Notification(
+                                            Guid.NewGuid(),
+                                            Id,
+                                            title,
+                                            body,
+                                            new(msg.date.ToUniversalTime()),
+                                            null,
+                                            Extras: new Dictionary<string, string>
+                                            {
+                                                ["telegram.sender"] = senderName,
+                                                ["telegram.chat"] = chatName,
+                                            }
+                                        ),
+                                        ct
+                                    );
+                                }
+                            };
 
         await Task.Delay(Timeout.Infinite, ct).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
     }

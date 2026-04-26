@@ -56,6 +56,10 @@ export class ArrrApi {
     await this.req(`/api/plugins/${encodeURIComponent(packageId)}/uninstall`, { method: 'POST' })
   }
 
+  async update(packageId: string) {
+    await this.req(`/api/plugins/${encodeURIComponent(packageId)}/update`, { method: 'POST' })
+  }
+
   async getConfig(pluginId: string): Promise<PluginConfigResponse> {
     return (await this.req(`/api/plugins/${encodeURIComponent(pluginId)}/config`)).json()
   }

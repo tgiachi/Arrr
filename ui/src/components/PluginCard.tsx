@@ -9,7 +9,7 @@ import {
   Text,
   Tooltip,
 } from '@chakra-ui/react'
-import { QrCode, RefreshCw, Settings2, Trash2, Webhook } from 'lucide-react'
+import { ArrowUpCircle, QrCode, RefreshCw, Settings2, Trash2, Webhook } from 'lucide-react'
 import type { Plugin } from '../types'
 
 interface Props {
@@ -17,13 +17,14 @@ interface Props {
   busy: boolean
   onToggle: (plugin: Plugin, enabled: boolean) => void
   onReload: (plugin: Plugin) => void
+  onUpdate: (plugin: Plugin) => void
   onUninstall: (plugin: Plugin) => void
   onConfigure: (plugin: Plugin) => void
   onCallback: (plugin: Plugin) => void
   onQr: (plugin: Plugin) => void
 }
 
-export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onConfigure, onCallback, onQr }: Props) {
+export function PluginCard({ plugin, busy, onToggle, onReload, onUpdate, onUninstall, onConfigure, onCallback, onQr }: Props) {
   const statusColor = plugin.running ? '#4ade80' : plugin.enabled ? '#facc15' : '#4b5563'
   const statusLabel = plugin.running ? 'Running' : plugin.enabled ? 'Starting' : 'Disabled'
 
@@ -145,6 +146,25 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
               </Tooltip.Trigger>
               <Tooltip.Positioner>
                 <Tooltip.Content bg="gray.800" color="white" fontSize="xs">Reload</Tooltip.Content>
+              </Tooltip.Positioner>
+            </Tooltip.Root>
+
+            <Tooltip.Root>
+              <Tooltip.Trigger asChild>
+                <IconButton
+                  aria-label="Update plugin"
+                  size="xs"
+                  variant="ghost"
+                  color="app.iconColor"
+                  _hover={{ color: 'blue.300', bg: 'app.cardBgHover' }}
+                  onClick={() => onUpdate(plugin)}
+                  disabled={busy}
+                >
+                  <ArrowUpCircle size={13} />
+                </IconButton>
+              </Tooltip.Trigger>
+              <Tooltip.Positioner>
+                <Tooltip.Content bg="gray.800" color="white" fontSize="xs">Update to latest</Tooltip.Content>
               </Tooltip.Positioner>
             </Tooltip.Root>
 

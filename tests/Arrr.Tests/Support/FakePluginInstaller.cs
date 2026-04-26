@@ -9,4 +9,7 @@ internal class FakePluginInstaller : IPluginInstaller
 
     public Task UninstallAsync(string packageId, CancellationToken ct)
         => Task.CompletedTask;
+
+    public Task UpdateAsync(string packageId, CancellationToken ct)
+        => Task.CompletedTask;
 }
