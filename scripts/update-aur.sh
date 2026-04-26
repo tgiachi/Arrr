@@ -22,7 +22,7 @@ echo "==> Setting up AUR SSH key"
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
 AUR_KEY_FILE="$WORK_DIR/aur_id_rsa"
-echo "${AUR_SSH_KEY}" > "$AUR_KEY_FILE"
+echo "${AUR_SSH_KEY}" | base64 -d > "$AUR_KEY_FILE"
 chmod 600 "$AUR_KEY_FILE"
 grep -q "Host aur.archlinux.org" ~/.ssh/config 2>/dev/null || cat >> ~/.ssh/config << EOF
 
