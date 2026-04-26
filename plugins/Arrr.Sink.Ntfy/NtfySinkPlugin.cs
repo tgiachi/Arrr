@@ -49,7 +49,12 @@ public class NtfySinkPlugin : ISinkPlugin, IConfigurablePlugin
         };
 
         request.Headers.Add("X-Title", title);
-        request.Headers.Add("X-Priority", _config.DefaultPriority.ToString());
+        request.Headers.Add("X-Priority", notification.ToNtfyPriority());
+
+        if (!string.IsNullOrEmpty(notification.Url))
+        {
+            request.Headers.Add("X-Click", notification.Url);
+        }
 
         if (!string.IsNullOrEmpty(_config.AuthToken))
         {

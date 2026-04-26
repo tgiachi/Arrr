@@ -1,3 +1,4 @@
+using Arrr.Core.Data.Notifications;
 using System.Runtime.CompilerServices;
 using Arrr.Plugin.Systemd;
 using Arrr.Plugin.Systemd.Data;

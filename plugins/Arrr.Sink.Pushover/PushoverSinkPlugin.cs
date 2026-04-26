@@ -38,16 +38,21 @@ public class PushoverSinkPlugin : ISinkPlugin, IConfigurablePlugin
 
         var fields = new Dictionary<string, string>
         {
-            ["token"] = _config.ApiToken,
-            ["user"] = _config.UserKey,
-            ["title"] = notification.Title,
-            ["message"] = notification.Body,
-            ["priority"] = _config.Priority.ToString()
+            ["token"]    = _config.ApiToken,
+            ["user"]     = _config.UserKey,
+            ["title"]    = notification.Title,
+            ["message"]  = notification.Body,
+            ["priority"] = notification.ToPushoverPriority().ToString()
         };
 
         if (!string.IsNullOrEmpty(_config.Sound))
         {
             fields["sound"] = _config.Sound;
+        }
+
+        if (!string.IsNullOrEmpty(notification.Url))
+        {
+            fields["url"] = notification.Url;
         }
 
         try

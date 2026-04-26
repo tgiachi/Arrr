@@ -1,3 +1,5 @@
+using Arrr.Core.Types;
+using Arrr.Core.Data.Notifications;
 using System.Net;
 using Arrr.Tests.Support;
 using GotifySink;
@@ -19,14 +21,16 @@ public class GotifySinkPluginTests
             {
                 ServerUrl = "http://gotify.example.com",
                 AppToken = "mytoken",
-                DefaultPriority = 7,
                 TitleTemplate = "[{source}] {title}"
             }
         );
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await _sink!.StartAsync(ctx, cts.Token);
 
-        var notification = new Notification(Guid.NewGuid(), "rss", "New Post", "Body text", DateTimeOffset.UtcNow, null);
+        var notification = new Notification(
+            Guid.NewGuid(), "rss", "New Post", "Body text", DateTimeOffset.UtcNow, null,
+            Priority: NotificationPriority.High
+        );
         await _sink.ConsumeAsync(notification, cts.Token);
 
         Assert.That(_handler.LastRequest, Is.Not.Null);
@@ -36,7 +40,7 @@ public class GotifySinkPluginTests
         var body = await _handler.LastRequest.Content!.ReadAsStringAsync();
         Assert.That(body, Does.Contain("[rss] New Post"));
         Assert.That(body, Does.Contain("Body text"));
-        Assert.That(body, Does.Contain("7"));
+        Assert.That(body, Does.Contain("8")); // High → 8
     }
 
     [Test]

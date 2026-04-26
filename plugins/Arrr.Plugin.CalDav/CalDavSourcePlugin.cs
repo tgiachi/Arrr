@@ -107,7 +107,13 @@ public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
                             $"📅 {evt.Summary}",
                             BuildBody(evt.Summary, evt.Description, alertMin),
                             now,
-                            null
+                            null,
+                            Extras: new Dictionary<string, string>
+                            {
+                                ["caldav.event_uid"]     = evt.Uid ?? "",
+                                ["caldav.event_start"]   = start.ToString("O"),
+                                ["caldav.alert_minutes"] = alertMin.ToString(),
+                            }
                         ),
                         ct
                     );

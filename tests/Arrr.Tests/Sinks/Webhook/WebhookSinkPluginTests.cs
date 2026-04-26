@@ -1,3 +1,4 @@
+using Arrr.Core.Data.Notifications;
 using Arrr.Tests.Support;
 using WebhookSink;
 using WebhookSink.Data;

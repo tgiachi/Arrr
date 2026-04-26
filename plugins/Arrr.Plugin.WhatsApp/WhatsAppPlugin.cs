@@ -147,7 +147,19 @@ public class WhatsAppPlugin : ISourcePlugin, IConfigurablePlugin, IQrPlugin
                     var subtitle = string.IsNullOrEmpty(chat) ? from : $"{from} → {chat}";
 
                     _ = context.EventBus.PublishAsync(
-                        new Notification(Guid.NewGuid(), "com.arrr.whatsapp", title, subtitle, timestamp, null),
+                        new Notification(
+                            Guid.NewGuid(),
+                            Id,
+                            title,
+                            subtitle,
+                            timestamp,
+                            null,
+                            Extras: new Dictionary<string, string>
+                            {
+                                ["whatsapp.from"] = from,
+                                ["whatsapp.chat"] = chat,
+                            }
+                        ),
                         ct
                     );
 

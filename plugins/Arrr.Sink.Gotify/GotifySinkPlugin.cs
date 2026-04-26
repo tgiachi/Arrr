@@ -46,8 +46,8 @@ public class GotifySinkPlugin : ISinkPlugin, IConfigurablePlugin
         var payload = new
         {
             title,
-            message = notification.Body,
-            priority = _config.DefaultPriority
+            message  = notification.Body,
+            priority = notification.ToGotifyPriority()
         };
 
         var url = $"{_config.ServerUrl.TrimEnd('/')}/message";

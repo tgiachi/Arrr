@@ -114,7 +114,12 @@ public class TelegramPlugin : ISourcePlugin, IConfigurablePlugin, ICallbackPlugi
                                            title,
                                            body,
                                            new(msg.date.ToUniversalTime()),
-                                           null
+                                           null,
+                                           Extras: new Dictionary<string, string>
+                                           {
+                                               ["telegram.sender"] = senderName,
+                                               ["telegram.chat"]   = chatName,
+                                           }
                                        ),
                                        ct
                                    );

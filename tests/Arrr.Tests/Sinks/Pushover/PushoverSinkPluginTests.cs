@@ -1,3 +1,5 @@
+using Arrr.Core.Types;
+using Arrr.Core.Data.Notifications;
 using System.Net;
 using Arrr.Sink.Pushover;
 using Arrr.Sink.Pushover.Data;
@@ -41,8 +43,7 @@ public class PushoverSinkPluginTests
             configFactory: _ => new PushoverConfig
             {
                 ApiToken = "APP_TOKEN",
-                UserKey = "USER_KEY",
-                Priority = 1
+                UserKey = "USER_KEY"
             }
         );
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -54,7 +55,8 @@ public class PushoverSinkPluginTests
             "New Article",
             "Some body text",
             DateTimeOffset.UtcNow,
-            null
+            null,
+            Priority: NotificationPriority.High
         );
         await _sink.ConsumeAsync(notification, cts.Token);
 
@@ -65,7 +67,7 @@ public class PushoverSinkPluginTests
         Assert.That(body, Does.Contain("APP_TOKEN"));
         Assert.That(body, Does.Contain("USER_KEY"));
         Assert.That(body, Does.Contain("New+Article").Or.Contain("New%20Article").Or.Contain("New Article"));
-        Assert.That(body, Does.Contain("priority=1"));
+        Assert.That(body, Does.Contain("priority=1")); // High → 1
     }
 
     [Test]

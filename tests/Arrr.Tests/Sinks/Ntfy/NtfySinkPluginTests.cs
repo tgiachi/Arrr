@@ -1,3 +1,5 @@
+using Arrr.Core.Types;
+using Arrr.Core.Data.Notifications;
 using System.Net;
 using Arrr.Tests.Support;
 using NtfySink;
@@ -19,7 +21,6 @@ public class NtfySinkPluginTests
             {
                 ServerUrl = "https://ntfy.example.com",
                 Topic = "alerts",
-                DefaultPriority = 4,
                 TitleTemplate = "[{source}] {title}"
             }
         );
@@ -32,14 +33,15 @@ public class NtfySinkPluginTests
             "New Article",
             "Article body",
             DateTimeOffset.UtcNow,
-            null
+            null,
+            Priority: NotificationPriority.High
         );
         await _sink.ConsumeAsync(notification, cts.Token);
 
         Assert.That(_handler.LastRequest, Is.Not.Null);
         Assert.That(_handler.LastRequest!.RequestUri!.ToString(), Is.EqualTo("https://ntfy.example.com/alerts"));
         Assert.That(_handler.LastRequest.Headers.GetValues("X-Title").First(), Is.EqualTo("[rss] New Article"));
-        Assert.That(_handler.LastRequest.Headers.GetValues("X-Priority").First(), Is.EqualTo("4"));
+        Assert.That(_handler.LastRequest.Headers.GetValues("X-Priority").First(), Is.EqualTo("high")); // High → "high"
 
         var body = await _handler.LastRequest.Content!.ReadAsStringAsync();
         Assert.That(body, Is.EqualTo("Article body"));

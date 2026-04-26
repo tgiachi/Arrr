@@ -125,7 +125,11 @@ public class MqttSourcePlugin : ISourcePlugin, IConfigurablePlugin, IDisposable
             title,
             payload,
             DateTimeOffset.UtcNow,
-            null
+            null,
+            Extras: new Dictionary<string, string>
+            {
+                ["mqtt.topic"] = topic,
+            }
         );
 
         return _context.EventBus.PublishAsync(notification, CancellationToken.None);

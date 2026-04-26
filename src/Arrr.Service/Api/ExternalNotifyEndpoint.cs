@@ -37,7 +37,10 @@ internal static class ExternalNotifyEndpoint
                     req.Title,
                     req.Body,
                     DateTimeOffset.UtcNow,
-                    req.IconUrl
+                    req.IconUrl,
+                    req.Priority,
+                    req.Url,
+                    req.Extras
                 );
 
                 await eventBus.PublishAsync(notification);

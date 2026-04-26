@@ -1,3 +1,4 @@
+using Arrr.Core.Data.Notifications;
 using System.Net;
 using System.Text.Json;
 using Arrr.Sink.Bark;

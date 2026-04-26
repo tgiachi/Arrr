@@ -94,7 +94,13 @@ public class RssPlugin : IPollingPlugin, IConfigurablePlugin
                     item.Title?.Text ?? "(no title)",
                     body,
                     item.PublishDate == default ? DateTimeOffset.UtcNow : item.PublishDate,
-                    null
+                    null,
+                    Url: link,
+                    Extras: new Dictionary<string, string>
+                    {
+                        ["rss.feed_label"] = feed.Label,
+                        ["rss.feed_url"]   = feed.Url,
+                    }
                 ),
                 ct
             );

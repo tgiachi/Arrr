@@ -1,3 +1,4 @@
+using Arrr.Core.Data.Notifications;
 using System.Text;
 using Arrr.Tests.Support;
 using CalDavSource;

@@ -1,3 +1,4 @@
+using Arrr.Core.Data.Notifications;
 using Arrr.Service.Sinks;
 using Arrr.Tests.Support;
 

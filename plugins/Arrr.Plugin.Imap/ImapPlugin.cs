@@ -71,7 +71,12 @@ public class ImapPlugin : IPollingPlugin, IConfigurablePlugin
                         subject,
                         $"From: {from}",
                         message.Date == default ? DateTimeOffset.UtcNow : message.Date,
-                        null
+                        null,
+                        Extras: new Dictionary<string, string>
+                        {
+                            ["imap.sender"] = from,
+                            ["imap.folder"] = _config.Folder,
+                        }
                     ),
                     ct
                 );

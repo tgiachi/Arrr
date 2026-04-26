@@ -36,7 +36,7 @@ internal class DbusNotifySink : ISinkPlugin
                 notification.Title,
                 notification.Body,
                 [],
-                new Dictionary<string, object>(),
+                new Dictionary<string, object> { ["urgency"] = notification.ToDbusUrgency() },
                 -1
             );
         }

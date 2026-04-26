@@ -1,3 +1,4 @@
+using Arrr.Core.Data.Notifications;
 using System.Text.Json;
 using Arrr.Plugin.Github;
 using Arrr.Plugin.Github.Data;
