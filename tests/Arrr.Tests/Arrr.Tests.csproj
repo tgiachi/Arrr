@@ -36,6 +36,7 @@
         <ProjectReference Include="..\..\plugins\Arrr.Sink.Ntfy\Arrr.Sink.Ntfy.csproj"/>
         <ProjectReference Include="..\..\plugins\Arrr.Sink.Smtp\Arrr.Sink.Smtp.csproj"/>
         <ProjectReference Include="..\..\plugins\Arrr.Plugin.CalDav\Arrr.Plugin.CalDav.csproj"/>
+        <ProjectReference Include="..\..\plugins\Arrr.Plugin.Healthcheck\Arrr.Plugin.Healthcheck.csproj"/>
         <ProjectReference Include="..\..\plugins\Arrr.Sink.Webhook\Arrr.Sink.Webhook.csproj"/>
         <ProjectReference Include="..\..\plugins\Arrr.Sink.Gotify\Arrr.Sink.Gotify.csproj"/>
         <ProjectReference Include="..\..\plugins\Arrr.Sink.HomeAssistant\Arrr.Sink.HomeAssistant.csproj"/>
