@@ -28,5 +28,6 @@
         <Project Path="plugins/Arrr.Sink.Bark/Arrr.Sink.Bark.csproj"/>
         <Project Path="plugins/Arrr.Sink.WindowsNotify/Arrr.Sink.WindowsNotify.csproj"/>
         <Project Path="plugins/Arrr.Sink.MacNotify/Arrr.Sink.MacNotify.csproj"/>
+        <Project Path="plugins/Arrr.Plugin.Todoist/Arrr.Plugin.Todoist.csproj"/>
     </Folder>
 </Solution>
