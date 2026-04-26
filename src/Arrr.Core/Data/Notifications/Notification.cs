@@ -21,28 +21,6 @@ public record Notification(
     public bool HasExtra(string key)
         => Extras?.ContainsKey(key) == true;
 
-    /// <summary>Maps to Pushover priority: -2=Low, 0=Normal, 1=High, 2=Critical.</summary>
-    public int ToPushoverPriority()
-        => Priority switch
-        {
-            NotificationPriority.Low      => -2,
-            NotificationPriority.Normal   => 0,
-            NotificationPriority.High     => 1,
-            NotificationPriority.Critical => 2,
-            _                             => 0
-        };
-
-    /// <summary>Maps to ntfy priority string: min/low/default/high/urgent.</summary>
-    public string ToNtfyPriority()
-        => Priority switch
-        {
-            NotificationPriority.Low      => "low",
-            NotificationPriority.Normal   => "default",
-            NotificationPriority.High     => "high",
-            NotificationPriority.Critical => "urgent",
-            _                             => "default"
-        };
-
     /// <summary>Maps to Bark level: passive/active/timeSensitive/critical.</summary>
     public string ToBarkLevel()
         => Priority switch
@@ -74,5 +52,27 @@ public record Notification(
             NotificationPriority.High     => 8,
             NotificationPriority.Critical => 10,
             _                             => 5
+        };
+
+    /// <summary>Maps to ntfy priority string: min/low/default/high/urgent.</summary>
+    public string ToNtfyPriority()
+        => Priority switch
+        {
+            NotificationPriority.Low      => "low",
+            NotificationPriority.Normal   => "default",
+            NotificationPriority.High     => "high",
+            NotificationPriority.Critical => "urgent",
+            _                             => "default"
+        };
+
+    /// <summary>Maps to Pushover priority: -2=Low, 0=Normal, 1=High, 2=Critical.</summary>
+    public int ToPushoverPriority()
+        => Priority switch
+        {
+            NotificationPriority.Low      => -2,
+            NotificationPriority.Normal   => 0,
+            NotificationPriority.High     => 1,
+            NotificationPriority.Critical => 2,
+            _                             => 0
         };
 }

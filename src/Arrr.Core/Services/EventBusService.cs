@@ -36,6 +36,7 @@ public class EventBusService : IEventBus
         if (_configService is not null && evt is Notification notification)
         {
             var config = _configService.Config.Deduplication;
+
             if (config.Enabled && IsDuplicate(notification, TimeSpan.FromSeconds(config.WindowSeconds)))
             {
                 _logger.Debug(
@@ -43,6 +44,7 @@ public class EventBusService : IEventBus
                     notification.Source,
                     notification.Title
                 );
+
                 return;
             }
         }
@@ -78,6 +80,45 @@ public class EventBusService : IEventBus
         }
     }
 
+    private static string ComputeKey(Notification n)
+    {
+        var raw = Encoding.UTF8.GetBytes($"{n.Source}|{n.Title}|{n.Body}");
+
+        return Convert.ToHexString(SHA256.HashData(raw));
+    }
+
+    private async Task DispatchLoopAsync(CancellationToken ct)
+    {
+        await foreach (var evt in _channel.Reader.ReadAllAsync(ct))
+        {
+            List<Func<IArrrEvent, CancellationToken, Task>> handlers;
+
+            lock (_lock)
+            {
+                handlers = _subscribers
+                           .Where(s => s.EventType.IsAssignableFrom(evt.GetType()))
+                           .Select(s => s.Handler)
+                           .ToList();
+            }
+
+            await Task.WhenAll(
+                handlers.Select(
+                    async handler =>
+                    {
+                        try
+                        {
+                            await handler(evt, ct);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Error(ex, "[EventBus] Handler error");
+                        }
+                    }
+                )
+            );
+        }
+    }
+
     private bool IsDuplicate(Notification n, TimeSpan window)
     {
         var key = ComputeKey(n);
@@ -97,42 +138,7 @@ public class EventBusService : IEventBus
         }
 
         _recentNotifications[key] = now;
+
         return false;
-    }
-
-    private static string ComputeKey(Notification n)
-    {
-        var raw = Encoding.UTF8.GetBytes($"{n.Source}|{n.Title}|{n.Body}");
-        return Convert.ToHexString(SHA256.HashData(raw));
-    }
-
-    private async Task DispatchLoopAsync(CancellationToken ct)
-    {
-        await foreach (var evt in _channel.Reader.ReadAllAsync(ct))
-        {
-            List<Func<IArrrEvent, CancellationToken, Task>> handlers;
-
-            lock (_lock)
-            {
-                handlers = _subscribers
-                           .Where(s => s.EventType.IsAssignableFrom(evt.GetType()))
-                           .Select(s => s.Handler)
-                           .ToList();
-            }
-
-            await Task.WhenAll(
-                handlers.Select(async handler =>
-                {
-                    try
-                    {
-                        await handler(evt, ct);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error(ex, "[EventBus] Handler error");
-                    }
-                })
-            );
-        }
     }
 }

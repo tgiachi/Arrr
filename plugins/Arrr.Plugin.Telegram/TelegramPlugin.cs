@@ -118,7 +118,7 @@ public class TelegramPlugin : ISourcePlugin, IConfigurablePlugin, ICallbackPlugi
                                             Extras: new Dictionary<string, string>
                                             {
                                                 ["telegram.sender"] = senderName,
-                                                ["telegram.chat"] = chatName,
+                                                ["telegram.chat"] = chatName
                                             }
                                         ),
                                         ct

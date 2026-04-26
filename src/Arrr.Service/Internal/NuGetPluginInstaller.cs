@@ -104,28 +104,6 @@ internal class NuGetPluginInstaller : IPluginInstaller
         await _pluginManager.ReloadAllAsync(ct);
     }
 
-    public async Task UpdateAsync(string packageId, CancellationToken ct)
-    {
-        var entry = _manifest.Remove(packageId);
-
-        if (entry is not null)
-        {
-            foreach (var file in entry.Files)
-            {
-                var path = Path.Combine(_pluginsPath, file);
-
-                if (File.Exists(path))
-                {
-                    File.Delete(path);
-                }
-            }
-
-            _logger.Information("Removed old files for {PackageId} before update", packageId);
-        }
-
-        await InstallAsync(packageId, null, ct);
-    }
-
     public async Task UninstallAsync(string packageId, CancellationToken ct)
     {
         var entry = _manifest.Remove(packageId);
@@ -151,6 +129,28 @@ internal class NuGetPluginInstaller : IPluginInstaller
         }
 
         _logger.Information("Uninstalled {PackageId}", packageId);
+    }
+
+    public async Task UpdateAsync(string packageId, CancellationToken ct)
+    {
+        var entry = _manifest.Remove(packageId);
+
+        if (entry is not null)
+        {
+            foreach (var file in entry.Files)
+            {
+                var path = Path.Combine(_pluginsPath, file);
+
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+
+            _logger.Information("Removed old files for {PackageId} before update", packageId);
+        }
+
+        await InstallAsync(packageId, null, ct);
     }
 
     private async Task DownloadPackageAsync(

@@ -41,13 +41,13 @@ public class BarkSinkPlugin : ISinkPlugin, IConfigurablePlugin
         var payload = new
         {
             device_key = _config.DeviceKey,
-            title      = notification.Title,
-            body       = notification.Body,
-            level      = notification.ToBarkLevel(),
-            group      = _config.Group,
-            sound      = string.IsNullOrEmpty(_config.Sound) ? null : _config.Sound,
-            icon       = notification.IconUrl,
-            url        = notification.Url
+            title = notification.Title,
+            body = notification.Body,
+            level = notification.ToBarkLevel(),
+            group = _config.Group,
+            sound = string.IsNullOrEmpty(_config.Sound) ? null : _config.Sound,
+            icon = notification.IconUrl,
+            url = notification.Url
         };
 
         var url = $"{_config.ServerUrl.TrimEnd('/')}/push";

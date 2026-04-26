@@ -87,8 +87,8 @@ public class MqttSourcePlugin : ISourcePlugin, IConfigurablePlugin, IDisposable
         }
 
         var subscribeOptions = new MqttClientSubscribeOptionsBuilder()
-                                                .WithTopicFilter(f => f.WithTopic(_config.Topic))
-                                                .Build();
+                               .WithTopicFilter(f => f.WithTopic(_config.Topic))
+                               .Build();
 
         await _client.SubscribeAsync(subscribeOptions, ct);
 
@@ -128,7 +128,7 @@ public class MqttSourcePlugin : ISourcePlugin, IConfigurablePlugin, IDisposable
             null,
             Extras: new Dictionary<string, string>
             {
-                ["mqtt.topic"] = topic,
+                ["mqtt.topic"] = topic
             }
         );
 

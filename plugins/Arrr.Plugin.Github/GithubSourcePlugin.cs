@@ -1,7 +1,6 @@
 using System.Text.Json;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
-using Arrr.Core.Types;
 using Arrr.Core.Utils;
 using Arrr.Plugin.Github.Data;
 using Microsoft.Extensions.Logging;
@@ -119,9 +118,9 @@ public class GithubSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
                         null,
                         Extras: new Dictionary<string, string>
                         {
-                            ["github.repo"]         = n.Repository.FullName,
+                            ["github.repo"] = n.Repository.FullName,
                             ["github.subject_type"] = n.Subject.Type,
-                            ["github.reason"]       = n.Reason,
+                            ["github.reason"] = n.Reason
                         }
                     ),
                     ct

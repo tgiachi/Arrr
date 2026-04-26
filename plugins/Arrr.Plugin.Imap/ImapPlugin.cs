@@ -75,7 +75,7 @@ public class ImapPlugin : IPollingPlugin, IConfigurablePlugin
                         Extras: new Dictionary<string, string>
                         {
                             ["imap.sender"] = from,
-                            ["imap.folder"] = _config.Folder,
+                            ["imap.folder"] = _config.Folder
                         }
                     ),
                     ct

@@ -34,7 +34,7 @@ public class MacNotifySinkPlugin : ISinkPlugin, IConfigurablePlugin
         {
             var script = BuildScript(notification);
             using var proc = new Process();
-            proc.StartInfo = new ProcessStartInfo("osascript", ["-e", script])
+            proc.StartInfo = new("osascript", ["-e", script])
             {
                 RedirectStandardError = true,
                 UseShellExecute = false
@@ -73,6 +73,7 @@ public class MacNotifySinkPlugin : ISinkPlugin, IConfigurablePlugin
     public Task StopAsync()
     {
         _initialized = false;
+
         return Task.CompletedTask;
     }
 

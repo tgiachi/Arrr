@@ -1,5 +1,4 @@
 using Arrr.Core.Interfaces;
-
 namespace Arrr.Tests.Support;
 
 internal class FakeEventBus : IEventBus

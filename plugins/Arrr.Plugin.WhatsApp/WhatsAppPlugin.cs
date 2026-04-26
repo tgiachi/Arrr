@@ -157,7 +157,7 @@ public class WhatsAppPlugin : ISourcePlugin, IConfigurablePlugin, IQrPlugin
                             Extras: new Dictionary<string, string>
                             {
                                 ["whatsapp.from"] = from,
-                                ["whatsapp.chat"] = chat,
+                                ["whatsapp.chat"] = chat
                             }
                         ),
                         ct

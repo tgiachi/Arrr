@@ -38,10 +38,10 @@ public class PushoverSinkPlugin : ISinkPlugin, IConfigurablePlugin
 
         var fields = new Dictionary<string, string>
         {
-            ["token"]    = _config.ApiToken,
-            ["user"]     = _config.UserKey,
-            ["title"]    = notification.Title,
-            ["message"]  = notification.Body,
+            ["token"] = _config.ApiToken,
+            ["user"] = _config.UserKey,
+            ["title"] = notification.Title,
+            ["message"] = notification.Body,
             ["priority"] = notification.ToPushoverPriority().ToString()
         };
 

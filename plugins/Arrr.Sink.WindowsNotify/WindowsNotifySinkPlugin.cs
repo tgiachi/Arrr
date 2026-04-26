@@ -1,10 +1,4 @@
-using Arrr.Core.Data.Notifications;
-using Arrr.Core.Interfaces;
-using Arrr.Core.Types;
-using Arrr.Core.Utils;
 using Arrr.Sink.WindowsNotify.Data;
-using Microsoft.Extensions.Logging;
-using Microsoft.Toolkit.Uwp.Notifications;
 
 namespace Arrr.Sink.WindowsNotify;
 
@@ -33,8 +27,8 @@ public class WindowsNotifySinkPlugin : ISinkPlugin, IConfigurablePlugin
         try
         {
             var builder = new ToastContentBuilder()
-                .AddText(notification.Title)
-                .AddText(notification.Body);
+                          .AddText(notification.Title)
+                          .AddText(notification.Body);
 
             if (_config.ShowSource)
             {
@@ -89,6 +83,7 @@ public class WindowsNotifySinkPlugin : ISinkPlugin, IConfigurablePlugin
     public Task StopAsync()
     {
         _initialized = false;
+
         return Task.CompletedTask;
     }
 }

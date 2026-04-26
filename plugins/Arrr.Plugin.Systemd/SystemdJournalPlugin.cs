@@ -77,14 +77,14 @@ public class SystemdJournalPlugin : ISourcePlugin, IConfigurablePlugin
 
             var (priorityLabel, notificationPriority) = entry.Priority switch
             {
-                "0" => ("EMERG",  NotificationPriority.Critical),
-                "1" => ("ALERT",  NotificationPriority.Critical),
-                "2" => ("CRIT",   NotificationPriority.Critical),
-                "3" => ("ERR",    NotificationPriority.High),
-                "4" => ("WARN",   NotificationPriority.Normal),
+                "0" => ("EMERG", NotificationPriority.Critical),
+                "1" => ("ALERT", NotificationPriority.Critical),
+                "2" => ("CRIT", NotificationPriority.Critical),
+                "3" => ("ERR", NotificationPriority.High),
+                "4" => ("WARN", NotificationPriority.Normal),
                 "5" => ("NOTICE", NotificationPriority.Normal),
-                "6" => ("INFO",   NotificationPriority.Low),
-                _   => ("DEBUG",  NotificationPriority.Low)
+                "6" => ("INFO", NotificationPriority.Low),
+                _   => ("DEBUG", NotificationPriority.Low)
             };
 
             await context.EventBus.PublishAsync(
@@ -98,8 +98,8 @@ public class SystemdJournalPlugin : ISourcePlugin, IConfigurablePlugin
                     notificationPriority,
                     Extras: new Dictionary<string, string>
                     {
-                        ["systemd.unit"]     = unit,
-                        ["systemd.priority"] = entry.Priority ?? "",
+                        ["systemd.unit"] = unit,
+                        ["systemd.priority"] = entry.Priority ?? ""
                     }
                 ),
                 ct

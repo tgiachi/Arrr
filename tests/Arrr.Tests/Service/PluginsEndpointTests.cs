@@ -1,8 +1,8 @@
+using Arrr.Core.Data.Api;
+using Arrr.Core.Services;
+using Arrr.Core.Interfaces;
 using System.Net;
 using System.Net.Http.Json;
-using Arrr.Core.Data.Api;
-using Arrr.Core.Interfaces;
-using Arrr.Core.Services;
 using Arrr.Service.Api;
 using Arrr.Service.Internal;
 using Arrr.Service.Services;

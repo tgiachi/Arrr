@@ -46,7 +46,7 @@ public class GotifySinkPlugin : ISinkPlugin, IConfigurablePlugin
         var payload = new
         {
             title,
-            message  = notification.Body,
+            message = notification.Body,
             priority = notification.ToGotifyPriority()
         };
 

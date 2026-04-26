@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Arrr.Core.Data.Api;
 using Arrr.Core.Utils;
 
@@ -12,8 +13,9 @@ internal static class VersionEndpoint
             () =>
             {
                 var version = VersionUtils.Get(typeof(VersionEndpoint));
-                var runtime = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
-                var os = System.Runtime.InteropServices.RuntimeInformation.OSDescription;
+                var runtime = RuntimeInformation.FrameworkDescription;
+                var os = RuntimeInformation.OSDescription;
+
                 return Results.Ok(new VersionResponse(version, runtime, os));
             }
         );

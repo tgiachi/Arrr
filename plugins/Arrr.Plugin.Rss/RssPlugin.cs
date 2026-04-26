@@ -99,7 +99,7 @@ public class RssPlugin : IPollingPlugin, IConfigurablePlugin
                     Extras: new Dictionary<string, string>
                     {
                         ["rss.feed_label"] = feed.Label,
-                        ["rss.feed_url"]   = feed.Url,
+                        ["rss.feed_url"] = feed.Url
                     }
                 ),
                 ct

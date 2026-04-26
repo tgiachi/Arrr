@@ -1,5 +1,5 @@
-using Arrr.Core.Types;
 using Arrr.Core.Data.Notifications;
+using Arrr.Core.Types;
 using System.Net;
 using Arrr.Tests.Support;
 using GotifySink;
@@ -28,7 +28,12 @@ public class GotifySinkPluginTests
         await _sink!.StartAsync(ctx, cts.Token);
 
         var notification = new Notification(
-            Guid.NewGuid(), "rss", "New Post", "Body text", DateTimeOffset.UtcNow, null,
+            Guid.NewGuid(),
+            "rss",
+            "New Post",
+            "Body text",
+            DateTimeOffset.UtcNow,
+            null,
             Priority: NotificationPriority.High
         );
         await _sink.ConsumeAsync(notification, cts.Token);

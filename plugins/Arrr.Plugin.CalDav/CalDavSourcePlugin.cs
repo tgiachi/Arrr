@@ -110,9 +110,9 @@ public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
                             null,
                             Extras: new Dictionary<string, string>
                             {
-                                ["caldav.event_uid"]     = evt.Uid ?? "",
-                                ["caldav.event_start"]   = start.ToString("O"),
-                                ["caldav.alert_minutes"] = alertMin.ToString(),
+                                ["caldav.event_uid"] = evt.Uid ?? "",
+                                ["caldav.event_start"] = start.ToString("O"),
+                                ["caldav.alert_minutes"] = alertMin.ToString()
                             }
                         ),
                         ct

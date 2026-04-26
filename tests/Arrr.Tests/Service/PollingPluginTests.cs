@@ -1,5 +1,5 @@
-using Arrr.Core.Interfaces;
 using Arrr.Core.Services;
+using Arrr.Core.Interfaces;
 using Arrr.Tests.Support;
 
 namespace Arrr.Tests.Service;
