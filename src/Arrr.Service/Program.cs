@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Arrr.Core.Data.Config;
 using Arrr.Core.Data.Events;
 using Arrr.Core.Data.Notifications;
@@ -8,6 +9,7 @@ using Arrr.Core.Json;
 using Arrr.Core.Services;
 using Arrr.Core.Types;
 using Arrr.Service.Api;
+using Arrr.Service.Hubs;
 using Arrr.Service.Internal;
 using Arrr.Service.Services;
 using ConsoleAppFramework;
@@ -65,7 +67,27 @@ await ConsoleApp.RunAsync(
         builder.Services.AddHostedService(sp => sp.GetRequiredService<SinkOrchestrator>());
         builder.Services.AddSingleton<ISinkManager>(sp => sp.GetRequiredService<SinkOrchestrator>());
         builder.Services.AddSingleton<IConfigBackupService, ConfigBackupService>();
+        builder.Services.AddSingleton<INotificationHistoryService>(
+            _ => new NotificationHistoryService(Path.Combine(directoriesConfig.Root, "history.db"))
+        );
         builder.Services.AddHostedService<EventBusHostedService>();
+
+        builder.Services.AddCors(
+            opt =>
+                opt.AddDefaultPolicy(
+                    p =>
+                        p.SetIsOriginAllowed(_ => true).AllowAnyHeader().AllowAnyMethod().AllowCredentials()
+                )
+        );
+
+        builder.Services
+               .AddSignalR()
+               .AddJsonProtocol(
+                   opt =>
+                       opt.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+               );
+
+        builder.Services.AddHostedService<NotificationStreamService>();
 
         builder.Services.AddOpenApi();
         builder.Logging.ClearProviders().AddSerilog();
@@ -76,6 +98,17 @@ await ConsoleApp.RunAsync(
         await configService.LoadAsync(ct);
 
         var eventBus = app.Services.GetRequiredService<IEventBus>();
+        var historyService = app.Services.GetRequiredService<INotificationHistoryService>();
+
+        eventBus.Subscribe<Notification>(
+            async (n, token) =>
+            {
+                if (configService.Config.HistoryEnabled)
+                {
+                    await historyService.AddAsync(n, token);
+                }
+            }
+        );
 
         eventBus.Subscribe<ArrStartedEvent>(
             async (evt, token) =>
@@ -99,12 +132,21 @@ await ConsoleApp.RunAsync(
 
         app.Urls.Add($"http://0.0.0.0:{configService.Config.Web.Port}");
 
+        app.UseCors();
+
         app.UseDefaultFiles();
         app.UseStaticFiles();
+        app.UseWebSockets();
 
+        app.MapHub<NotificationStreamHub>("/stream");
+
+        app.MapVersionApi();
         app.MapExternalApi();
         app.MapSinksApi();
         app.MapConfigBackupApi();
+        app.MapLogsApi();
+        app.MapDaemonConfigApi();
+        app.MapHistoryApi();
 
         if (configService.Config.IsDebug)
         {

@@ -12,7 +12,9 @@ internal static class SinksEndpoint
             (HttpContext ctx, IConfigService configService, ISinkManager manager) =>
             {
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
                     return error!;
+                }
 
                 return Results.Ok(manager.GetAvailable());
             }
@@ -20,12 +22,16 @@ internal static class SinksEndpoint
 
         app.MapPost(
             "/api/sinks/{sinkId}/enable",
-            async (HttpContext ctx, string sinkId, IConfigService configService, ISinkManager manager, CancellationToken ct) =>
+            async (HttpContext ctx, string sinkId, IConfigService configService, ISinkManager manager, CancellationToken ct)
+                =>
             {
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
                     return error!;
+                }
 
                 await manager.EnableAsync(sinkId, ct);
+
                 return Results.Ok(new { sinkId, enabled = true });
             }
         );
@@ -35,49 +41,70 @@ internal static class SinksEndpoint
             async (HttpContext ctx, string sinkId, IConfigService configService, ISinkManager manager) =>
             {
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
                     return error!;
+                }
 
                 await manager.DisableAsync(sinkId);
+
                 return Results.Ok(new { sinkId, enabled = false });
             }
         );
 
         app.MapPost(
             "/api/sinks/{sinkId}/reload",
-            async (HttpContext ctx, string sinkId, IConfigService configService, ISinkManager manager, CancellationToken ct) =>
+            async (HttpContext ctx, string sinkId, IConfigService configService, ISinkManager manager, CancellationToken ct)
+                =>
             {
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
                     return error!;
+                }
 
                 await manager.ReloadAsync(sinkId, ct);
+
                 return Results.Ok(new { sinkId, reloaded = true });
             }
         );
 
         app.MapGet(
             "/api/sinks/{sinkId}/config",
-            async (HttpContext ctx, string sinkId, IConfigService configService, ISinkManager manager, CancellationToken ct) =>
+            async (HttpContext ctx, string sinkId, IConfigService configService, ISinkManager manager, CancellationToken ct)
+                =>
             {
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
                     return error!;
+                }
 
                 var response = await manager.GetSinkConfigAsync(sinkId, ct);
+
                 return response is null
-                    ? Results.NotFound(new { sinkId, error = "Sink not found or has no config." })
-                    : Results.Ok(response);
+                           ? Results.NotFound(new { sinkId, error = "Sink not found or has no config." })
+                           : Results.Ok(response);
             }
         );
 
         app.MapPost(
             "/api/sinks/{sinkId}/config",
-            async (HttpContext ctx, string sinkId, JsonElement body, IConfigService configService, ISinkManager manager, CancellationToken ct) =>
+            async (
+                HttpContext ctx,
+                string sinkId,
+                JsonElement body,
+                IConfigService configService,
+                ISinkManager manager,
+                CancellationToken ct
+            ) =>
             {
                 if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
                     return error!;
+                }
 
                 try
                 {
                     await manager.SaveSinkConfigAsync(sinkId, body, ct);
+
                     return Results.Ok(new { sinkId, saved = true });
                 }
                 catch (KeyNotFoundException)

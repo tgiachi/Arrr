@@ -1,0 +1,12 @@
+global using Arrr.Core.Data.Api;
+global using Arrr.Core.Data.Config;
+global using Arrr.Core.Data.Events;
+global using Arrr.Core.Data.Notifications;
+global using Arrr.Core.Directories;
+global using Arrr.Core.Interfaces;
+global using Arrr.Core.Services;
+global using Arrr.Core.Types;
+global using Arrr.Core.Utils;
+global using Arrr.Service.Internal;
+global using Arrr.Service.Services;
+global using Microsoft.Extensions.DependencyInjection;

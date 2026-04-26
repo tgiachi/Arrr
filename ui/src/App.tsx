@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   Flex,
-  Grid,
   HStack,
   IconButton,
   SimpleGrid,
@@ -20,9 +19,16 @@ import { CallbackModal } from './components/CallbackModal'
 import { QrModal } from './components/QrModal'
 import { InstallPanel } from './components/InstallPanel'
 import { SettingsPanel } from './components/SettingsPanel'
+import { LogsView } from './components/LogsView'
+import { StreamView } from './components/StreamView'
+import { DaemonConfigView } from './components/DaemonConfigView'
+import { HistoryView } from './components/HistoryView'
+import { ThemeToggle } from './components/ThemeToggle'
 import type { Plugin, Sink, Settings as AppSettings } from './types'
 
 const STORAGE_KEY = 'arrr-settings'
+
+type Tab = 'configurazione' | 'stream' | 'install' | 'logs' | 'daemon' | 'history'
 
 interface Toast {
   id: number
@@ -38,9 +44,19 @@ function loadSettings(): AppSettings {
   }
 }
 
+const TAB_LABELS: Record<Tab, string> = {
+  configurazione: 'Configuration',
+  stream: 'Stream',
+  install: 'Install',
+  logs: 'Logs',
+  daemon: 'Daemon',
+  history: 'History',
+}
+
 export default function App() {
   const [settings, setSettings] = useState<AppSettings>(loadSettings)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<Tab>('configurazione')
   const [plugins, setPlugins] = useState<Plugin[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -56,6 +72,8 @@ export default function App() {
   const [sinksError, setSinksError] = useState<string | null>(null)
   const [sinkBusyIds, setSinkBusyIds] = useState<Set<string>>(new Set())
   const [configuringSink, setConfiguringSink] = useState<Sink | null>(null)
+
+  const [serviceVersion, setServiceVersion] = useState<string | null>(null)
 
   const apiRef = useRef<ArrrApi | null>(null)
   apiRef.current = new ArrrApi(settings.baseUrl || '', settings.apiKey || '')
@@ -102,6 +120,14 @@ export default function App() {
       setSettingsOpen(true)
     }
   }, [settings.apiKey, fetchPlugins, fetchSinks])
+
+  useEffect(() => {
+    if (!settings.baseUrl && !settings.apiKey) return
+    const a = new ArrrApi(settings.baseUrl || '', settings.apiKey || '')
+    a.getVersion()
+      .then((v) => setServiceVersion(v.version))
+      .catch(() => setServiceVersion(null))
+  }, [settings.baseUrl, settings.apiKey])
 
   const withBusy = async (id: string, fn: () => Promise<void>) => {
     setBusyIds((prev) => new Set(prev).add(id))
@@ -155,6 +181,13 @@ export default function App() {
       await fetchPlugins()
     })
 
+  const handleUpdate = (plugin: Plugin) =>
+    withBusy(plugin.id, async () => {
+      await api().update(plugin.id)
+      toast(`${plugin.name} updated to latest`, 'success')
+      await fetchPlugins()
+    })
+
   const handleReloadAll = async () => {
     setReloadingAll(true)
     try {
@@ -199,206 +232,377 @@ export default function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(s))
   }
 
+  const handleDaemonSettingsChanged = (patch: Partial<AppSettings>) => {
+    setSettings((prev) => {
+      const next = { ...prev, ...patch }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+      return next
+    })
+  }
+
+  const handleSettingsClick = () => {
+    setActiveTab('configurazione')
+    setSettingsOpen((o) => !o)
+  }
+
   const runningCount = plugins.filter((p) => p.running).length
 
   return (
-    <Box minH="100vh" bg="#080c14" p={0}>
-      {/* Navbar */}
-      <Flex
+    <Box minH="100vh" bg="app.bg" p={0}>
+      {/* Sticky header: brand row + tab row */}
+      <Box
         as="header"
-        align="center"
-        justify="space-between"
-        px={6}
-        py={4}
-        borderBottomWidth="1px"
-        borderColor="whiteAlpha.50"
-        bg="blackAlpha.400"
-        backdropFilter="blur(10px)"
         position="sticky"
         top={0}
         zIndex={10}
+        bg="app.headerBg"
+        backdropFilter="blur(12px)"
+        borderBottomWidth="1px"
+        borderColor="app.border"
       >
-        <HStack gap={3}>
-          <Skull size={22} color="#d97706" />
-          <Text
-            fontFamily="'Pirata One', cursive"
-            fontSize="2xl"
-            color="amber.400"
-            letterSpacing="wider"
-            lineHeight={1}
-          >
-            Arrr
-          </Text>
-          <Text
-            fontSize="xs"
-            color="gray.600"
-            fontFamily="mono"
-            textTransform="uppercase"
-            letterSpacing="widest"
-            mt="1px"
-          >
-            Notification center
-          </Text>
-        </HStack>
-
-        <HStack gap={2}>
-          {plugins.length > 0 && (
-            <Text fontSize="xs" color="gray.600" fontFamily="mono" mr={1}>
-              {runningCount}/{plugins.length} running
-            </Text>
-          )}
-          <Button
-            size="sm"
-            variant="ghost"
-            color="gray.400"
-            _hover={{ color: 'amber.300', bg: 'whiteAlpha.50' }}
-            onClick={handleReloadAll}
-            loading={reloadingAll}
-            gap={1}
-          >
-            <RefreshCcw size={14} />
-            Reload all
-          </Button>
-          <IconButton
-            aria-label="Settings"
-            size="sm"
-            variant="ghost"
-            color={settingsOpen ? 'amber.400' : 'gray.500'}
-            _hover={{ color: 'amber.300', bg: 'whiteAlpha.50' }}
-            onClick={() => setSettingsOpen((o) => !o)}
-          >
-            <Settings size={16} />
-          </IconButton>
-          <IconButton
-            aria-label="Refresh"
-            size="sm"
-            variant="ghost"
-            color="gray.500"
-            _hover={{ color: 'white', bg: 'whiteAlpha.50' }}
-            onClick={fetchPlugins}
-            loading={loading}
-          >
-            <RefreshCcw size={16} />
-          </IconButton>
-        </HStack>
-      </Flex>
-
-      {/* Main */}
-      <Box maxW="1200px" mx="auto" px={6} py={6}>
-        <Grid templateColumns="1fr" gap={4}>
-          {/* Settings panel (collapsible) */}
-          {settingsOpen && (
-            <SettingsPanel
-              settings={settings}
-              onSave={handleSaveSettings}
-              onClose={() => setSettingsOpen(false)}
-            />
-          )}
-
-          {/* Install panel */}
-          {!settingsOpen && settings.apiKey && (
-            <InstallPanel onInstall={handleInstall} />
-          )}
-
-          {/* Error */}
-          {error && (
-            <Alert.Root status="error" borderRadius="xl" bg="red.900" borderColor="red.700">
-              <Alert.Indicator />
-              <Alert.Title fontSize="sm">{error}</Alert.Title>
-            </Alert.Root>
-          )}
-
-          {/* Plugin grid */}
-          {loading && plugins.length === 0 ? (
-            <Flex justify="center" align="center" h="200px">
-              <Spinner color="amber.500" size="lg" />
-            </Flex>
-          ) : plugins.length === 0 && !loading && !error && settings.apiKey ? (
-            <Flex
-              direction="column"
-              align="center"
-              justify="center"
-              h="200px"
-              gap={2}
-              color="gray.600"
+        {/* Brand row */}
+        <Flex align="center" justify="space-between" px={6} py={3}>
+          <HStack gap={3}>
+            <img src="/logo.png" alt="Arrr logo" width={28} height={28} style={{ borderRadius: 4 }} />
+            <Text
+              fontFamily="'Pirata One', cursive"
+              fontSize="2xl"
+              color="amber.400"
+              letterSpacing="wider"
+              lineHeight={1}
             >
-              <Skull size={32} />
-              <Text fontSize="sm" fontFamily="mono">
-                No plugins found
-              </Text>
-            </Flex>
-          ) : (
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={4}>
-              {plugins.map((plugin) => (
-                <PluginCard
-                  key={plugin.id}
-                  plugin={plugin}
-                  busy={busyIds.has(plugin.id)}
-                  onToggle={handleToggle}
-                  onReload={handleReload}
-                  onUninstall={handleUninstall}
-                  onConfigure={setConfiguringPlugin}
-                  onCallback={setCallbackPlugin}
-                  onQr={setQrPlugin}
-                />
-              ))}
-            </SimpleGrid>
-          )}
+              Arrr
+            </Text>
+            <Text
+              fontSize="xs"
+              color="app.textDim"
+              fontFamily="mono"
+              textTransform="uppercase"
+              letterSpacing="widest"
+              mt="1px"
+            >
+              Notification center
+            </Text>
+          </HStack>
 
-          {/* Output Connectors section */}
-          {settings.apiKey && (
-            <Box mt={4}>
+          <HStack gap={2}>
+            {plugins.length > 0 && (
+              <Text fontSize="xs" color="app.textDim" fontFamily="mono" mr={1}>
+                {runningCount}/{plugins.length} running
+              </Text>
+            )}
+            {activeTab === 'configurazione' && (
+              <Button
+                size="sm"
+                variant="ghost"
+                color="app.textMuted"
+                _hover={{ color: 'amber.300', bg: 'whiteAlpha.50' }}
+                onClick={handleReloadAll}
+                loading={reloadingAll}
+                gap={1}
+              >
+                <RefreshCcw size={13} />
+                Reload all
+              </Button>
+            )}
+            <ThemeToggle />
+            <IconButton
+              aria-label="Settings"
+              size="sm"
+              variant="ghost"
+              color={settingsOpen ? 'amber.400' : 'app.textMuted'}
+              _hover={{ color: 'amber.300', bg: 'whiteAlpha.50' }}
+              onClick={handleSettingsClick}
+            >
+              <Settings size={15} />
+            </IconButton>
+            <IconButton
+              aria-label="Refresh"
+              size="sm"
+              variant="ghost"
+              color="app.textMuted"
+              _hover={{ color: 'white', bg: 'whiteAlpha.50' }}
+              onClick={fetchPlugins}
+              loading={loading}
+            >
+              <RefreshCcw size={15} />
+            </IconButton>
+          </HStack>
+        </Flex>
+
+        {/* Tab row */}
+        <Flex px={4} gap={0} borderTopWidth="1px" borderColor="app.border">
+          {(Object.keys(TAB_LABELS) as Tab[]).map((tab) => {
+            const active = activeTab === tab
+            return (
+              <Button
+                key={tab}
+                variant="ghost"
+                size="sm"
+                px={5}
+                py={3}
+                h="auto"
+                borderRadius={0}
+                borderBottomWidth="2px"
+                borderBottomColor={active ? 'amber.500' : 'transparent'}
+                color={active ? 'amber.400' : 'gray.600'}
+                fontFamily="mono"
+                fontSize="xs"
+                fontWeight={active ? '600' : '400'}
+                textTransform="uppercase"
+                letterSpacing="wider"
+                onClick={() => setActiveTab(tab)}
+                _hover={{
+                  color: active ? 'amber.400' : 'gray.400',
+                  bg: 'transparent',
+                }}
+                style={{
+                  transition: 'color 0.15s, border-color 0.15s',
+                }}
+              >
+                {TAB_LABELS[tab]}
+              </Button>
+            )
+          })}
+        </Flex>
+      </Box>
+
+      {/* Main content */}
+      <Box maxW="1200px" mx="auto" px={6} py={6}>
+        {/* ── TAB: Configurazione ── */}
+        {activeTab === 'configurazione' && (
+          <Box>
+            {settingsOpen && (
+              <Box mb={4}>
+                <SettingsPanel
+                  settings={settings}
+                  onSave={handleSaveSettings}
+                  onClose={() => setSettingsOpen(false)}
+                />
+              </Box>
+            )}
+
+            {error && (
+              <Alert.Root status="error" borderRadius="xl" bg="red.900" borderColor="red.700" mb={4}>
+                <Alert.Indicator />
+                <Alert.Title fontSize="sm">{error}</Alert.Title>
+              </Alert.Root>
+            )}
+
+            {/* Plugin section label */}
+            {settings.apiKey && (
               <Text
                 fontSize="xs"
                 fontFamily="mono"
-                color="gray.600"
+                color="app.textMuted"
                 textTransform="uppercase"
                 letterSpacing="widest"
                 mb={3}
               >
-                Output Connectors
+                Source Plugins
               </Text>
+            )}
 
-              {sinksError && (
-                <Alert.Root status="error" borderRadius="xl" bg="red.900" borderColor="red.700" mb={3}>
-                  <Alert.Indicator />
-                  <Alert.Title fontSize="sm">{sinksError}</Alert.Title>
-                </Alert.Root>
-              )}
+            {loading && plugins.length === 0 ? (
+              <Flex justify="center" align="center" h="200px">
+                <Spinner color="amber.500" size="lg" />
+              </Flex>
+            ) : plugins.length === 0 && !loading && !error && settings.apiKey ? (
+              <Flex direction="column" align="center" justify="center" h="200px" gap={2} color="app.textDim">
+                <Skull size={28} />
+                <Text fontSize="sm" fontFamily="mono">
+                  No plugins found
+                </Text>
+              </Flex>
+            ) : (
+              <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={4}>
+                {plugins.map((plugin) => (
+                  <PluginCard
+                    key={plugin.id}
+                    plugin={plugin}
+                    busy={busyIds.has(plugin.id)}
+                    onToggle={handleToggle}
+                    onReload={handleReload}
+                    onUpdate={handleUpdate}
+                    onUninstall={handleUninstall}
+                    onConfigure={setConfiguringPlugin}
+                    onCallback={setCallbackPlugin}
+                    onQr={setQrPlugin}
+                  />
+                ))}
+              </SimpleGrid>
+            )}
 
-              {loadingSinks && sinks.length === 0 ? (
-                <Flex justify="center" align="center" h="100px">
-                  <Spinner color="amber.500" size="md" />
-                </Flex>
-              ) : (
-                <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={4}>
-                  {sinks.map((sink) => (
-                    <SinkCard
-                      key={sink.id}
-                      sink={sink}
-                      busy={sinkBusyIds.has(sink.id)}
-                      onToggle={handleSinkToggle}
-                      onReload={handleSinkReload}
-                      onConfigure={setConfiguringSink}
-                    />
-                  ))}
-                </SimpleGrid>
-              )}
-            </Box>
-          )}
-        </Grid>
+            {/* Output Connectors section */}
+            {settings.apiKey && (
+              <Box mt={8}>
+                <Text
+                  fontSize="xs"
+                  fontFamily="mono"
+                  color="app.textMuted"
+                  textTransform="uppercase"
+                  letterSpacing="widest"
+                  mb={3}
+                >
+                  Output Connectors
+                </Text>
+
+                {sinksError && (
+                  <Alert.Root
+                    status="error"
+                    borderRadius="xl"
+                    bg="red.900"
+                    borderColor="red.700"
+                    mb={3}
+                  >
+                    <Alert.Indicator />
+                    <Alert.Title fontSize="sm">{sinksError}</Alert.Title>
+                  </Alert.Root>
+                )}
+
+                {loadingSinks && sinks.length === 0 ? (
+                  <Flex justify="center" align="center" h="100px">
+                    <Spinner color="amber.500" size="md" />
+                  </Flex>
+                ) : (
+                  <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={4}>
+                    {sinks.map((sink) => (
+                      <SinkCard
+                        key={sink.id}
+                        sink={sink}
+                        busy={sinkBusyIds.has(sink.id)}
+                        onToggle={handleSinkToggle}
+                        onReload={handleSinkReload}
+                        onConfigure={setConfiguringSink}
+                      />
+                    ))}
+                  </SimpleGrid>
+                )}
+              </Box>
+            )}
+          </Box>
+        )}
+
+        {/* ── TAB: Install ── */}
+        {activeTab === 'install' && settings.apiKey && (
+          <InstallPanel onInstall={handleInstall} />
+        )}
+        {activeTab === 'install' && !settings.apiKey && (
+          <Flex direction="column" align="center" justify="center" h="300px" gap={3} color="app.textDim">
+            <Settings size={28} />
+            <Text fontFamily="mono" fontSize="sm">
+              Configure API key first
+            </Text>
+            <Button
+              size="sm"
+              variant="outline"
+              colorPalette="amber"
+              onClick={handleSettingsClick}
+            >
+              Open Settings
+            </Button>
+          </Flex>
+        )}
+
+        {/* ── TAB: Stream ── */}
+        {activeTab === 'stream' && (
+          <StreamView settings={settings} onOpenSettings={handleSettingsClick} />
+        )}
+
+        {/* ── TAB: Logs ── */}
+        {activeTab === 'logs' && settings.apiKey && (
+          <LogsView api={api()} />
+        )}
+        {activeTab === 'logs' && !settings.apiKey && (
+          <Flex direction="column" align="center" justify="center" h="300px" gap={3} color="app.textDim">
+            <Settings size={28} />
+            <Text fontFamily="mono" fontSize="sm">
+              Configure API key first
+            </Text>
+            <Button
+              size="sm"
+              variant="outline"
+              colorPalette="amber"
+              onClick={handleSettingsClick}
+            >
+              Open Settings
+            </Button>
+          </Flex>
+        )}
+
+        {/* ── TAB: Daemon ── */}
+        {activeTab === 'daemon' && settings.apiKey && (
+          <DaemonConfigView
+            api={api()}
+            onToast={toast}
+            onSettingsChanged={handleDaemonSettingsChanged}
+          />
+        )}
+        {/* ── TAB: History ── */}
+        {activeTab === 'history' && settings.apiKey && (
+          <HistoryView api={api()} onToast={toast} />
+        )}
+        {activeTab === 'history' && !settings.apiKey && (
+          <Flex direction="column" align="center" justify="center" h="300px" gap={3} color="app.textDim">
+            <Settings size={28} />
+            <Text fontFamily="mono" fontSize="sm">Configure API key first</Text>
+            <Button size="sm" variant="outline" colorPalette="amber" onClick={handleSettingsClick}>
+              Open Settings
+            </Button>
+          </Flex>
+        )}
+
+        {activeTab === 'daemon' && !settings.apiKey && (
+          <Flex direction="column" align="center" justify="center" h="300px" gap={3} color="app.textDim">
+            <Settings size={28} />
+            <Text fontFamily="mono" fontSize="sm">
+              Configure API key first
+            </Text>
+            <Button
+              size="sm"
+              variant="outline"
+              colorPalette="amber"
+              onClick={handleSettingsClick}
+            >
+              Open Settings
+            </Button>
+          </Flex>
+        )}
       </Box>
 
-      {/* QR modal */}
-      {qrPlugin && (
-        <QrModal
-          plugin={qrPlugin}
-          api={api()}
-          onClose={() => setQrPlugin(null)}
-        />
-      )}
+      {/* Version footer */}
+      <Box
+        as="footer"
+        borderTopWidth="1px"
+        borderColor="app.border"
+        py={2}
+        px={6}
+        mt={4}
+      >
+        <Flex justify="center" align="center" gap={3}>
+          {serviceVersion && (
+            <Text fontSize="10px" color="app.textDim" fontFamily="mono">
+              arrr v{serviceVersion}
+            </Text>
+          )}
+          <Text fontSize="10px" color="app.textDim" fontFamily="mono">
+            built with ❤️{' '}
+            <a
+              href="https://github.com/tgiachi/Arrr"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'inherit' }}
+            >
+              tom
+            </a>
+          </Text>
+        </Flex>
+      </Box>
 
-      {/* Callback modal */}
+      {/* Modals */}
+      {qrPlugin && (
+        <QrModal plugin={qrPlugin} api={api()} onClose={() => setQrPlugin(null)} />
+      )}
       {callbackPlugin && (
         <CallbackModal
           plugin={callbackPlugin}
@@ -407,8 +611,6 @@ export default function App() {
           onToast={toast}
         />
       )}
-
-      {/* Plugin config modal */}
       {configuringPlugin && (
         <ConfigModal
           id={configuringPlugin.id}
@@ -419,8 +621,6 @@ export default function App() {
           onToast={toast}
         />
       )}
-
-      {/* Sink config modal */}
       {configuringSink && (
         <ConfigModal
           id={configuringSink.id}
@@ -433,7 +633,15 @@ export default function App() {
       )}
 
       {/* Toast stack */}
-      <Box position="fixed" bottom={4} right={4} zIndex={100} display="flex" flexDirection="column" gap={2}>
+      <Box
+        position="fixed"
+        bottom={4}
+        right={4}
+        zIndex={100}
+        display="flex"
+        flexDirection="column"
+        gap={2}
+      >
         {toasts.map((t) => (
           <Box
             key={t.id}

@@ -9,7 +9,7 @@ import {
   Text,
   Tooltip,
 } from '@chakra-ui/react'
-import { QrCode, RefreshCw, Settings2, Trash2, Webhook } from 'lucide-react'
+import { ArrowUpCircle, QrCode, RefreshCw, Settings2, Trash2, Webhook } from 'lucide-react'
 import type { Plugin } from '../types'
 
 interface Props {
@@ -17,25 +17,26 @@ interface Props {
   busy: boolean
   onToggle: (plugin: Plugin, enabled: boolean) => void
   onReload: (plugin: Plugin) => void
+  onUpdate: (plugin: Plugin) => void
   onUninstall: (plugin: Plugin) => void
   onConfigure: (plugin: Plugin) => void
   onCallback: (plugin: Plugin) => void
   onQr: (plugin: Plugin) => void
 }
 
-export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onConfigure, onCallback, onQr }: Props) {
+export function PluginCard({ plugin, busy, onToggle, onReload, onUpdate, onUninstall, onConfigure, onCallback, onQr }: Props) {
   const statusColor = plugin.running ? '#4ade80' : plugin.enabled ? '#facc15' : '#4b5563'
   const statusLabel = plugin.running ? 'Running' : plugin.enabled ? 'Starting' : 'Disabled'
 
   return (
     <Card.Root
-      bg="whiteAlpha.50"
+      bg="app.cardBg"
       borderWidth="1px"
-      borderColor="whiteAlpha.100"
+      borderColor="app.cardBorder"
       borderRadius="xl"
       overflow="hidden"
       transition="all 0.2s"
-      _hover={{ borderColor: 'whiteAlpha.200', bg: 'whiteAlpha.100', transform: 'translateY(-2px)' }}
+      _hover={{ borderColor: 'app.cardBorderHover', bg: 'app.cardBgHover', transform: 'translateY(-2px)' }}
       opacity={busy ? 0.6 : 1}
     >
       <Card.Body p={5}>
@@ -58,7 +59,7 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
               fontWeight="700"
               fontSize="md"
               fontFamily="heading"
-              color="white"
+              color="app.text"
               overflow="hidden"
               textOverflow="ellipsis"
               whiteSpace="nowrap"
@@ -74,8 +75,8 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
                   aria-label="Configure plugin"
                   size="xs"
                   variant="ghost"
-                  color="gray.400"
-                  _hover={{ color: 'amber.300', bg: 'whiteAlpha.100' }}
+                  color="app.iconColor"
+                  _hover={{ color: 'amber.300', bg: 'app.cardBgHover' }}
                   onClick={() => onConfigure(plugin)}
                   disabled={busy}
                 >
@@ -94,8 +95,8 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
                     aria-label="Send callback"
                     size="xs"
                     variant="ghost"
-                    color="gray.400"
-                    _hover={{ color: 'cyan.300', bg: 'whiteAlpha.100' }}
+                    color="app.iconColor"
+                    _hover={{ color: 'cyan.300', bg: 'app.cardBgHover' }}
                     onClick={() => onCallback(plugin)}
                     disabled={busy}
                   >
@@ -115,8 +116,8 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
                     aria-label="Scan QR code"
                     size="xs"
                     variant="ghost"
-                    color="gray.400"
-                    _hover={{ color: 'green.300', bg: 'whiteAlpha.100' }}
+                    color="app.iconColor"
+                    _hover={{ color: 'green.300', bg: 'app.cardBgHover' }}
                     onClick={() => onQr(plugin)}
                     disabled={busy}
                   >
@@ -135,8 +136,8 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
                   aria-label="Reload plugin"
                   size="xs"
                   variant="ghost"
-                  color="gray.400"
-                  _hover={{ color: 'amber.300', bg: 'whiteAlpha.100' }}
+                  color="app.iconColor"
+                  _hover={{ color: 'amber.300', bg: 'app.cardBgHover' }}
                   onClick={() => onReload(plugin)}
                   disabled={busy}
                 >
@@ -151,11 +152,30 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
             <Tooltip.Root>
               <Tooltip.Trigger asChild>
                 <IconButton
+                  aria-label="Update plugin"
+                  size="xs"
+                  variant="ghost"
+                  color="app.iconColor"
+                  _hover={{ color: 'blue.300', bg: 'app.cardBgHover' }}
+                  onClick={() => onUpdate(plugin)}
+                  disabled={busy}
+                >
+                  <ArrowUpCircle size={13} />
+                </IconButton>
+              </Tooltip.Trigger>
+              <Tooltip.Positioner>
+                <Tooltip.Content bg="gray.800" color="white" fontSize="xs">Update to latest</Tooltip.Content>
+              </Tooltip.Positioner>
+            </Tooltip.Root>
+
+            <Tooltip.Root>
+              <Tooltip.Trigger asChild>
+                <IconButton
                   aria-label="Uninstall plugin"
                   size="xs"
                   variant="ghost"
-                  color="gray.600"
-                  _hover={{ color: 'red.400', bg: 'whiteAlpha.100' }}
+                  color="app.textDim"
+                  _hover={{ color: 'red.400', bg: 'app.cardBgHover' }}
                   onClick={() => onUninstall(plugin)}
                   disabled={busy}
                 >
@@ -172,7 +192,7 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
         <Text
           fontFamily="mono"
           fontSize="xs"
-          color="gray.500"
+          color="app.textMuted"
           mb={2}
           overflow="hidden"
           textOverflow="ellipsis"
@@ -182,7 +202,7 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
         </Text>
 
         {plugin.description && (
-          <Text fontSize="sm" color="gray.400" mb={3} lineHeight="1.5">
+          <Text fontSize="sm" color="app.textMuted" mb={3} lineHeight="1.5">
             {plugin.description}
           </Text>
         )}
@@ -207,7 +227,7 @@ export function PluginCard({ plugin, busy, onToggle, onReload, onUninstall, onCo
         )}
 
         <Flex justify="space-between" align="center">
-          <Text fontSize="xs" color="gray.600">
+          <Text fontSize="xs" color="app.textMuted">
             {statusLabel}
           </Text>
           <Switch.Root

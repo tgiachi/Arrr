@@ -3,7 +3,6 @@ using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
-using Arrr.Core.Data.Notifications;
 using Arrr.Tests.Support;
 using WebSocketSink;
 using WebSocketSink.Data;
@@ -16,38 +15,6 @@ public class WebSocketSinkPluginTests
     private int _port;
     private WebSocketSinkPlugin? _sink;
 
-    [SetUp]
-    public void SetUp()
-    {
-        _port = GetFreePort();
-        _sink = new WebSocketSinkPlugin();
-    }
-
-    [TearDown]
-    public async Task TearDown()
-    {
-        if (_sink is not null)
-        {
-            await _sink.StopAsync();
-            _sink.Dispose();
-            _sink = null;
-        }
-    }
-
-    [Test]
-    public async Task StartAsync_ServerAcceptsWebSocketConnections()
-    {
-        var ctx = new FakeSinkContext(configFactory: _ => new WebSocketSinkConfig { Port = _port, Path = "ws" });
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        await _sink!.StartAsync(ctx, cts.Token);
-
-        using var client = new ClientWebSocket();
-        await client.ConnectAsync(new Uri($"ws://localhost:{_port}/ws"), cts.Token);
-
-        Assert.That(client.State, Is.EqualTo(WebSocketState.Open));
-    }
-
     [Test]
     public async Task ConsumeAsync_BroadcastsJsonFrame_ToConnectedClient()
     {
@@ -57,7 +24,7 @@ public class WebSocketSinkPluginTests
         await _sink!.StartAsync(ctx, cts.Token);
 
         using var client = new ClientWebSocket();
-        await client.ConnectAsync(new Uri($"ws://localhost:{_port}/ws"), cts.Token);
+        await client.ConnectAsync(new($"ws://localhost:{_port}/ws"), cts.Token);
         await Task.Delay(100, cts.Token);
 
         var notification = new Notification(Guid.NewGuid(), "test", "Title", "Body", DateTimeOffset.UtcNow, null);
@@ -80,7 +47,7 @@ public class WebSocketSinkPluginTests
         await _sink!.StartAsync(ctx, cts.Token);
 
         var client = new ClientWebSocket();
-        await client.ConnectAsync(new Uri($"ws://localhost:{_port}/ws"), cts.Token);
+        await client.ConnectAsync(new($"ws://localhost:{_port}/ws"), cts.Token);
         await Task.Delay(100, cts.Token);
 
         client.Dispose();
@@ -88,6 +55,27 @@ public class WebSocketSinkPluginTests
 
         var notification = new Notification(Guid.NewGuid(), "test", "Title", "Body", DateTimeOffset.UtcNow, null);
         Assert.DoesNotThrowAsync(() => _sink.ConsumeAsync(notification, cts.Token));
+    }
+
+    [SetUp]
+    public void SetUp()
+    {
+        _port = GetFreePort();
+        _sink = new();
+    }
+
+    [Test]
+    public async Task StartAsync_ServerAcceptsWebSocketConnections()
+    {
+        var ctx = new FakeSinkContext(configFactory: _ => new WebSocketSinkConfig { Port = _port, Path = "ws" });
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        await _sink!.StartAsync(ctx, cts.Token);
+
+        using var client = new ClientWebSocket();
+        await client.ConnectAsync(new($"ws://localhost:{_port}/ws"), cts.Token);
+
+        Assert.That(client.State, Is.EqualTo(WebSocketState.Open));
     }
 
     [Test]
@@ -99,30 +87,42 @@ public class WebSocketSinkPluginTests
         await _sink!.StartAsync(ctx, cts.Token);
 
         using var client = new ClientWebSocket();
-        await client.ConnectAsync(new Uri($"ws://localhost:{_port}/ws"), cts.Token);
+        await client.ConnectAsync(new($"ws://localhost:{_port}/ws"), cts.Token);
         await Task.Delay(100, cts.Token);
 
         await _sink.StopAsync();
 
         using var client2 = new ClientWebSocket();
         using var cts2 = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        var connectEx = Assert.CatchAsync(() =>
-            client2.ConnectAsync(new Uri($"ws://localhost:{_port}/ws"), cts2.Token));
+        var connectEx = Assert.CatchAsync(
+            () =>
+                client2.ConnectAsync(new($"ws://localhost:{_port}/ws"), cts2.Token)
+        );
         Assert.That(connectEx, Is.Not.Null);
     }
 
     [Test]
     public void StopAsync_WhenNeverStarted_DoesNotThrow()
+        => Assert.DoesNotThrowAsync(() => _sink!.StopAsync());
+
+    [TearDown]
+    public async Task TearDown()
     {
-        Assert.DoesNotThrowAsync(() => _sink!.StopAsync());
+        if (_sink is not null)
+        {
+            await _sink.StopAsync();
+            _sink.Dispose();
+            _sink = null;
+        }
     }
 
     private static int GetFreePort()
     {
         using var l = new TcpListener(IPAddress.Loopback, 0);
         l.Start();
-        int port = ((IPEndPoint)l.LocalEndpoint).Port;
+        var port = ((IPEndPoint)l.LocalEndpoint).Port;
         l.Stop();
+
         return port;
     }
 }

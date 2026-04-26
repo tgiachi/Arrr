@@ -18,14 +18,14 @@ public interface IPluginContext
     IEventBus EventBus { get; }
 
     /// <summary>
-    /// Deserializes the plugin config from <see cref="ConfigPath"/>.
+    /// Deserializes the plugin config from <see cref="ConfigPath" />.
     /// Properties marked with <c>[Sensitive]</c> are decrypted automatically.
     /// Returns a default instance if the file does not exist.
     /// </summary>
     Task<T> LoadConfigAsync<T>(CancellationToken ct = default) where T : new();
 
     /// <summary>
-    /// Serializes <paramref name="config"/> to <see cref="ConfigPath"/>.
+    /// Serializes <paramref name="config" /> to <see cref="ConfigPath" />.
     /// Properties marked with <c>[Sensitive]</c> are encrypted automatically before writing.
     /// </summary>
     Task SaveConfigAsync<T>(T config, CancellationToken ct = default);

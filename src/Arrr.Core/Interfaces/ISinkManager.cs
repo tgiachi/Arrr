@@ -6,10 +6,10 @@ namespace Arrr.Core.Interfaces;
 /// <summary>Manages sink lifecycle and exposes sink metadata for the REST API.</summary>
 public interface ISinkManager
 {
-    IReadOnlyList<AvailableSinkResponse> GetAvailable();
-    Task EnableAsync(string sinkId, CancellationToken ct);
     Task DisableAsync(string sinkId);
-    Task ReloadAsync(string sinkId, CancellationToken ct);
+    Task EnableAsync(string sinkId, CancellationToken ct);
+    IReadOnlyList<AvailableSinkResponse> GetAvailable();
     Task<PluginConfigResponse?> GetSinkConfigAsync(string sinkId, CancellationToken ct = default);
+    Task ReloadAsync(string sinkId, CancellationToken ct);
     Task SaveSinkConfigAsync(string sinkId, JsonElement config, CancellationToken ct = default);
 }

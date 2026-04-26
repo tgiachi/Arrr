@@ -9,22 +9,16 @@ internal class FakeSink : ISinkPlugin
     public bool Started { get; private set; }
     public bool Stopped { get; private set; }
 
-    public string Id          { get; }
-    public string Name        => "Fake Sink";
-    public string Version     => "1.0.0";
-    public string Author      => "Test";
+    public string Id { get; }
+    public string Name => "Fake Sink";
+    public string Version => "1.0.0";
+    public string Author => "Test";
     public string Description => "Test sink";
-    public string Icon        => "";
+    public string Icon => "";
 
     public FakeSink(string id = "com.test.sink")
     {
         Id = id;
-    }
-
-    public Task StartAsync(ISinkContext context, CancellationToken ct)
-    {
-        Started = true;
-        return Task.CompletedTask;
     }
 
     public bool ThrowOnConsume { get; set; }
@@ -32,14 +26,25 @@ internal class FakeSink : ISinkPlugin
     public Task ConsumeAsync(Notification notification, CancellationToken ct)
     {
         if (ThrowOnConsume)
+        {
             throw new InvalidOperationException("Simulated sink failure");
+        }
         Received.Add(notification);
+
+        return Task.CompletedTask;
+    }
+
+    public Task StartAsync(ISinkContext context, CancellationToken ct)
+    {
+        Started = true;
+
         return Task.CompletedTask;
     }
 
     public Task StopAsync()
     {
         Stopped = true;
+
         return Task.CompletedTask;
     }
 }

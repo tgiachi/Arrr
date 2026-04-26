@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AssemblyName>Arrr.Plugin.WhatsApp</AssemblyName>
+        <RootNamespace>Arrr.Plugin.WhatsApp</RootNamespace>
+
+        <PackageId>Arrr.Plugin.WhatsApp</PackageId>
+        <Version>1.5.1</Version>
+        <Authors>Tom</Authors>
+        <Company>orivega.io</Company>
+        <Description>WhatsApp plugin for Arrr — receives messages via whatsapp-bridge (whatsmeow).</Description>
+        <PackageTags>arrr;arrr-plugin;plugin;whatsapp;notifications;linux</PackageTags>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/tgiachi/Arrr</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/tgiachi/Arrr</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageIcon>arr_logo.png</PackageIcon>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Arrr.Core" Version="*"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="../../assets/arr_logo.png" Pack="true" PackagePath="\"/>
+        <None Include="bridge/linux-x64/whatsapp-bridge" Pack="true" PackagePath="tools/linux-x64/" Condition="Exists('bridge/linux-x64/whatsapp-bridge')"/>
+        <None Include="bridge/linux-arm64/whatsapp-bridge" Pack="true" PackagePath="tools/linux-arm64/" Condition="Exists('bridge/linux-arm64/whatsapp-bridge')"/>
+        <None Include="bridge/win-x64/whatsapp-bridge.exe" Pack="true" PackagePath="tools/win-x64/" Condition="Exists('bridge/win-x64/whatsapp-bridge.exe')"/>
+        <None Include="bridge/osx-x64/whatsapp-bridge" Pack="true" PackagePath="tools/osx-x64/" Condition="Exists('bridge/osx-x64/whatsapp-bridge')"/>
+        <None Include="bridge/osx-arm64/whatsapp-bridge" Pack="true" PackagePath="tools/osx-arm64/" Condition="Exists('bridge/osx-arm64/whatsapp-bridge')"/>
+    </ItemGroup>
+
+</Project>

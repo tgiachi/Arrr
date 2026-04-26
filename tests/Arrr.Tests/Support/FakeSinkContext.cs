@@ -1,4 +1,3 @@
-using Arrr.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -22,8 +21,11 @@ internal class FakeSinkContext : ISinkContext
         if (_configFactory is not null)
         {
             var result = _configFactory(typeof(T));
+
             if (result is T typed)
+            {
                 return Task.FromResult(typed);
+            }
         }
 
         return Task.FromResult(new T());

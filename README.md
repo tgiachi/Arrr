@@ -6,16 +6,20 @@
 
 > *Arrr!* — because every good notification deserves a pirate's welcome.
 
-Arrr is a Linux desktop notification aggregator daemon. It runs as a background service, collects notifications from multiple sources via a plugin system, and delivers them to your desktop through D-Bus (the standard freedesktop.org Notifications API) and a Unix domain socket for any client that wants to listen.
+Arrr is a Linux desktop notification aggregator daemon. It runs as a background service, collects notifications from multiple sources via a plugin system, and delivers them to your desktop through D-Bus and configurable sink plugins. A built-in web UI lets you browse notification history, manage plugins and sinks, and tweak settings — all from a browser.
 
 ---
 
 ## Features
 
 - **Plugin system** — load notification sources from external `.dll` assemblies at runtime; each plugin runs in isolation and can't crash the daemon
+- **Sink system** — fan-out to any number of destinations: desktop popups, email, push notifications, webhooks, and more
+- **Web UI** — React dashboard for history, plugins, sinks, logs, and config
+- **Notification history** — optional SQLite-backed history with full-text search, source filter, and pagination (encrypted at rest)
 - **D-Bus delivery** — notifications appear as native desktop popups via `org.freedesktop.Notifications`
-- **Unix socket broadcast** — newline-delimited JSON stream on `/tmp/arrr.sock` for custom clients and scripts
-- **REST API** — HTTP endpoints to send notifications from any language and inspect loaded plugins
+- **REST API** — HTTP endpoints to send notifications from any language and manage plugins/sinks
+- **Deduplication** — configurable time window to suppress duplicate notifications
+- **NuGet installer** — install community plugins directly from NuGet.org via the API or web UI
 - **systemd user service** — runs as a user unit, logs to the journal
 - **Self-contained binary** — no .NET runtime required on the target machine
 
@@ -24,28 +28,38 @@ Arrr is a Linux desktop notification aggregator daemon. It runs as a background 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────┐
-│                  Arrr.Service                    │
-│                                                  │
-│  Plugin A ──┐                                    │
-│  Plugin B ──┼──▶  EventBus  ──▶  DBusNotify     │
-│  Plugin C ──┘          │                         │
-│  REST /api/notify ──────┘         SocketServer   │
-│                                        │         │
-└────────────────────────────────────────┼─────────┘
-                                         │
-                              /tmp/arrr.sock  (JSON stream)
+┌──────────────────────────────────────────────────────┐
+│                     Arrr.Service                     │
+│                                                      │
+│  Source Plugins ──┐                                  │
+│  REST /api/notify ┼──▶  EventBus ──▶  SinkOrchestrator ──▶ D-Bus popup
+│                   │                        │         │ ──▶ Ntfy / SMTP / Pushover
+│                   │                        │         │ ──▶ Webhook / WebSocket
+│                   │              HistoryService       │ ──▶ SignalR hub
+│                                                      │ ──▶ … (sink plugins)
+└──────────────────────────────────────────────────────┘
+                          │
+                    Web UI :5150
 ```
 
 1. The daemon starts and loads plugins from the configured `plugins/` directory.
-2. Each plugin receives an `IPluginContext` (event bus, logger, HTTP callback URL) and runs on its own task.
+2. Each plugin receives an `IPluginContext` (event bus, logger, per-plugin config) and runs on its own task.
 3. Plugins publish `Notification` events onto the internal event bus.
-4. Two subscribers consume every notification: one forwards it to D-Bus (desktop popup), the other broadcasts it as JSON over the Unix socket.
-5. External processes (plugins written in any language, scripts, etc.) can also inject notifications via `POST /api/notify`.
+4. `SinkOrchestrator` fans every notification out to all enabled sinks in parallel.
+5. If `historyEnabled: true`, every notification is also persisted to an encrypted SQLite database.
+6. External processes can inject notifications via `POST /api/notify`.
 
 ---
 
 ## Getting Started
+
+### Install from AUR (Arch Linux)
+
+```bash
+yay -S arrr-bin
+# or
+paru -S arrr-bin
+```
 
 ### Install from package
 
@@ -61,7 +75,7 @@ sudo dpkg -i arrr_<version>_amd64.deb
 sudo rpm -i arrr-<version>-1.x86_64.rpm
 ```
 
-**Arch Linux**
+**Arch Linux (manual)**
 ```bash
 sudo pacman -U arrr-<version>-1-x86_64.pkg.tar.zst
 ```
@@ -72,6 +86,8 @@ sudo pacman -U arrr-<version>-1-x86_64.pkg.tar.zst
 systemctl --user enable --now arrr
 journalctl --user -u arrr -f
 ```
+
+The web UI is available at `http://localhost:5150` once the service is running.
 
 ### Build from source
 
@@ -90,33 +106,43 @@ dotnet run --project src/Arrr.Service -- --rootDirectory ~/.local/share/arrr
 
 ## Configuration
 
-On first run Arrr creates `$XDG_DATA_HOME/arrr/arrr.config` (defaults to `~/.local/share/arrr/arrr.config`):
+On first run Arrr creates `$XDG_DATA_HOME/arrr/arrr.config` (defaults to `~/.local/share/arrr/arrr.config`).
 
 ```json
 {
-  "socketPath": "/tmp/arrr.sock",
   "apiKey": "",
   "isDebug": false,
+  "historyEnabled": false,
   "web": {
     "port": 5150
   },
-  "plugins": []
+  "deduplication": {
+    "enabled": false,
+    "windowSeconds": 300
+  },
+  "plugins": [],
+  "sinks": []
 }
 ```
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| `socketPath` | `/tmp/arrr.sock` | Unix socket path |
-| `apiKey` | `""` | API key for REST endpoints (leave empty to disable) |
+| `apiKey` | `""` | API key for REST endpoints; leave empty to disable auth |
 | `isDebug` | `false` | Enables OpenAPI (`/openapi/v1.json`) and Scalar UI (`/scalar/v1`) |
-| `web.port` | `5150` | HTTP port for the REST API |
-| `plugins` | `[]` | List of enabled plugins |
+| `historyEnabled` | `false` | Persist all notifications to an encrypted SQLite database |
+| `web.port` | `5150` | HTTP port for the REST API and web UI |
+| `deduplication.enabled` | `false` | Suppress duplicate notifications within the time window |
+| `deduplication.windowSeconds` | `300` | Window (seconds) for duplicate suppression |
+| `plugins` | `[]` | List of enabled source plugins |
+| `sinks` | `[]` | List of enabled sink plugins |
+
+All settings can be changed from the web UI → **Config** tab without editing the JSON file directly.
 
 ---
 
 ## REST API
 
-All endpoints require the `X-Api-Key` header (set `apiKey` in config first).
+All endpoints require the `X-Api-Key` header when `apiKey` is set.
 
 ### Send a notification
 
@@ -133,102 +159,98 @@ Content-Type: application/json
 }
 ```
 
-### List loaded plugins
+### Notification history
 
 ```http
-GET /api/plugins
+GET /api/history?page=1&limit=50&search=deploy&source=rss
 X-Api-Key: <your-key>
 ```
 
-### List available plugins (all DLLs in plugins/)
+Requires `historyEnabled: true`. Supports full-text search across title and body, source filter, and pagination.
+
+### Plugins
 
 ```http
-GET /api/plugins/available
-X-Api-Key: <your-key>
+GET  /api/plugins                          # list loaded plugins
+GET  /api/plugins/available                # all plugins in plugins/
+POST /api/plugins/{id}/enable
+POST /api/plugins/{id}/disable
+POST /api/plugins/{id}/reload
+POST /api/plugins/reload/all
+POST /api/plugins/install                  # install from NuGet
+POST /api/plugins/{id}/uninstall
+GET  /api/plugins/{id}/config              # get plugin config JSON
+PUT  /api/plugins/{id}/config              # save plugin config JSON
 ```
 
-Returns each plugin with `enabled` and `running` fields.
-
-### Enable / Disable a plugin
-
-```http
-POST /api/plugins/{pluginId}/enable
-POST /api/plugins/{pluginId}/disable
-X-Api-Key: <your-key>
-```
-
-### Reload plugins
-
-```http
-POST /api/plugins/{pluginId}/reload    # reload single plugin
-POST /api/plugins/reload/all           # reload all plugins
-X-Api-Key: <your-key>
-```
-
-### Install a plugin from NuGet
-
-Plugins published on NuGet.org with the `arrr-plugin` tag can be installed directly:
-
+**Install from NuGet:**
 ```http
 POST /api/plugins/install
-X-Api-Key: <your-key>
 Content-Type: application/json
 
 { "packageId": "Arrr.Plugin.Rss", "version": "1.0.0" }
 ```
 
-Omit `version` to install the latest. The installer downloads the package and its dependencies, extracts the DLLs into the `plugins/` directory and starts the plugin automatically.
+Omit `version` to install the latest.
 
-### Uninstall a plugin
+### Sinks
 
 ```http
-POST /api/plugins/Arrr.Plugin.Rss/uninstall
-X-Api-Key: <your-key>
+GET  /api/sinks                            # list available sinks
+POST /api/sinks/{id}/enable
+POST /api/sinks/{id}/disable
+POST /api/sinks/{id}/reload
+GET  /api/sinks/{id}/config
+PUT  /api/sinks/{id}/config
+```
+
+### Config backup / restore
+
+```http
+GET  /api/config/backup                    # export all plugin configs as JSON
+POST /api/config/restore                   # import previously exported JSON
 ```
 
 ---
 
-## Available Plugins
+## Available Source Plugins
 
-| Plugin | Plugin ID | NuGet | Description | Auth |
-|--------|-----------|-------|-------------|------|
-| **RSS / Atom** | `com.arrr.rss` | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.Rss)](https://www.nuget.org/packages/Arrr.Plugin.Rss) | Polls one or more RSS/Atom feeds and notifies on new items | None |
-| **IMAP** | `com.arrr.imap` | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.Imap)](https://www.nuget.org/packages/Arrr.Plugin.Imap) | Monitors an IMAP mailbox via IDLE and notifies on new e-mails | Username / password |
-| **Telegram** | `com.arrr.telegram` | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.Telegram)](https://www.nuget.org/packages/Arrr.Plugin.Telegram) | Receives messages on your Telegram user account via MTProto (WTelegramClient). Verification code delivered via `POST /api/plugins/{id}/callback` | Phone + QR/code |
-| **WhatsApp** | `com.arrr.whatsapp` | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.WhatsApp)](https://www.nuget.org/packages/Arrr.Plugin.WhatsApp) | Receives WhatsApp messages via a Go bridge (whatsmeow). First-time QR pairing shown directly in the web UI | QR scan (in-UI) |
-
-### Building the WhatsApp bridge
-
-The WhatsApp plugin requires a small compiled Go binary (requires Go ≥ 1.22 and GCC):
-
-```bash
-cd plugins/WhatsAppPlugin/bridge
-./build.sh          # fetches deps, compiles → ./whatsapp-bridge
-```
-
-Set `BridgePath` in the plugin config to the absolute path of the produced binary.
+| Plugin | NuGet | Description |
+|--------|-------|-------------|
+| **RSS / Atom** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.Rss)](https://www.nuget.org/packages/Arrr.Plugin.Rss) | Polls RSS/Atom feeds and notifies on new items |
+| **IMAP** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.Imap)](https://www.nuget.org/packages/Arrr.Plugin.Imap) | Monitors an IMAP mailbox and notifies on new mail |
+| **Telegram** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.Telegram)](https://www.nuget.org/packages/Arrr.Plugin.Telegram) | Receives Telegram messages via MTProto (WTelegramClient) |
+| **WhatsApp** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.WhatsApp)](https://www.nuget.org/packages/Arrr.Plugin.WhatsApp) | Receives WhatsApp messages via whatsmeow bridge (QR pairing in UI) |
+| **GitHub** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.Github)](https://www.nuget.org/packages/Arrr.Plugin.Github) | Polls GitHub notifications (mentions, reviews, CI, etc.) |
+| **CalDAV** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.CalDav)](https://www.nuget.org/packages/Arrr.Plugin.CalDav) | Polls ICS calendars and notifies for upcoming events |
+| **Healthcheck** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.Healthcheck)](https://www.nuget.org/packages/Arrr.Plugin.Healthcheck) | Polls HTTP endpoints and notifies on up/down state changes |
+| **MQTT** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.Mqtt)](https://www.nuget.org/packages/Arrr.Plugin.Mqtt) | Subscribes to MQTT topics and emits a notification per message |
+| **systemd Journal** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.Systemd)](https://www.nuget.org/packages/Arrr.Plugin.Systemd) | Tails `journalctl` and publishes log events as notifications |
 
 ---
 
-## Plugin Template
+## Available Sinks
 
-Install the `dotnet new` template to scaffold a new plugin in seconds:
-
-```bash
-dotnet new install Arrr.Templates
-dotnet new arrr-plugin -n MyRssPlugin \
-    --PluginId com.example.rss \
-    --Author "Your Name" \
-    --Interval "00:05:00"
-```
-
-This generates a ready-to-build project with `IPollingPlugin` pre-wired and all metadata filled in.
+| Sink | NuGet | Description |
+|------|-------|-------------|
+| **D-Bus** | built-in | Native desktop popups via `org.freedesktop.Notifications` |
+| **Ntfy** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Sink.Ntfy)](https://www.nuget.org/packages/Arrr.Sink.Ntfy) | Push to a [ntfy](https://ntfy.sh) topic |
+| **SMTP** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Sink.Smtp)](https://www.nuget.org/packages/Arrr.Sink.Smtp) | Send notifications by email (single or digest mode) |
+| **Gotify** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Sink.Gotify)](https://www.nuget.org/packages/Arrr.Sink.Gotify) | Push to a self-hosted [Gotify](https://gotify.net) server |
+| **Pushover** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Sink.Pushover)](https://www.nuget.org/packages/Arrr.Sink.Pushover) | Push to iOS/Android via [Pushover](https://pushover.net) |
+| **Bark** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Sink.Bark)](https://www.nuget.org/packages/Arrr.Sink.Bark) | Push to iOS via the [Bark](https://bark.day.app) app |
+| **Telegram Bot** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Sink.Telegram)](https://www.nuget.org/packages/Arrr.Sink.Telegram) | Send notifications to a Telegram chat via Bot API |
+| **Home Assistant** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Sink.HomeAssistant)](https://www.nuget.org/packages/Arrr.Sink.HomeAssistant) | Call a HA `notify` service |
+| **Webhook** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Sink.Webhook)](https://www.nuget.org/packages/Arrr.Sink.Webhook) | POST notifications as JSON to any HTTP endpoint |
+| **WebSocket** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Sink.WebSocket)](https://www.nuget.org/packages/Arrr.Sink.WebSocket) | Broadcast JSON frames to connected WebSocket clients |
+| **SignalR** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Sink.SignalR)](https://www.nuget.org/packages/Arrr.Sink.SignalR) | Broadcast to SignalR clients via a hub |
+| **macOS Notify** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Sink.MacNotify)](https://www.nuget.org/packages/Arrr.Sink.MacNotify) | Native macOS notifications via `osascript` |
 
 ---
 
 ## Writing a Plugin
 
-Implement `ISourcePlugin` from `Arrr.Core`, drop the compiled `.dll` into the `plugins/` directory and restart the daemon.
+Implement `ISourcePlugin` from `Arrr.Core`, drop the compiled `.dll` into the `plugins/` directory and restart the daemon (or use the API to hot-reload).
 
 ```csharp
 using Arrr.Core.Data.Notifications;
@@ -258,7 +280,16 @@ public class MyPlugin : ISourcePlugin
 }
 ```
 
-Plugins written in **any language** can also send notifications over HTTP — no .NET required:
+**Optional interfaces** a plugin can add:
+
+| Interface | Purpose |
+|-----------|---------|
+| `IPollingPlugin` | Declare a poll interval; the host calls `PollAsync` on schedule |
+| `IConfigurablePlugin<T>` | Persist typed config via `context.LoadConfigAsync<T>()` |
+| `ICallbackPlugin` | Receive HTTP callbacks at `POST /api/plugins/{id}/callback` |
+| `IQrPlugin` | Surface a QR code in the web UI for first-time pairing flows |
+
+Plugins in **any language** can also inject notifications over HTTP — no .NET required:
 
 ```bash
 curl -X POST http://localhost:5150/api/notify \
@@ -267,18 +298,14 @@ curl -X POST http://localhost:5150/api/notify \
   -d '{"source":"bash","title":"Deploy done","body":"v1.2.3 is live","iconUrl":null}'
 ```
 
----
-
-## Listening on the Unix Socket
-
-Every notification is broadcast as a single JSON line:
+### Plugin Template
 
 ```bash
-socat - UNIX-CONNECT:/tmp/arrr.sock
-```
-
-```json
-{"id":"...","source":"rss","title":"New post","body":"...","timestamp":"2026-04-24T12:00:00+00:00","iconUrl":null}
+dotnet new install Arrr.Templates
+dotnet new arrr-plugin -n MyPlugin \
+    --PluginId com.example.myplugin \
+    --Author "Your Name" \
+    --Interval "00:05:00"
 ```
 
 ---

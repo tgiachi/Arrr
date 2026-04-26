@@ -1,5 +1,3 @@
-using Arrr.Core.Interfaces;
-
 namespace Arrr.Tests.Support;
 
 internal class FakeEventBus : IEventBus
@@ -10,6 +8,7 @@ internal class FakeEventBus : IEventBus
     public Task PublishAsync<T>(T evt, CancellationToken ct = default) where T : IArrrEvent
     {
         _published.Add(evt);
+
         return Task.CompletedTask;
     }
 

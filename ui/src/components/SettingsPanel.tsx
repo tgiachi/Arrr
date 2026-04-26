@@ -79,9 +79,9 @@ export function SettingsPanel({ settings, onSave, onClose }: Props) {
 
   return (
     <Box
-      bg="gray.900"
+      bg="app.panelBg"
       borderWidth="1px"
-      borderColor="whiteAlpha.100"
+      borderColor="app.panelBorder"
       borderRadius="xl"
       p={5}
     >
@@ -89,7 +89,7 @@ export function SettingsPanel({ settings, onSave, onClose }: Props) {
         <Text
           fontSize="xs"
           fontWeight="600"
-          color="gray.500"
+          color="app.textMuted"
           textTransform="uppercase"
           letterSpacing="wider"
           mb={4}
@@ -100,40 +100,40 @@ export function SettingsPanel({ settings, onSave, onClose }: Props) {
 
         <Flex direction="column" gap={3} mb={4}>
           <Box>
-            <Text fontSize="xs" color="gray.500" mb={1}>API Key</Text>
+            <Text fontSize="xs" color="app.textMuted" mb={1}>API Key</Text>
             <Input
               name="apiKey"
               type="password"
               defaultValue={settings.apiKey}
               placeholder="your-api-key"
               size="sm"
-              bg="whiteAlpha.50"
-              borderColor="whiteAlpha.100"
-              color="white"
+              bg="app.inputBg"
+              borderColor="app.inputBorder"
+              color="app.inputColor"
               fontFamily="mono"
-              _placeholder={{ color: 'gray.600' }}
+              _placeholder={{ color: 'app.placeholder' }}
               _focus={{ borderColor: 'amber.500', boxShadow: '0 0 0 1px var(--chakra-colors-amber-500)' }}
             />
           </Box>
           <Box>
-            <Text fontSize="xs" color="gray.500" mb={1}>Base URL (leave empty when served by Arrr)</Text>
+            <Text fontSize="xs" color="app.textMuted" mb={1}>Base URL (leave empty when served by Arrr)</Text>
             <Input
               name="baseUrl"
               defaultValue={settings.baseUrl}
               placeholder="http://localhost:5150"
               size="sm"
-              bg="whiteAlpha.50"
-              borderColor="whiteAlpha.100"
-              color="white"
+              bg="app.inputBg"
+              borderColor="app.inputBorder"
+              color="app.inputColor"
               fontFamily="mono"
-              _placeholder={{ color: 'gray.600' }}
+              _placeholder={{ color: 'app.placeholder' }}
               _focus={{ borderColor: 'amber.500', boxShadow: '0 0 0 1px var(--chakra-colors-amber-500)' }}
             />
           </Box>
         </Flex>
 
         <Flex gap={2} justify="flex-end">
-          <Button size="sm" variant="ghost" color="gray.500" onClick={onClose} type="button">
+          <Button size="sm" variant="ghost" color="app.textMuted" onClick={onClose} type="button">
             Cancel
           </Button>
           <Button size="sm" colorPalette="amber" type="submit">
@@ -142,11 +142,11 @@ export function SettingsPanel({ settings, onSave, onClose }: Props) {
         </Flex>
       </form>
 
-      <Box mt={5} pt={4} borderTopWidth="1px" borderTopColor="whiteAlpha.100">
+      <Box mt={5} pt={4} borderTopWidth="1px" borderTopColor="app.panelBorder">
         <Text
           fontSize="xs"
           fontWeight="600"
-          color="gray.500"
+          color="app.textMuted"
           textTransform="uppercase"
           letterSpacing="wider"
           mb={3}

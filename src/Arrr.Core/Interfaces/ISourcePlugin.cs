@@ -1,3 +1,5 @@
+using Arrr.Core.Types;
+
 namespace Arrr.Core.Interfaces;
 
 /// <summary>
@@ -26,6 +28,11 @@ public interface ISourcePlugin
 
     /// <summary>Icon identifier or path for UI display.</summary>
     string Icon { get; }
+
+    /// <summary>
+    /// Supported OS platforms. Empty array means compatible with all platforms.
+    /// </summary>
+    PlatformType[] Platforms => [];
 
     /// <summary>
     /// Starts the plugin. The plugin publishes events via <paramref name="context" />.EventBus

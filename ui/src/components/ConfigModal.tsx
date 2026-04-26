@@ -70,9 +70,9 @@ export function ConfigModal({ id, name, onClose, onToast, getConfig, saveConfig 
       <Dialog.Backdrop bg="blackAlpha.700" backdropFilter="blur(4px)" />
       <Dialog.Positioner>
         <Dialog.Content
-          bg="gray.900"
+          bg="app.panelBg"
           borderWidth="1px"
-          borderColor="whiteAlpha.100"
+          borderColor="app.panelBorder"
           borderRadius="xl"
           maxW="600px"
           w="full"
@@ -81,16 +81,16 @@ export function ConfigModal({ id, name, onClose, onToast, getConfig, saveConfig 
           <Dialog.Header px={5} pt={5} pb={3}>
             <Flex justify="space-between" align="center">
               <Box>
-                <Dialog.Title fontFamily="heading" fontWeight="700" fontSize="lg" color="white">
+                <Dialog.Title fontFamily="heading" fontWeight="700" fontSize="lg" color="app.text">
                   Configure {name}
                 </Dialog.Title>
-                <Text fontFamily="mono" fontSize="xs" color="gray.500" mt={0.5}>
+                <Text fontFamily="mono" fontSize="xs" color="app.textMuted" mt={0.5}>
                   {id}
                 </Text>
               </Box>
               <Dialog.CloseTrigger asChild>
-                <IconButton aria-label="Close" size="sm" variant="ghost" color="gray.500"
-                  _hover={{ color: 'white', bg: 'whiteAlpha.100' }}>
+                <IconButton aria-label="Close" size="sm" variant="ghost" color="app.iconColor"
+                  _hover={{ color: 'app.text', bg: 'app.cardBgHover' }}>
                   <X size={16} />
                 </IconButton>
               </Dialog.CloseTrigger>
@@ -109,9 +109,9 @@ export function ConfigModal({ id, name, onClose, onToast, getConfig, saveConfig 
                   onChange={(e) => { setJson(e.target.value); setParseError(null) }}
                   fontFamily="mono"
                   fontSize="sm"
-                  bg="blackAlpha.400"
-                  borderColor={parseError ? 'red.500' : 'whiteAlpha.100'}
-                  color="gray.100"
+                  bg="app.inputBg"
+                  borderColor={parseError ? 'red.500' : 'app.inputBorder'}
+                  color="app.inputColor"
                   rows={14}
                   resize="vertical"
                   spellCheck={false}
@@ -130,8 +130,8 @@ export function ConfigModal({ id, name, onClose, onToast, getConfig, saveConfig 
                       as="button"
                       onClick={() => setSchemaOpen((o) => !o)}
                       gap={1}
-                      color="gray.500"
-                      _hover={{ color: 'gray.300' }}
+                      color="app.textMuted"
+                      _hover={{ color: 'app.text' }}
                       fontSize="xs"
                       fontFamily="mono"
                       cursor="pointer"
@@ -144,7 +144,7 @@ export function ConfigModal({ id, name, onClose, onToast, getConfig, saveConfig 
                       <Box
                         mt={2}
                         borderWidth="1px"
-                        borderColor="whiteAlpha.100"
+                        borderColor="app.cardBorder"
                         borderRadius="lg"
                         overflow="hidden"
                       >
@@ -156,8 +156,8 @@ export function ConfigModal({ id, name, onClose, onToast, getConfig, saveConfig 
                             gap={3}
                             align="flex-start"
                             borderTopWidth={i > 0 ? '1px' : '0'}
-                            borderColor="whiteAlpha.50"
-                            bg={i % 2 === 0 ? 'blackAlpha.200' : 'transparent'}
+                            borderColor="app.cardBorder"
+                            bg={i % 2 === 0 ? 'app.rowStripe' : 'transparent'}
                           >
                             <HStack gap={1} flexShrink={0} pt="1px">
                               <Text fontFamily="mono" fontSize="xs" color="amber.400" whiteSpace="nowrap">
@@ -169,7 +169,7 @@ export function ConfigModal({ id, name, onClose, onToast, getConfig, saveConfig 
                                 </Badge>
                               )}
                             </HStack>
-                            <Text fontSize="xs" color="gray.400" lineHeight="1.5">
+                            <Text fontSize="xs" color="app.textMuted" lineHeight="1.5">
                               {f.description}
                             </Text>
                           </Flex>
@@ -179,7 +179,7 @@ export function ConfigModal({ id, name, onClose, onToast, getConfig, saveConfig 
                   </Box>
                 )}
 
-                <Text fontSize="xs" color="gray.600" mt={2}>
+                <Text fontSize="xs" color="app.textDim" mt={2}>
                   Sensitive fields are shown decrypted and re-encrypted on save.
                 </Text>
               </Box>
@@ -188,7 +188,7 @@ export function ConfigModal({ id, name, onClose, onToast, getConfig, saveConfig 
 
           <Dialog.Footer px={5} pb={5} pt={3}>
             <Flex gap={2} justify="flex-end" w="full">
-              <Button size="sm" variant="ghost" color="gray.500" onClick={onClose} disabled={saving}>
+              <Button size="sm" variant="ghost" color="app.textMuted" onClick={onClose} disabled={saving}>
                 Cancel
               </Button>
               <Button size="sm" colorPalette="amber" onClick={handleSave} loading={saving} disabled={loading}>

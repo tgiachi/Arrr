@@ -40,3 +40,39 @@ export interface Settings {
   apiKey: string
   baseUrl: string
 }
+
+export interface DaemonConfig {
+  apiKey: string
+  isDebug: boolean
+  port: number
+  deduplicationEnabled: boolean
+  deduplicationWindowSeconds: number
+  historyEnabled: boolean
+}
+
+export interface HistoryEntry {
+  id: string
+  source: string
+  title: string
+  body: string
+  timestamp: string
+  iconUrl: string | null
+  priority: number
+}
+
+export interface HistoryPage {
+  items: HistoryEntry[]
+  total: number
+  page: number
+  limit: number
+}
+
+export interface NotificationItem {
+  id: string
+  source: string
+  title: string
+  body: string
+  timestamp: string
+  iconUrl: string | null
+  _fresh?: boolean
+}

@@ -1,4 +1,4 @@
-import type { Plugin, PluginConfigResponse, Sink } from './types'
+import type { DaemonConfig, HistoryPage, Plugin, PluginConfigResponse, Sink } from './types'
 
 export class ArrrApi {
   constructor(
@@ -56,6 +56,10 @@ export class ArrrApi {
     await this.req(`/api/plugins/${encodeURIComponent(packageId)}/uninstall`, { method: 'POST' })
   }
 
+  async update(packageId: string) {
+    await this.req(`/api/plugins/${encodeURIComponent(packageId)}/update`, { method: 'POST' })
+  }
+
   async getConfig(pluginId: string): Promise<PluginConfigResponse> {
     return (await this.req(`/api/plugins/${encodeURIComponent(pluginId)}/config`)).json()
   }
@@ -100,6 +104,35 @@ export class ArrrApi {
       method: 'POST',
       body: JSON.stringify(config),
     })
+  }
+
+  async getVersion(): Promise<{ version: string; runtimeVersion: string; os: string }> {
+    const r = await fetch(`${this.baseUrl}/api/version`)
+    if (!r.ok) throw new Error(`${r.status}`)
+    return r.json()
+  }
+
+  async getHistory(page = 1, limit = 50, search?: string, source?: string): Promise<HistoryPage> {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+    if (search) params.set('search', search)
+    if (source) params.set('source', source)
+    return (await this.req(`/api/history?${params}`)).json()
+  }
+
+  async clearHistory(): Promise<void> {
+    await this.req('/api/history', { method: 'DELETE' })
+  }
+
+  async getDaemonConfig(): Promise<DaemonConfig> {
+    return (await this.req('/api/config')).json()
+  }
+
+  async saveDaemonConfig(config: DaemonConfig): Promise<void> {
+    await this.req('/api/config', { method: 'PUT', body: JSON.stringify(config) })
+  }
+
+  async getLogs(): Promise<string[]> {
+    return (await this.req('/api/logs')).json()
   }
 
   async getQrCode(pluginId: string): Promise<string | null> {

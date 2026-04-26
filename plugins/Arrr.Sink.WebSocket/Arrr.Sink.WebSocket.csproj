@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AssemblyName>Arrr.Sink.WebSocket</AssemblyName>
+        <RootNamespace>Arrr.Sink.WebSocket</RootNamespace>
+
+        <PackageId>Arrr.Sink.WebSocket</PackageId>
+        <Version>1.5.1</Version>
+        <Authors>Tom</Authors>
+        <Company>orivega.io</Company>
+        <Description>WebSocket sink for Arrr — broadcasts notifications as JSON frames to connected WebSocket clients.</Description>
+        <PackageTags>arrr;arrr-sink;sink;websocket;notifications;linux</PackageTags>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/tgiachi/Arrr</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/tgiachi/Arrr</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageIcon>arr_logo.png</PackageIcon>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App"/>
+        <PackageReference Include="Arrr.Core" Version="*"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="../../assets/arr_logo.png" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+</Project>

@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/logo.png" />
     <title>Arrr!</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,7 +13,9 @@
     />
     <style>
       *, *::before, *::after { box-sizing: border-box; }
-      body { margin: 0; background: #080c14; }
+      html { background: #080c14; }
+      html.light { background: #f0f4f8; }
+      body { margin: 0; background: inherit; }
     </style>
   </head>
   <body>

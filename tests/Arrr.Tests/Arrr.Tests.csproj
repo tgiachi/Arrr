@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
@@ -31,12 +31,21 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\Arrr.Core\Arrr.Core.csproj"/>
         <ProjectReference Include="..\..\src\Arrr.Service\Arrr.Service.csproj"/>
-        <ProjectReference Include="..\..\plugins\WebSocketSink\WebSocketSink.csproj"/>
-        <ProjectReference Include="..\..\plugins\SignalRSink\SignalRSink.csproj"/>
-        <ProjectReference Include="..\..\plugins\NtfySink\NtfySink.csproj"/>
-        <ProjectReference Include="..\..\plugins\SmtpSink\SmtpSink.csproj"/>
-        <ProjectReference Include="..\..\plugins\CalDavSource\CalDavSource.csproj"/>
-        <ProjectReference Include="..\..\plugins\WebhookSink\WebhookSink.csproj"/>
+        <ProjectReference Include="..\..\plugins\Arrr.Sink.WebSocket\Arrr.Sink.WebSocket.csproj"/>
+        <ProjectReference Include="..\..\plugins\Arrr.Sink.SignalR\Arrr.Sink.SignalR.csproj"/>
+        <ProjectReference Include="..\..\plugins\Arrr.Sink.Ntfy\Arrr.Sink.Ntfy.csproj"/>
+        <ProjectReference Include="..\..\plugins\Arrr.Sink.Smtp\Arrr.Sink.Smtp.csproj"/>
+        <ProjectReference Include="..\..\plugins\Arrr.Plugin.CalDav\Arrr.Plugin.CalDav.csproj"/>
+        <ProjectReference Include="..\..\plugins\Arrr.Plugin.Healthcheck\Arrr.Plugin.Healthcheck.csproj"/>
+        <ProjectReference Include="..\..\plugins\Arrr.Sink.Webhook\Arrr.Sink.Webhook.csproj"/>
+        <ProjectReference Include="..\..\plugins\Arrr.Sink.Gotify\Arrr.Sink.Gotify.csproj"/>
+        <ProjectReference Include="..\..\plugins\Arrr.Sink.HomeAssistant\Arrr.Sink.HomeAssistant.csproj"/>
+        <ProjectReference Include="..\..\plugins\Arrr.Plugin.Mqtt\Arrr.Plugin.Mqtt.csproj"/>
+        <ProjectReference Include="..\..\plugins\Arrr.Sink.Pushover\Arrr.Sink.Pushover.csproj"/>
+        <ProjectReference Include="..\..\plugins\Arrr.Plugin.Github\Arrr.Plugin.Github.csproj"/>
+        <ProjectReference Include="..\..\plugins\Arrr.Plugin.Systemd\Arrr.Plugin.Systemd.csproj"/>
+        <ProjectReference Include="..\..\plugins\Arrr.Sink.Bark\Arrr.Sink.Bark.csproj"/>
+        <ProjectReference Include="..\..\plugins\Arrr.Sink.MacNotify\Arrr.Sink.MacNotify.csproj"/>
     </ItemGroup>
 
 </Project>

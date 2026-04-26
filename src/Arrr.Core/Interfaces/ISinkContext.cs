@@ -6,7 +6,7 @@ namespace Arrr.Core.Interfaces;
 public interface ISinkContext
 {
     string ConfigPath { get; }
-    ILogger Logger    { get; }
+    ILogger Logger { get; }
 
     Task<T> LoadConfigAsync<T>(CancellationToken ct = default) where T : new();
     Task SaveConfigAsync<T>(T config, CancellationToken ct = default);

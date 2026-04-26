@@ -23,21 +23,29 @@ internal class PluginInstallManifest
         Save();
     }
 
+    public InstalledPluginEntry? FindByFile(string fileName)
+        => _entries.FirstOrDefault(e => e.Files.Contains(fileName, StringComparer.OrdinalIgnoreCase));
+
     public InstalledPluginEntry? Remove(string packageId)
     {
         var entry = _entries.FirstOrDefault(e => e.PackageId.Equals(packageId, StringComparison.OrdinalIgnoreCase));
-        if (entry is null) return null;
+
+        if (entry is null)
+        {
+            return null;
+        }
         _entries.Remove(entry);
         Save();
+
         return entry;
     }
 
-    public InstalledPluginEntry? FindByFile(string fileName) =>
-        _entries.FirstOrDefault(e => e.Files.Contains(fileName, StringComparer.OrdinalIgnoreCase));
-
     private void Load()
     {
-        if (!File.Exists(_path)) return;
+        if (!File.Exists(_path))
+        {
+            return;
+        }
         var json = File.ReadAllText(_path);
         _entries = JsonSerializer.Deserialize<List<InstalledPluginEntry>>(json) ?? [];
     }
