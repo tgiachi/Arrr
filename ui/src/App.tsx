@@ -244,7 +244,7 @@ export default function App() {
         {/* Brand row */}
         <Flex align="center" justify="space-between" px={6} py={3}>
           <HStack gap={3}>
-            <Skull size={20} color="#d97706" />
+            <img src="/logo.png" alt="Arrr logo" width={28} height={28} style={{ borderRadius: 4 }} />
             <Text
               fontFamily="'Pirata One', cursive"
               fontSize="2xl"

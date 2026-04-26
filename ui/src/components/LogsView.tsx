@@ -1,5 +1,6 @@
 import { Box, Flex, IconButton, Spinner, Text } from '@chakra-ui/react'
 import { RefreshCcw, Terminal } from 'lucide-react'
+import { useTheme } from 'next-themes'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ArrrApi } from '../api'
 
@@ -14,53 +15,60 @@ function parseLevel(line: string): Level {
   return m ? (m[1] as Level) : null
 }
 
-function levelColor(level: Level): string {
+function levelColor(level: Level, dark: boolean): string {
+  if (dark) {
+    switch (level) {
+      case 'ERR': case 'FTL': return '#f87171'
+      case 'WRN': return '#fbbf24'
+      case 'INF': return '#a3e635'
+      case 'DBG': return '#6b7280'
+      case 'VRB': return '#4b5563'
+      default: return '#9ca3af'
+    }
+  }
   switch (level) {
-    case 'ERR':
-    case 'FTL':
-      return '#f87171'
-    case 'WRN':
-      return '#fbbf24'
-    case 'INF':
-      return '#a3e635'
-    case 'DBG':
-      return '#6b7280'
-    case 'VRB':
-      return '#4b5563'
-    default:
-      return '#9ca3af'
+    case 'ERR': case 'FTL': return '#b91c1c'
+    case 'WRN': return '#b45309'
+    case 'INF': return '#166534'
+    case 'DBG': return '#3d5a80'
+    case 'VRB': return '#64748b'
+    default: return '#334155'
   }
 }
 
-function levelBg(level: Level): string {
+function levelBg(level: Level, dark: boolean): string {
   switch (level) {
-    case 'ERR':
-    case 'FTL':
-      return 'rgba(239,68,68,0.08)'
+    case 'ERR': case 'FTL':
+      return dark ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.06)'
     case 'WRN':
-      return 'rgba(245,158,11,0.06)'
+      return dark ? 'rgba(245,158,11,0.06)' : 'rgba(245,158,11,0.07)'
     default:
       return 'transparent'
   }
 }
 
-function levelBadge(level: Level): string {
+function levelBadge(level: Level, dark: boolean): string {
+  if (dark) {
+    switch (level) {
+      case 'ERR': case 'FTL': return '#ef4444'
+      case 'WRN': return '#f59e0b'
+      case 'INF': return '#4d7c0f'
+      case 'DBG': return '#374151'
+      default: return '#1f2937'
+    }
+  }
   switch (level) {
-    case 'ERR':
-    case 'FTL':
-      return '#ef4444'
-    case 'WRN':
-      return '#f59e0b'
-    case 'INF':
-      return '#4d7c0f'
-    case 'DBG':
-      return '#374151'
-    default:
-      return '#1f2937'
+    case 'ERR': case 'FTL': return '#fee2e2'
+    case 'WRN': return '#fef3c7'
+    case 'INF': return '#dcfce7'
+    case 'DBG': return '#dbeafe'
+    default: return '#e2e8f0'
   }
 }
 
 export function LogsView({ api }: Props) {
+  const { resolvedTheme } = useTheme()
+  const dark = resolvedTheme !== 'light'
   const [lines, setLines] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [autoScroll, setAutoScroll] = useState(true)
@@ -171,7 +179,7 @@ export function LogsView({ api }: Props) {
                 px={2}
                 py="1px"
                 borderRadius="sm"
-                bg={levelBg(level)}
+                bg={levelBg(level, dark)}
                 _hover={{ bg: 'app.cardBgHover' }}
                 align="baseline"
                 gap={2}
@@ -183,10 +191,10 @@ export function LogsView({ api }: Props) {
                     px="5px"
                     py="1px"
                     borderRadius="sm"
-                    bg={levelBadge(level)}
+                    bg={levelBadge(level, dark)}
                     fontSize="9px"
                     fontFamily="mono"
-                    color={levelColor(level)}
+                    color={levelColor(level, dark)}
                     fontWeight="700"
                     letterSpacing="wider"
                     lineHeight="16px"
@@ -198,7 +206,7 @@ export function LogsView({ api }: Props) {
                   as="span"
                   fontFamily="mono"
                   fontSize="xs"
-                  color={levelColor(level)}
+                  color={levelColor(level, dark)}
                   whiteSpace="pre-wrap"
                   wordBreak="break-all"
                   lineHeight="1.6"
