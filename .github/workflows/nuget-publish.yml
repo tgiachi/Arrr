@@ -21,7 +21,7 @@ jobs:
           go-version: "1.26.x"
 
       - name: Build whatsapp-bridge (all platforms)
-        working-directory: plugins/WhatsAppPlugin/bridge
+        working-directory: plugins/Arrr.Plugin.WhatsApp/bridge
         run: |
           mkdir -p linux-x64 linux-arm64 win-x64 osx-x64 osx-arm64
           CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -o linux-x64/whatsapp-bridge   .

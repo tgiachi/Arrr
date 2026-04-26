@@ -1,3 +1,5 @@
+using System.ComponentModel;
+
 namespace Arrr.Sink.WindowsNotify.Data;
 
 public class WindowsNotifyConfig

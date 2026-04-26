@@ -1,4 +1,9 @@
+using Arrr.Core.Data.Notifications;
+using Arrr.Core.Interfaces;
+using Arrr.Core.Types;
+using Arrr.Core.Utils;
 using Arrr.Sink.WindowsNotify.Data;
+using Microsoft.Extensions.Logging;
 
 namespace Arrr.Sink.WindowsNotify;
 
