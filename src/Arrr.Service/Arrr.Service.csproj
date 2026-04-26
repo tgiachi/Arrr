@@ -16,7 +16,8 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.7" />
+        <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.7" />
+        <PackageReference Include="SQLitePCLRaw.bundle_e_sqlcipher" Version="2.1.11" />
         <PackageReference Include="NuGet.Protocol" Version="7.3.1" />
         <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
         <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
