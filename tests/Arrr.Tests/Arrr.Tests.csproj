@@ -40,6 +40,9 @@
         <ProjectReference Include="..\..\plugins\Arrr.Sink.Gotify\Arrr.Sink.Gotify.csproj"/>
         <ProjectReference Include="..\..\plugins\Arrr.Sink.HomeAssistant\Arrr.Sink.HomeAssistant.csproj"/>
         <ProjectReference Include="..\..\plugins\Arrr.Plugin.Mqtt\Arrr.Plugin.Mqtt.csproj"/>
+        <ProjectReference Include="..\..\plugins\Arrr.Sink.Pushover\Arrr.Sink.Pushover.csproj"/>
+        <ProjectReference Include="..\..\plugins\Arrr.Plugin.Github\Arrr.Plugin.Github.csproj"/>
+        <ProjectReference Include="..\..\plugins\Arrr.Plugin.Systemd\Arrr.Plugin.Systemd.csproj"/>
     </ItemGroup>
 
 </Project>

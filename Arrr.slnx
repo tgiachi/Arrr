@@ -21,5 +21,8 @@
         <Project Path="plugins/Arrr.Sink.Telegram/Arrr.Sink.Telegram.csproj"/>
         <Project Path="plugins/Arrr.Plugin.Telegram/Arrr.Plugin.Telegram.csproj"/>
         <Project Path="plugins/Arrr.Plugin.WhatsApp/Arrr.Plugin.WhatsApp.csproj"/>
+        <Project Path="plugins/Arrr.Sink.Pushover/Arrr.Sink.Pushover.csproj"/>
+        <Project Path="plugins/Arrr.Plugin.Github/Arrr.Plugin.Github.csproj"/>
+        <Project Path="plugins/Arrr.Plugin.Systemd/Arrr.Plugin.Systemd.csproj"/>
     </Folder>
 </Solution>
