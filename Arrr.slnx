@@ -7,14 +7,19 @@
         <Project Path="tests/Arrr.Tests/Arrr.Tests.csproj"/>
     </Folder>
     <Folder Name="/plugins/">
-        <Project Path="plugins/WebSocketSink/WebSocketSink.csproj"/>
-        <Project Path="plugins/SignalRSink/SignalRSink.csproj"/>
-        <Project Path="plugins/NtfySink/NtfySink.csproj"/>
-        <Project Path="plugins/SmtpSink/SmtpSink.csproj"/>
-        <Project Path="plugins/CalDavSource/CalDavSource.csproj"/>
-        <Project Path="plugins/WebhookSink/WebhookSink.csproj"/>
-        <Project Path="plugins/GotifySink/GotifySink.csproj"/>
-        <Project Path="plugins/HomeAssistantSink/HomeAssistantSink.csproj"/>
-        <Project Path="plugins/MqttSource/MqttSource.csproj"/>
+        <Project Path="plugins/Arrr.Sink.WebSocket/Arrr.Sink.WebSocket.csproj"/>
+        <Project Path="plugins/Arrr.Sink.SignalR/Arrr.Sink.SignalR.csproj"/>
+        <Project Path="plugins/Arrr.Sink.Ntfy/Arrr.Sink.Ntfy.csproj"/>
+        <Project Path="plugins/Arrr.Sink.Smtp/Arrr.Sink.Smtp.csproj"/>
+        <Project Path="plugins/Arrr.Plugin.CalDav/Arrr.Plugin.CalDav.csproj"/>
+        <Project Path="plugins/Arrr.Sink.Webhook/Arrr.Sink.Webhook.csproj"/>
+        <Project Path="plugins/Arrr.Sink.Gotify/Arrr.Sink.Gotify.csproj"/>
+        <Project Path="plugins/Arrr.Sink.HomeAssistant/Arrr.Sink.HomeAssistant.csproj"/>
+        <Project Path="plugins/Arrr.Plugin.Mqtt/Arrr.Plugin.Mqtt.csproj"/>
+        <Project Path="plugins/Arrr.Plugin.Imap/Arrr.Plugin.Imap.csproj"/>
+        <Project Path="plugins/Arrr.Plugin.Rss/Arrr.Plugin.Rss.csproj"/>
+        <Project Path="plugins/Arrr.Sink.Telegram/Arrr.Sink.Telegram.csproj"/>
+        <Project Path="plugins/Arrr.Plugin.Telegram/Arrr.Plugin.Telegram.csproj"/>
+        <Project Path="plugins/Arrr.Plugin.WhatsApp/Arrr.Plugin.WhatsApp.csproj"/>
     </Folder>
 </Solution>
