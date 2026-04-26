@@ -4,6 +4,7 @@ using Arrr.Core.Types;
 using Arrr.Core.Utils;
 using Arrr.Sink.WindowsNotify.Data;
 using Microsoft.Extensions.Logging;
+using Microsoft.Toolkit.Uwp.Notifications;
 
 namespace Arrr.Sink.WindowsNotify;
 
