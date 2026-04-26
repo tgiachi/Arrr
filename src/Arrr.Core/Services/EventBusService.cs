@@ -64,17 +64,19 @@ public class EventBusService : IEventBus
                            .ToList();
             }
 
-            foreach (var handler in handlers)
-            {
-                try
+            await Task.WhenAll(
+                handlers.Select(async handler =>
                 {
-                    await handler(evt, ct);
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "[EventBus] Handler error");
-                }
-            }
+                    try
+                    {
+                        await handler(evt, ct);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, "[EventBus] Handler error");
+                    }
+                })
+            );
         }
     }
 }
