@@ -30,14 +30,28 @@ public class HealthcheckPlugin : IPollingPlugin, IConfigurablePlugin, IDisposabl
 
     public HealthcheckPlugin()
     {
-        _httpClient = new HttpClient();
+        _httpClient = new();
         _timeProvider = TimeProvider.System;
     }
 
     internal HealthcheckPlugin(HttpMessageHandler handler, TimeProvider timeProvider)
     {
-        _httpClient = new HttpClient(handler);
+        _httpClient = new(handler);
         _timeProvider = timeProvider;
+    }
+
+    public void Dispose()
+        => _httpClient.Dispose();
+
+    public async Task PollAsync(IPluginContext context, CancellationToken ct)
+    {
+        if (_config.Endpoints.Count == 0)
+        {
+            return;
+        }
+
+        var tasks = _config.Endpoints.Select(e => ProbeAsync(e, context, ct));
+        await Task.WhenAll(tasks);
     }
 
     public async Task StartAsync(IPluginContext context, CancellationToken ct)
@@ -48,22 +62,22 @@ public class HealthcheckPlugin : IPollingPlugin, IConfigurablePlugin, IDisposabl
         context.Logger.LogInformation("Healthcheck plugin loaded, monitoring {Count} endpoint(s)", _config.Endpoints.Count);
     }
 
-    public async Task PollAsync(IPluginContext context, CancellationToken ct)
+    private static bool IsExpectedStatus(int statusCode, List<int> expected)
     {
-        if (_config.Endpoints.Count == 0)
-            return;
+        if (expected.Count == 0)
+        {
+            return statusCode is >= 200 and < 300;
+        }
 
-        var tasks = _config.Endpoints.Select(e => ProbeAsync(e, context, ct));
-        await Task.WhenAll(tasks);
+        return expected.Contains(statusCode);
     }
-
-    public void Dispose()
-        => _httpClient.Dispose();
 
     private async Task ProbeAsync(EndpointConfig endpoint, IPluginContext context, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(endpoint.Url))
+        {
             return;
+        }
 
         var sw = Stopwatch.StartNew();
         bool isUp;
@@ -76,8 +90,8 @@ public class HealthcheckPlugin : IPollingPlugin, IConfigurablePlugin, IDisposabl
 
             isUp = IsExpectedStatus((int)response.StatusCode, endpoint.ExpectedStatusCodes);
             detail = isUp
-                ? $"{(int)response.StatusCode} in {sw.ElapsedMilliseconds}ms"
-                : $"unexpected {(int)response.StatusCode}";
+                         ? $"{(int)response.StatusCode} in {sw.ElapsedMilliseconds}ms"
+                         : $"unexpected {(int)response.StatusCode}";
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -100,12 +114,16 @@ public class HealthcheckPlugin : IPollingPlugin, IConfigurablePlugin, IDisposabl
         _states.TryGetValue(key, out var previous);
 
         if (previous == isUp)
+        {
             return;
+        }
 
         _states[key] = isUp;
 
         if (previous is null)
+        {
             return; // first probe — establish baseline silently
+        }
 
         var name = string.IsNullOrWhiteSpace(endpoint.Name) ? endpoint.Url : endpoint.Name;
         var now = _timeProvider.GetUtcNow();
@@ -123,18 +141,10 @@ public class HealthcheckPlugin : IPollingPlugin, IConfigurablePlugin, IDisposabl
                 {
                     ["healthcheck.url"] = endpoint.Url,
                     ["healthcheck.up"] = isUp.ToString().ToLowerInvariant(),
-                    ["healthcheck.detail"] = detail,
+                    ["healthcheck.detail"] = detail
                 }
             ),
             ct
         );
-    }
-
-    private static bool IsExpectedStatus(int statusCode, List<int> expected)
-    {
-        if (expected.Count == 0)
-            return statusCode is >= 200 and < 300;
-
-        return expected.Contains(statusCode);
     }
 }

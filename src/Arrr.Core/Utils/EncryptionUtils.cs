@@ -68,6 +68,13 @@ public static class EncryptionUtils
         return Encoding.UTF8.GetString(plaintext);
     }
 
+    /// <summary>
+    /// Derives a 32-byte machine-tied key for the given <paramref name="salt" /> and returns it
+    /// as a lowercase hex string. Use a unique salt per purpose to get independent keys.
+    /// </summary>
+    public static string DeriveRawKeyHex(string salt)
+        => Convert.ToHexString(DeriveKeyBytes(Encoding.UTF8.GetBytes(salt))).ToLowerInvariant();
+
     public static string Encrypt(string plaintext)
     {
         var data = Encoding.UTF8.GetBytes(plaintext);
@@ -88,13 +95,6 @@ public static class EncryptionUtils
 
     public static bool IsEncrypted(string value)
         => value.StartsWith(Prefix, StringComparison.Ordinal);
-
-    /// <summary>
-    /// Derives a 32-byte machine-tied key for the given <paramref name="salt"/> and returns it
-    /// as a lowercase hex string. Use a unique salt per purpose to get independent keys.
-    /// </summary>
-    public static string DeriveRawKeyHex(string salt)
-        => Convert.ToHexString(DeriveKeyBytes(Encoding.UTF8.GetBytes(salt))).ToLowerInvariant();
 
     private static byte[] DeriveKey()
         => DeriveKeyBytes("arrr-plugin-config-v1"u8.ToArray());

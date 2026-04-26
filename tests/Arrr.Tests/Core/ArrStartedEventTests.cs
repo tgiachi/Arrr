@@ -1,7 +1,3 @@
-using Arrr.Core.Data.Config;
-using Arrr.Core.Data.Events;
-using Arrr.Core.Data.Notifications;
-using Arrr.Core.Services;
 namespace Arrr.Tests.Core;
 
 [TestFixture]

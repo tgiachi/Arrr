@@ -1,4 +1,3 @@
-using Arrr.Core.Data.Notifications;
 using Arrr.Tests.Support;
 using MimeKit;
 using SmtpSink;

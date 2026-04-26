@@ -14,7 +14,9 @@ internal class FakeHttpMessageHandler : HttpMessageHandler, IDisposable
         LastRequest = request;
 
         if (ShouldTimeout)
+        {
             throw new TaskCanceledException("Simulated timeout");
+        }
 
         return Task.FromResult(
             new HttpResponseMessage(ResponseStatusCode)

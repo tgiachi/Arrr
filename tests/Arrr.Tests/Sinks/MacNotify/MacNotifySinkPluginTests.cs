@@ -1,5 +1,3 @@
-using Arrr.Core.Data.Notifications;
-using Arrr.Core.Types;
 using Arrr.Sink.MacNotify;
 using Arrr.Sink.MacNotify.Data;
 

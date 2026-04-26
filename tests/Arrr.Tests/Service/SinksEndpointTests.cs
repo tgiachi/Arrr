@@ -1,7 +1,3 @@
-using Arrr.Core.Interfaces;
-using Arrr.Core.Services;
-using Microsoft.Extensions.DependencyInjection;
-using Arrr.Core.Data.Api;
 using System.Net;
 using System.Net.Http.Json;
 using Arrr.Service.Api;

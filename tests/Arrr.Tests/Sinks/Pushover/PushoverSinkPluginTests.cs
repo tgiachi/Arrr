@@ -1,5 +1,3 @@
-using Arrr.Core.Data.Notifications;
-using Arrr.Core.Types;
 using System.Net;
 using Arrr.Sink.Pushover;
 using Arrr.Sink.Pushover.Data;

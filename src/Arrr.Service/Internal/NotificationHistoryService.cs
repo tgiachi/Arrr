@@ -6,46 +6,47 @@ using Arrr.Core.Types;
 using Arrr.Core.Utils;
 using Microsoft.Data.Sqlite;
 using Serilog;
+using ILogger = Serilog.ILogger;
 
 namespace Arrr.Service.Internal;
 
 internal class NotificationHistoryService : INotificationHistoryService, IDisposable
 {
     private const string SqlCreateSchema = """
-        CREATE TABLE IF NOT EXISTS notifications (
-            id        TEXT    NOT NULL PRIMARY KEY,
-            source    TEXT    NOT NULL,
-            title     TEXT    NOT NULL,
-            body      TEXT    NOT NULL,
-            timestamp TEXT    NOT NULL,
-            icon_url  TEXT,
-            priority  INTEGER NOT NULL DEFAULT 1
-        );
-        CREATE INDEX IF NOT EXISTS idx_notifications_timestamp ON notifications (timestamp DESC);
-        CREATE INDEX IF NOT EXISTS idx_notifications_source    ON notifications (source);
-        """;
+                                           CREATE TABLE IF NOT EXISTS notifications (
+                                               id        TEXT    NOT NULL PRIMARY KEY,
+                                               source    TEXT    NOT NULL,
+                                               title     TEXT    NOT NULL,
+                                               body      TEXT    NOT NULL,
+                                               timestamp TEXT    NOT NULL,
+                                               icon_url  TEXT,
+                                               priority  INTEGER NOT NULL DEFAULT 1
+                                           );
+                                           CREATE INDEX IF NOT EXISTS idx_notifications_timestamp ON notifications (timestamp DESC);
+                                           CREATE INDEX IF NOT EXISTS idx_notifications_source    ON notifications (source);
+                                           """;
 
     private const string SqlInsert = """
-        INSERT INTO notifications (id, source, title, body, timestamp, icon_url, priority)
-        VALUES (@id, @source, @title, @body, @timestamp, @icon_url, @priority)
-        """;
+                                     INSERT INTO notifications (id, source, title, body, timestamp, icon_url, priority)
+                                     VALUES (@id, @source, @title, @body, @timestamp, @icon_url, @priority)
+                                     """;
 
     private const string SqlCount = "SELECT COUNT(*) FROM notifications";
 
     private const string SqlSelectPrefix = """
-        SELECT id, source, title, body, timestamp, icon_url, priority
-        FROM notifications
-        """;
+                                           SELECT id, source, title, body, timestamp, icon_url, priority
+                                           FROM notifications
+                                           """;
 
     private const string SqlSelectSuffix = """
 
-        ORDER BY timestamp DESC
-        LIMIT @limit OFFSET @offset
-        """;
+                                           ORDER BY timestamp DESC
+                                           LIMIT @limit OFFSET @offset
+                                           """;
 
     private const string SqlDelete = "DELETE FROM notifications";
 
-    private readonly Serilog.ILogger _logger = Log.ForContext<NotificationHistoryService>();
+    private readonly ILogger _logger = Log.ForContext<NotificationHistoryService>();
     private readonly SqliteConnection _connection;
 
     public NotificationHistoryService(string dbPath)
@@ -54,28 +55,6 @@ internal class NotificationHistoryService : INotificationHistoryService, IDispos
         var connStr = new SqliteConnectionStringBuilder { DataSource = dbPath, Password = password }.ToString();
         _connection = OpenConnection(dbPath, connStr);
         EnsureSchema();
-    }
-
-    private SqliteConnection OpenConnection(string dbPath, string connStr)
-    {
-        var conn = new SqliteConnection(connStr);
-        try
-        {
-            conn.Open();
-            return conn;
-        }
-        catch (SqliteException ex)
-        {
-            // Existing DB is unencrypted or from a different machine — discard and start fresh.
-            conn.Dispose();
-            SqliteConnection.ClearAllPools(); // release pooled broken connection before retrying
-            _logger.Warning(ex, "Could not open history DB with encryption key, recreating at {Path}", dbPath);
-            if (File.Exists(dbPath))
-                File.Delete(dbPath);
-            var fresh = new SqliteConnection(connStr);
-            fresh.Open();
-            return fresh;
-        }
     }
 
     public async Task AddAsync(Notification notification, CancellationToken ct = default)
@@ -92,6 +71,17 @@ internal class NotificationHistoryService : INotificationHistoryService, IDispos
 
         await cmd.ExecuteNonQueryAsync(ct);
     }
+
+    public async Task ClearAsync(CancellationToken ct = default)
+    {
+        await using var cmd = _connection.CreateCommand();
+        cmd.CommandText = SqlDelete;
+        await cmd.ExecuteNonQueryAsync(ct);
+        _logger.Information("Notification history cleared");
+    }
+
+    public void Dispose()
+        => _connection.Dispose();
 
     public async Task<HistoryPageResponse> GetPageAsync(
         int page,
@@ -124,7 +114,7 @@ internal class NotificationHistoryService : INotificationHistoryService, IDispos
         while (await reader.ReadAsync(ct))
         {
             items.Add(
-                new NotificationHistoryEntry(
+                new(
                     reader.GetString(0),
                     reader.GetString(1),
                     reader.GetString(2),
@@ -136,20 +126,37 @@ internal class NotificationHistoryService : INotificationHistoryService, IDispos
             );
         }
 
-        return new HistoryPageResponse(items, total, page, limit);
+        return new(items, total, page, limit);
     }
 
-    public async Task ClearAsync(CancellationToken ct = default)
+    private static void AddFilterParams(SqliteCommand cmd, string? search, string? source)
     {
-        await using var cmd = _connection.CreateCommand();
-        cmd.CommandText = SqlDelete;
-        await cmd.ExecuteNonQueryAsync(ct);
-        _logger.Information("Notification history cleared");
+        if (!string.IsNullOrWhiteSpace(source))
+        {
+            cmd.Parameters.AddWithValue("@source", source);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            cmd.Parameters.AddWithValue("@search", $"%{search}%");
+        }
     }
 
-    public void Dispose()
+    private static string BuildWhere(string? search, string? source)
     {
-        _connection.Dispose();
+        var clauses = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(source))
+        {
+            clauses.Add("source = @source");
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            clauses.Add("(title LIKE @search OR body LIKE @search)");
+        }
+
+        return clauses.Count > 0 ? " WHERE " + string.Join(" AND ", clauses) : "";
     }
 
     private void EnsureSchema()
@@ -159,22 +166,31 @@ internal class NotificationHistoryService : INotificationHistoryService, IDispos
         cmd.ExecuteNonQuery();
     }
 
-    private static string BuildWhere(string? search, string? source)
+    private SqliteConnection OpenConnection(string dbPath, string connStr)
     {
-        var clauses = new List<string>();
-        if (!string.IsNullOrWhiteSpace(source))
-            clauses.Add("source = @source");
-        if (!string.IsNullOrWhiteSpace(search))
-            clauses.Add("(title LIKE @search OR body LIKE @search)");
+        var conn = new SqliteConnection(connStr);
 
-        return clauses.Count > 0 ? " WHERE " + string.Join(" AND ", clauses) : "";
-    }
+        try
+        {
+            conn.Open();
 
-    private static void AddFilterParams(SqliteCommand cmd, string? search, string? source)
-    {
-        if (!string.IsNullOrWhiteSpace(source))
-            cmd.Parameters.AddWithValue("@source", source);
-        if (!string.IsNullOrWhiteSpace(search))
-            cmd.Parameters.AddWithValue("@search", $"%{search}%");
+            return conn;
+        }
+        catch (SqliteException ex)
+        {
+            // Existing DB is unencrypted or from a different machine — discard and start fresh.
+            conn.Dispose();
+            SqliteConnection.ClearAllPools(); // release pooled broken connection before retrying
+            _logger.Warning(ex, "Could not open history DB with encryption key, recreating at {Path}", dbPath);
+
+            if (File.Exists(dbPath))
+            {
+                File.Delete(dbPath);
+            }
+            var fresh = new SqliteConnection(connStr);
+            fresh.Open();
+
+            return fresh;
+        }
     }
 }

@@ -1,7 +1,3 @@
-using Arrr.Core.Data.Api;
-using Arrr.Core.Data.Notifications;
-using Arrr.Core.Interfaces;
-using Arrr.Core.Services;
 using System.Net;
 using System.Net.Http.Json;
 using Arrr.Service.Api;

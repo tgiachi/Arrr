@@ -25,11 +25,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Arrr.Core" Version="*" />
+        <PackageReference Include="Arrr.Core" Version="*"/>
     </ItemGroup>
 
     <ItemGroup>
-        <None Include="../../assets/arr_logo.png" Pack="true" PackagePath="\" />
+        <None Include="../../assets/arr_logo.png" Pack="true" PackagePath="\"/>
     </ItemGroup>
 
 </Project>

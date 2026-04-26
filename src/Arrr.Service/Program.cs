@@ -68,9 +68,7 @@ await ConsoleApp.RunAsync(
         builder.Services.AddSingleton<ISinkManager>(sp => sp.GetRequiredService<SinkOrchestrator>());
         builder.Services.AddSingleton<IConfigBackupService, ConfigBackupService>();
         builder.Services.AddSingleton<INotificationHistoryService>(
-            _ => new NotificationHistoryService(
-                Path.Combine(directoriesConfig.Root, "history.db")
-            )
+            _ => new NotificationHistoryService(Path.Combine(directoriesConfig.Root, "history.db"))
         );
         builder.Services.AddHostedService<EventBusHostedService>();
 
@@ -106,7 +104,9 @@ await ConsoleApp.RunAsync(
             async (n, token) =>
             {
                 if (configService.Config.HistoryEnabled)
+                {
                     await historyService.AddAsync(n, token);
+                }
             }
         );
 

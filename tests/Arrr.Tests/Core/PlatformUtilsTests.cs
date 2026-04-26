@@ -1,5 +1,3 @@
-using Arrr.Core.Types;
-using Arrr.Core.Utils;
 using Arrr.Plugin.Systemd;
 
 namespace Arrr.Tests.Core;
