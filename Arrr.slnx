@@ -26,5 +26,6 @@
         <Project Path="plugins/Arrr.Plugin.Systemd/Arrr.Plugin.Systemd.csproj"/>
         <Project Path="plugins/Arrr.Sink.Bark/Arrr.Sink.Bark.csproj"/>
         <Project Path="plugins/Arrr.Sink.WindowsNotify/Arrr.Sink.WindowsNotify.csproj"/>
+        <Project Path="plugins/Arrr.Sink.MacNotify/Arrr.Sink.MacNotify.csproj"/>
     </Folder>
 </Solution>
