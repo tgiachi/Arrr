@@ -27,6 +27,20 @@ public static class PlatformUtils
     }
 
     /// <summary>
+    /// Returns true if the current OS matches at least one of the specified platforms,
+    /// or if the array is empty (meaning all platforms are supported).
+    /// </summary>
+    public static bool IsCompatible(PlatformType[] platforms)
+    {
+        if (platforms.Length == 0)
+        {
+            return true;
+        }
+
+        return platforms.Contains(GetCurrentPlatform());
+    }
+
+    /// <summary>
     /// Checks if the application is running inside a Docker container.
     /// </summary>
     /// <returns></returns>
@@ -53,18 +67,4 @@ public static class PlatformUtils
     /// <returns>True if running on Windows, otherwise false.</returns>
     public static bool IsRunningOnWindows()
         => OperatingSystem.IsWindows();
-
-    /// <summary>
-    /// Returns true if the current OS matches at least one of the specified platforms,
-    /// or if the array is empty (meaning all platforms are supported).
-    /// </summary>
-    public static bool IsCompatible(PlatformType[] platforms)
-    {
-        if (platforms.Length == 0)
-        {
-            return true;
-        }
-
-        return platforms.Contains(GetCurrentPlatform());
-    }
 }

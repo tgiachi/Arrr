@@ -1,5 +1,4 @@
 using System.Net;
-using Arrr.Core.Data.Notifications;
 using Arrr.Tests.Support;
 using HomeAssistantSink;
 using HomeAssistantSink.Data;

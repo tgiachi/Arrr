@@ -26,5 +26,6 @@ internal class NotificationStreamService : IHostedService
         return Task.CompletedTask;
     }
 
-    public Task StopAsync(CancellationToken ct) => Task.CompletedTask;
+    public Task StopAsync(CancellationToken ct)
+        => Task.CompletedTask;
 }

@@ -1,4 +1,4 @@
-using Arrr.Core.Data.Notifications;
+using System.Runtime.CompilerServices;
 using Arrr.Plugin.Systemd;
 using Arrr.Plugin.Systemd.Data;
 using Arrr.Tests.Support;
@@ -12,8 +12,24 @@ public class SystemdJournalPluginTests
 
     [SetUp]
     public void SetUp()
+        => _eventBus = new();
+
+    [Test]
+    public async Task StartAsync_FallsBackToSyslogIdentifier_WhenUnitMissing()
     {
-        _eventBus = new();
+        var lines = new[]
+        {
+            """{"MESSAGE":"Connection refused","SYSLOG_IDENTIFIER":"sshd","PRIORITY":"4"}"""
+        };
+
+        var plugin = MakePlugin(lines);
+        var ctx = new FakePluginContext(_eventBus, _ => new SystemdConfig());
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await plugin.StartAsync(ctx, cts.Token);
+
+        var n = (Notification)_eventBus.Published[0];
+        Assert.That(n.Title, Does.Contain("sshd"));
     }
 
     [Test]
@@ -32,6 +48,24 @@ public class SystemdJournalPluginTests
         await plugin.StartAsync(ctx, cts.Token);
 
         Assert.That(_eventBus.Published, Has.Count.EqualTo(2));
+    }
+
+    [Test]
+    public async Task StartAsync_SkipsInvalidJsonLines()
+    {
+        var lines = new[]
+        {
+            "not json at all",
+            """{"MESSAGE":"Valid entry","_SYSTEMD_UNIT":"ok.service","PRIORITY":"3"}"""
+        };
+
+        var plugin = MakePlugin(lines);
+        var ctx = new FakePluginContext(_eventBus, _ => new SystemdConfig());
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await plugin.StartAsync(ctx, cts.Token);
+
+        Assert.That(_eventBus.Published, Has.Count.EqualTo(1));
     }
 
     [Test]
@@ -77,55 +111,20 @@ public class SystemdJournalPluginTests
         Assert.That(n.Body, Does.EndWith("…"));
     }
 
-    [Test]
-    public async Task StartAsync_FallsBackToSyslogIdentifier_WhenUnitMissing()
-    {
-        var lines = new[]
-        {
-            """{"MESSAGE":"Connection refused","SYSLOG_IDENTIFIER":"sshd","PRIORITY":"4"}"""
-        };
-
-        var plugin = MakePlugin(lines);
-        var ctx = new FakePluginContext(_eventBus, _ => new SystemdConfig());
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        await plugin.StartAsync(ctx, cts.Token);
-
-        var n = (Notification)_eventBus.Published[0];
-        Assert.That(n.Title, Does.Contain("sshd"));
-    }
-
-    [Test]
-    public async Task StartAsync_SkipsInvalidJsonLines()
-    {
-        var lines = new[]
-        {
-            "not json at all",
-            """{"MESSAGE":"Valid entry","_SYSTEMD_UNIT":"ok.service","PRIORITY":"3"}"""
-        };
-
-        var plugin = MakePlugin(lines);
-        var ctx = new FakePluginContext(_eventBus, _ => new SystemdConfig());
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        await plugin.StartAsync(ctx, cts.Token);
-
-        Assert.That(_eventBus.Published, Has.Count.EqualTo(1));
-    }
-
     private SystemdJournalPlugin MakePlugin(string[] lines)
-    {
-        return new SystemdJournalPlugin((_, ct) => ToAsyncEnumerable(lines, ct));
-    }
+        => new((_, ct) => ToAsyncEnumerable(lines, ct));
 
     private static async IAsyncEnumerable<string> ToAsyncEnumerable(
         string[] lines,
-        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
+        [EnumeratorCancellation] CancellationToken ct
+    )
     {
         foreach (var line in lines)
         {
             ct.ThrowIfCancellationRequested();
+
             yield return line;
+
             await Task.Yield();
         }
     }

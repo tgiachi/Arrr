@@ -20,7 +20,10 @@ interface NugetPackage {
   totalDownloads: number
   verified: boolean
   iconUrl?: string
+  tags?: string[]
 }
+
+type PlatformFilter = 'all' | 'linux' | 'windows' | 'osx'
 
 interface Props {
   onInstall: (packageId: string, version: string) => Promise<void>
@@ -31,20 +34,66 @@ const NUGET_PLUGIN_URL =
 const NUGET_SINK_URL =
   'https://azuresearch-usnc.nuget.org/query?q=tags:arrr-sink&prerelease=false&take=50&semVerLevel=2.0.0'
 
+const PLATFORM_LABELS: Record<PlatformFilter, string> = {
+  all: 'All',
+  linux: '🐧 Linux',
+  windows: '🪟 Windows',
+  osx: '🍎 macOS',
+}
+
+function parsePlatform(tags: string[] | undefined): PlatformFilter | null {
+  if (!tags) return null
+  for (const tag of tags) {
+    const lower = tag.toLowerCase()
+    if (lower === 'platform:linux') return 'linux'
+    if (lower === 'platform:windows') return 'windows'
+    if (lower === 'platform:osx') return 'osx'
+  }
+  return null
+}
+
+function platformBadge(platform: PlatformFilter | null) {
+  if (!platform) return null
+  const map: Record<Exclude<PlatformFilter, 'all'>, { label: string; color: string }> = {
+    linux: { label: '🐧 Linux', color: 'yellow' },
+    windows: { label: '🪟 Windows', color: 'blue' },
+    osx: { label: '🍎 macOS', color: 'gray' },
+  }
+  const entry = map[platform as Exclude<PlatformFilter, 'all'>]
+  if (!entry) return null
+  return (
+    <Badge size="xs" colorPalette={entry.color} variant="subtle" fontFamily="mono" fontSize="9px">
+      {entry.label}
+    </Badge>
+  )
+}
+
 function formatDownloads(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`
   return String(n)
 }
 
-function filterPkgs(list: NugetPackage[], q: string): NugetPackage[] {
-  if (!q.trim()) return list
-  const lq = q.toLowerCase()
-  return list.filter(
-    (p) =>
-      p.id.toLowerCase().includes(lq) ||
-      p.description?.toLowerCase().includes(lq)
-  )
+function filterPkgs(list: NugetPackage[], q: string, platform: PlatformFilter): NugetPackage[] {
+  let result = list
+
+  if (platform !== 'all') {
+    result = result.filter((p) => {
+      const pkgPlatform = parsePlatform(p.tags)
+      return pkgPlatform === null || pkgPlatform === platform
+    })
+  }
+
+  if (q.trim()) {
+    const lq = q.toLowerCase()
+    result = result.filter(
+      (p) =>
+        p.id.toLowerCase().includes(lq) ||
+        p.description?.toLowerCase().includes(lq),
+    )
+  }
+
+  return result
 }
 
 function PackageCard({
@@ -56,6 +105,8 @@ function PackageCard({
   installing: boolean
   onInstall: (pkg: NugetPackage) => void
 }) {
+  const platform = parsePlatform(pkg.tags)
+
   return (
     <Box
       bg="app.cardBg"
@@ -119,6 +170,7 @@ function PackageCard({
                   verified
                 </Badge>
               )}
+              {platformBadge(platform)}
             </HStack>
 
             {pkg.description && (
@@ -160,16 +212,18 @@ function PackageSection({
   label,
   packages,
   query,
+  platform,
   installingIds,
   onInstall,
 }: {
   label: string
   packages: NugetPackage[]
   query: string
+  platform: PlatformFilter
   installingIds: Set<string>
   onInstall: (pkg: NugetPackage) => void
 }) {
-  const filtered = filterPkgs(packages, query)
+  const filtered = filterPkgs(packages, query, platform)
 
   return (
     <Box>
@@ -191,7 +245,7 @@ function PackageSection({
 
       {filtered.length === 0 ? (
         <Text fontSize="xs" color="app.textMuted" fontFamily="mono" mb={1}>
-          {query ? 'No matches' : 'None available'}
+          {query || platform !== 'all' ? 'No matches' : 'None available'}
         </Text>
       ) : (
         <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={3}>
@@ -216,6 +270,7 @@ export function InstallPanel({ onInstall }: Props) {
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [installingIds, setInstallingIds] = useState<Set<string>>(new Set())
   const [query, setQuery] = useState('')
+  const [platform, setPlatform] = useState<PlatformFilter>('all')
 
   const [packageId, setPackageId] = useState('')
   const [version, setVersion] = useState('')
@@ -302,8 +357,8 @@ export function InstallPanel({ onInstall }: Props) {
         </Button>
       </Flex>
 
-      {/* Search */}
-      <Box mb={4}>
+      {/* Search + Platform filter */}
+      <Flex gap={2} mb={4} direction={{ base: 'column', sm: 'row' }}>
         <Input
           placeholder="Search plugins and sinks…"
           value={query}
@@ -318,8 +373,25 @@ export function InstallPanel({ onInstall }: Props) {
             borderColor: 'amber.500',
             boxShadow: '0 0 0 1px var(--chakra-colors-amber-500)',
           }}
+          flex={1}
         />
-      </Box>
+        <HStack gap={1} flexShrink={0}>
+          {(['all', 'linux', 'windows', 'osx'] as PlatformFilter[]).map((p) => (
+            <Button
+              key={p}
+              size="xs"
+              variant={platform === p ? 'solid' : 'ghost'}
+              colorPalette={platform === p ? 'amber' : 'gray'}
+              fontFamily="mono"
+              fontSize="10px"
+              onClick={() => setPlatform(p)}
+              px={2}
+            >
+              {PLATFORM_LABELS[p]}
+            </Button>
+          ))}
+        </HStack>
+      </Flex>
 
       {fetchError ? (
         <Text fontSize="xs" color="red.400" fontFamily="mono" mb={3}>
@@ -335,6 +407,7 @@ export function InstallPanel({ onInstall }: Props) {
             label="Source Plugins"
             packages={plugins}
             query={query}
+            platform={platform}
             installingIds={installingIds}
             onInstall={handleInstallPackage}
           />
@@ -342,6 +415,7 @@ export function InstallPanel({ onInstall }: Props) {
             label="Output Sinks"
             packages={sinks}
             query={query}
+            platform={platform}
             installingIds={installingIds}
             onInstall={handleInstallPackage}
           />

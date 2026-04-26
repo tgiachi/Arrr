@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Text.Json;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
@@ -34,13 +33,13 @@ public class GithubSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
 
     public GithubSourcePlugin()
     {
-        _http = new HttpClient();
+        _http = new();
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("Arrr/1.0");
     }
 
     internal GithubSourcePlugin(HttpMessageHandler handler)
     {
-        _http = new HttpClient(handler);
+        _http = new(handler);
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("Arrr/1.0");
     }
 
@@ -59,13 +58,14 @@ public class GithubSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
         try
         {
             var request = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/notifications?all=false");
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _config.PersonalAccessToken);
+            request.Headers.Authorization = new("Bearer", _config.PersonalAccessToken);
 
             var response = await _http.SendAsync(request, ct);
 
             if (!response.IsSuccessStatusCode)
             {
                 _context?.Logger.LogWarning("GitHub API returned {Status}", response.StatusCode);
+
                 return;
             }
 
@@ -79,6 +79,7 @@ public class GithubSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
         catch (Exception ex)
         {
             _context?.Logger.LogError(ex, "GitHub notification fetch failed");
+
             return;
         }
 
@@ -92,6 +93,7 @@ public class GithubSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
             if (_firstPoll)
             {
                 _seenIds.Add(n.Id);
+
                 continue;
             }
 
@@ -100,10 +102,10 @@ public class GithubSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
                 var emoji = n.Subject.Type switch
                 {
                     "PullRequest" => "🔀",
-                    "Issue" => "🐛",
-                    "Release" => "🚀",
-                    "Discussion" => "💬",
-                    _ => "🔔"
+                    "Issue"       => "🐛",
+                    "Release"     => "🚀",
+                    "Discussion"  => "💬",
+                    _             => "🔔"
                 };
 
                 await context.EventBus.PublishAsync(

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
@@ -71,8 +72,8 @@ public class SystemdJournalPlugin : ISourcePlugin, IConfigurablePlugin
 
             var unit = entry.SystemdUnit ?? entry.SyslogIdentifier ?? "journal";
             var body = _config.MaxMessageLength > 0 && entry.Message.Length > _config.MaxMessageLength
-                ? entry.Message[.._config.MaxMessageLength] + "…"
-                : entry.Message;
+                           ? entry.Message[.._config.MaxMessageLength] + "…"
+                           : entry.Message;
 
             var priorityLabel = entry.Priority switch
             {
@@ -83,7 +84,7 @@ public class SystemdJournalPlugin : ISourcePlugin, IConfigurablePlugin
                 "4" => "WARN",
                 "5" => "NOTICE",
                 "6" => "INFO",
-                _ => "DEBUG"
+                _   => "DEBUG"
             };
 
             await context.EventBus.PublishAsync(
@@ -100,9 +101,22 @@ public class SystemdJournalPlugin : ISourcePlugin, IConfigurablePlugin
         }
     }
 
+    private static string BuildJournalctlArgs(SystemdConfig config)
+    {
+        var parts = new List<string> { "-f", "-o", "json", "--no-pager", $"-p {config.MinPriority}" };
+
+        foreach (var unit in config.Units)
+        {
+            parts.Add($"-u {unit}");
+        }
+
+        return string.Join(" ", parts);
+    }
+
     private static async IAsyncEnumerable<string> ReadJournalLines(
         SystemdConfig config,
-        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
+        [EnumeratorCancellation] CancellationToken ct
+    )
     {
         var args = BuildJournalctlArgs(config);
 
@@ -113,8 +127,7 @@ public class SystemdJournalPlugin : ISourcePlugin, IConfigurablePlugin
             UseShellExecute = false
         };
 
-        using var process = Process.Start(psi)
-                            ?? throw new InvalidOperationException("Failed to start journalctl");
+        using var process = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start journalctl");
 
         while (!ct.IsCancellationRequested)
         {
@@ -132,17 +145,5 @@ public class SystemdJournalPlugin : ISourcePlugin, IConfigurablePlugin
         {
             process.Kill();
         }
-    }
-
-    private static string BuildJournalctlArgs(SystemdConfig config)
-    {
-        var parts = new List<string> { "-f", "-o", "json", "--no-pager", $"-p {config.MinPriority}" };
-
-        foreach (var unit in config.Units)
-        {
-            parts.Add($"-u {unit}");
-        }
-
-        return string.Join(" ", parts);
     }
 }

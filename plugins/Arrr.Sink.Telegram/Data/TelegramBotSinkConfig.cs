@@ -5,8 +5,7 @@ namespace TelegramBotSink.Data;
 
 public class TelegramBotSinkConfig
 {
-    [Description("Bot token from @BotFather (e.g. 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11)")]
-    [Sensitive]
+    [Description("Bot token from @BotFather (e.g. 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11)"), Sensitive]
     public string BotToken { get; set; } = "";
 
     [Description("Target chat ID, group ID or @channelname")]

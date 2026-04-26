@@ -1,6 +1,5 @@
 using System.Net;
 using System.Text.Json;
-using Arrr.Core.Data.Notifications;
 using Arrr.Sink.Bark;
 using Arrr.Sink.Bark.Data;
 using Arrr.Tests.Support;
@@ -13,22 +12,21 @@ public class BarkSinkPluginTests
     private FakeHttpMessageHandler _handler = null!;
     private BarkSinkPlugin? _sink;
 
-    [SetUp]
-    public void SetUp()
+    [Test]
+    public async Task ConsumeAsync_IncludesSound_WhenConfigured()
     {
-        _handler = new();
-        _sink = new(_handler);
-    }
+        var ctx = new FakeSinkContext(configFactory: _ => new BarkConfig { DeviceKey = "KEY", Sound = "minuet" });
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await _sink!.StartAsync(ctx, cts.Token);
 
-    [TearDown]
-    public async Task TearDown()
-    {
-        if (_sink is not null)
-        {
-            await _sink.StopAsync();
-            _sink = null;
-        }
-        _handler.Dispose();
+        await _sink.ConsumeAsync(
+            new Notification(Guid.NewGuid(), "test", "T", "B", DateTimeOffset.UtcNow, null),
+            cts.Token
+        );
+
+        var body = await _handler.LastRequest!.Content!.ReadAsStringAsync();
+        var doc = JsonDocument.Parse(body);
+        Assert.That(doc.RootElement.GetProperty("sound").GetString(), Is.EqualTo("minuet"));
     }
 
     [Test]
@@ -46,7 +44,14 @@ public class BarkSinkPluginTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await _sink!.StartAsync(ctx, cts.Token);
 
-        var notification = new Notification(Guid.NewGuid(), "rss", "Breaking News", "Details here", DateTimeOffset.UtcNow, null);
+        var notification = new Notification(
+            Guid.NewGuid(),
+            "rss",
+            "Breaking News",
+            "Details here",
+            DateTimeOffset.UtcNow,
+            null
+        );
         await _sink.ConsumeAsync(notification, cts.Token);
 
         Assert.That(_handler.LastRequest, Is.Not.Null);
@@ -83,25 +88,6 @@ public class BarkSinkPluginTests
     }
 
     [Test]
-    public async Task ConsumeAsync_IncludesSound_WhenConfigured()
-    {
-        var ctx = new FakeSinkContext(
-            configFactory: _ => new BarkConfig { DeviceKey = "KEY", Sound = "minuet" }
-        );
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        await _sink!.StartAsync(ctx, cts.Token);
-
-        await _sink.ConsumeAsync(
-            new Notification(Guid.NewGuid(), "test", "T", "B", DateTimeOffset.UtcNow, null),
-            cts.Token
-        );
-
-        var body = await _handler.LastRequest!.Content!.ReadAsStringAsync();
-        var doc = JsonDocument.Parse(body);
-        Assert.That(doc.RootElement.GetProperty("sound").GetString(), Is.EqualTo("minuet"));
-    }
-
-    [Test]
     public async Task ConsumeAsync_WhenDeviceKeyEmpty_DoesNotSend()
     {
         var ctx = new FakeSinkContext(configFactory: _ => new BarkConfig { DeviceKey = "" });
@@ -130,5 +116,23 @@ public class BarkSinkPluginTests
                 cts.Token
             )
         );
+    }
+
+    [SetUp]
+    public void SetUp()
+    {
+        _handler = new();
+        _sink = new(_handler);
+    }
+
+    [TearDown]
+    public async Task TearDown()
+    {
+        if (_sink is not null)
+        {
+            await _sink.StopAsync();
+            _sink = null;
+        }
+        _handler.Dispose();
     }
 }

@@ -12,7 +12,7 @@
         <Authors>Tom</Authors>
         <Company>orivega.io</Company>
         <Description>systemd journal source for Arrr — tails journalctl and publishes log events as notifications.</Description>
-        <PackageTags>arrr;arrr-plugin;plugin;systemd;journal;notifications;linux</PackageTags>
+        <PackageTags>arrr;arrr-plugin;plugin;systemd;journal;notifications;linux;platform:linux</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageProjectUrl>https://github.com/tgiachi/Arrr</PackageProjectUrl>
         <RepositoryUrl>https://github.com/tgiachi/Arrr</RepositoryUrl>

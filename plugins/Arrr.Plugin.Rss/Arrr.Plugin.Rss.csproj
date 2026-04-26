@@ -24,8 +24,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Arrr.Core" Version="*" />
-        <PackageReference Include="System.ServiceModel.Syndication" Version="10.0.7" />
+        <PackageReference Include="Arrr.Core" Version="*"/>
+        <PackageReference Include="System.ServiceModel.Syndication" Version="10.0.7"/>
     </ItemGroup>
 
     <ItemGroup>

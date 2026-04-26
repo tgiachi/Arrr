@@ -24,8 +24,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Arrr.Core" Version="*" />
-        <PackageReference Include="WTelegramClient" Version="3.*" />
+        <PackageReference Include="Arrr.Core" Version="*"/>
+        <PackageReference Include="WTelegramClient" Version="3.*"/>
     </ItemGroup>
 
     <ItemGroup>

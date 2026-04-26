@@ -26,8 +26,12 @@ public class TelegramPlugin : ISourcePlugin, IConfigurablePlugin, ICallbackPlugi
     public Task HandleCallbackAsync(string body, CancellationToken ct)
     {
         var code = body.Trim();
+
         if (_pendingCode is not null && !_pendingCode.Task.IsCompleted)
+        {
             _pendingCode.TrySetResult(code);
+        }
+
         return Task.CompletedTask;
     }
 
@@ -37,69 +41,131 @@ public class TelegramPlugin : ISourcePlugin, IConfigurablePlugin, ICallbackPlugi
 
         if (config.ApiId == 0 || string.IsNullOrEmpty(config.ApiHash) || string.IsNullOrEmpty(config.PhoneNumber))
         {
-            context.Logger.LogError("TelegramPlugin: ApiId, ApiHash and PhoneNumber are required. Configure the plugin and restart.");
+            context.Logger.LogError(
+                "TelegramPlugin: ApiId, ApiHash and PhoneNumber are required. Configure the plugin and restart."
+            );
+
             return;
         }
 
         var sessionPath = Path.ChangeExtension(context.ConfigPath, ".session");
 
-        string ConfigCallback(string what) => what switch
-        {
-            "api_id" => config.ApiId.ToString(),
-            "api_hash" => config.ApiHash,
-            "phone_number" => config.PhoneNumber,
-            "session_pathname" => sessionPath,
-            "verification_code" => WaitForCode(context.Logger, ct),
-            "password" => string.IsNullOrEmpty(config.TwoFactorPassword) ? null : config.TwoFactorPassword,
-            _ => null
-        };
+        string ConfigCallback(string what)
+            => what switch
+            {
+                "api_id"            => config.ApiId.ToString(),
+                "api_hash"          => config.ApiHash,
+                "phone_number"      => config.PhoneNumber,
+                "session_pathname"  => sessionPath,
+                "verification_code" => WaitForCode(context.Logger, ct),
+                "password"          => string.IsNullOrEmpty(config.TwoFactorPassword) ? null : config.TwoFactorPassword,
+                _                   => null
+            };
 
         var filter = config.MonitoredChats
-            .Select(c => c.Trim().ToLowerInvariant())
-            .ToHashSet();
+                           .Select(c => c.Trim().ToLowerInvariant())
+                           .ToHashSet();
 
-        WTelegram.Helpers.Log = (level, message) => context.Logger.LogDebug("[WTelegram] {Message}", message);
+        Helpers.Log = (level, message) => context.Logger.LogDebug("[WTelegram] {Message}", message);
 
         using var client = new Client(ConfigCallback);
 
         var self = await client.LoginUserIfNeeded();
-        context.Logger.LogInformation("Telegram logged in as {FirstName} {LastName} (@{Username})",
-            self.first_name, self.last_name, self.username);
+        context.Logger.LogInformation(
+            "Telegram logged in as {FirstName} {LastName} (@{Username})",
+            self.first_name,
+            self.last_name,
+            self.username
+        );
 
         client.OnUpdate += async updates =>
-        {
-            foreach (var update in updates.UpdateList)
-            {
-                if (update is not UpdateNewMessage unm) continue;
-                if (unm.message is not Message msg) continue;
-                if (msg.flags.HasFlag(Message.Flags.out_)) continue;
+                           {
+                               foreach (var update in updates.UpdateList)
+                               {
+                                   if (update is not UpdateNewMessage unm)
+                                   {
+                                       continue;
+                                   }
 
-                var (senderName, chatName) = ResolvePeer(updates, msg);
-                if (filter.Count > 0 && !filter.Contains(chatName.ToLowerInvariant())) continue;
+                                   if (unm.message is not Message msg)
+                                   {
+                                       continue;
+                                   }
 
-                var title = msg.message.Length > 80 ? msg.message[..80] + "…" : msg.message;
-                var body = string.IsNullOrEmpty(chatName) ? senderName : $"{senderName} → {chatName}";
+                                   if (msg.flags.HasFlag(Message.Flags.out_))
+                                   {
+                                       continue;
+                                   }
 
-                await context.EventBus.PublishAsync(
-                    new Notification(
-                        Guid.NewGuid(),
-                        Id,
-                        title,
-                        body,
-                        new DateTimeOffset(msg.date.ToUniversalTime()),
-                        null
-                    ),
-                    ct
-                );
-            }
-        };
+                                   var (senderName, chatName) = ResolvePeer(updates, msg);
+
+                                   if (filter.Count > 0 && !filter.Contains(chatName.ToLowerInvariant()))
+                                   {
+                                       continue;
+                                   }
+
+                                   var title = msg.message.Length > 80 ? msg.message[..80] + "…" : msg.message;
+                                   var body = string.IsNullOrEmpty(chatName) ? senderName : $"{senderName} → {chatName}";
+
+                                   await context.EventBus.PublishAsync(
+                                       new Notification(
+                                           Guid.NewGuid(),
+                                           Id,
+                                           title,
+                                           body,
+                                           new(msg.date.ToUniversalTime()),
+                                           null
+                                       ),
+                                       ct
+                                   );
+                               }
+                           };
 
         await Task.Delay(Timeout.Infinite, ct).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
     }
 
+    private static string GetChatTitle(ChatBase chatBase)
+        => chatBase switch
+        {
+            Chat c              => c.title,
+            Channel ch          => ch.title,
+            ChatForbidden cf    => cf.title,
+            ChannelForbidden cf => cf.title,
+            _                   => ""
+        };
+
+    private static (string sender, string chat) ResolvePeer(UpdatesBase updates, Message msg)
+    {
+        var sender = "";
+        var chat = "";
+
+        if (msg.from_id is PeerUser fromUser && updates.Users.TryGetValue(fromUser.user_id, out var fromUserObj))
+        {
+            sender = $"{fromUserObj.first_name} {fromUserObj.last_name}".Trim();
+        }
+
+        if (msg.peer_id is PeerUser pu && updates.Users.TryGetValue(pu.user_id, out var peerUser))
+        {
+            if (string.IsNullOrEmpty(sender))
+            {
+                sender = $"{peerUser.first_name} {peerUser.last_name}".Trim();
+            }
+        }
+        else if (msg.peer_id is PeerChat pc && updates.Chats.TryGetValue(pc.chat_id, out var grp))
+        {
+            chat = GetChatTitle(grp);
+        }
+        else if (msg.peer_id is PeerChannel pch && updates.Chats.TryGetValue(pch.channel_id, out var ch))
+        {
+            chat = GetChatTitle(ch);
+        }
+
+        return (sender, chat);
+    }
+
     private string WaitForCode(ILogger logger, CancellationToken ct)
     {
-        _pendingCode = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _pendingCode = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         logger.LogWarning(
             "Telegram verification code required. Send it via POST /api/plugins/{Id}/callback with the code as plain text body.",
@@ -122,38 +188,4 @@ public class TelegramPlugin : ISourcePlugin, IConfigurablePlugin, ICallbackPlugi
             _pendingCode = null;
         }
     }
-
-    private static (string sender, string chat) ResolvePeer(UpdatesBase updates, Message msg)
-    {
-        var sender = "";
-        var chat = "";
-
-        if (msg.from_id is PeerUser fromUser && updates.Users.TryGetValue(fromUser.user_id, out var fromUserObj))
-            sender = $"{fromUserObj.first_name} {fromUserObj.last_name}".Trim();
-
-        if (msg.peer_id is PeerUser pu && updates.Users.TryGetValue(pu.user_id, out var peerUser))
-        {
-            if (string.IsNullOrEmpty(sender))
-                sender = $"{peerUser.first_name} {peerUser.last_name}".Trim();
-        }
-        else if (msg.peer_id is PeerChat pc && updates.Chats.TryGetValue(pc.chat_id, out var grp))
-        {
-            chat = GetChatTitle(grp);
-        }
-        else if (msg.peer_id is PeerChannel pch && updates.Chats.TryGetValue(pch.channel_id, out var ch))
-        {
-            chat = GetChatTitle(ch);
-        }
-
-        return (sender, chat);
-    }
-
-    private static string GetChatTitle(ChatBase chatBase) => chatBase switch
-    {
-        Chat c => c.title,
-        Channel ch => ch.title,
-        ChatForbidden cf => cf.title,
-        ChannelForbidden cf => cf.title,
-        _ => ""
-    };
 }

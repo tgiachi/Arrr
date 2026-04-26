@@ -54,10 +54,10 @@ public class BarkSinkPlugin : ISinkPlugin, IConfigurablePlugin
         try
         {
             var response = await _http.PostAsync(
-                url,
-                new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
-                ct
-            );
+                               url,
+                               new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
+                               ct
+                           );
             response.EnsureSuccessStatusCode();
         }
         catch (OperationCanceledException)

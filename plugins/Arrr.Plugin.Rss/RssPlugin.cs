@@ -14,6 +14,7 @@ public class RssPlugin : IPollingPlugin, IConfigurablePlugin
     {
         DefaultRequestHeaders = { { "User-Agent", "Mozilla/5.0 (compatible; Arrr/1.0; +https://github.com/tgiachi/Arrr)" } }
     };
+
     private readonly HashSet<string> _seenIds = [];
 
     private RssPluginConfig _config = new();

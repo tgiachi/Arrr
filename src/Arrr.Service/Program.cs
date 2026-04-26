@@ -69,13 +69,20 @@ await ConsoleApp.RunAsync(
         builder.Services.AddSingleton<IConfigBackupService, ConfigBackupService>();
         builder.Services.AddHostedService<EventBusHostedService>();
 
-        builder.Services.AddCors(opt =>
-            opt.AddDefaultPolicy(p =>
-                p.SetIsOriginAllowed(_ => true).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
+        builder.Services.AddCors(
+            opt =>
+                opt.AddDefaultPolicy(
+                    p =>
+                        p.SetIsOriginAllowed(_ => true).AllowAnyHeader().AllowAnyMethod().AllowCredentials()
+                )
+        );
 
-        builder.Services.AddSignalR()
-            .AddJsonProtocol(opt =>
-                opt.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase);
+        builder.Services
+               .AddSignalR()
+               .AddJsonProtocol(
+                   opt =>
+                       opt.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+               );
 
         builder.Services.AddHostedService<NotificationStreamService>();
 

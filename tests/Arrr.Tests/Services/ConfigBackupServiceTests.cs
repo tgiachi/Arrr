@@ -1,6 +1,4 @@
 using System.Text.Json;
-using Arrr.Core.Directories;
-using Arrr.Core.Types;
 using Arrr.Service.Internal;
 
 namespace Arrr.Tests.Services;

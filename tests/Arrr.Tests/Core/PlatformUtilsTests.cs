@@ -1,5 +1,4 @@
-using Arrr.Core.Types;
-using Arrr.Core.Utils;
+using Arrr.Plugin.Systemd;
 
 namespace Arrr.Tests.Core;
 
@@ -7,16 +6,11 @@ namespace Arrr.Tests.Core;
 public class PlatformUtilsTests
 {
     [Test]
-    public void IsCompatible_EmptyArray_ReturnsTrue()
-    {
-        Assert.That(PlatformUtils.IsCompatible([]), Is.True);
-    }
-
-    [Test]
-    public void IsCompatible_UnknownPlatform_ReturnsFalse()
-    {
-        Assert.That(PlatformUtils.IsCompatible([PlatformType.Unknown]), Is.False);
-    }
+    public void IsCompatible_AllPlatforms_ReturnsTrue()
+        => Assert.That(
+            PlatformUtils.IsCompatible([PlatformType.Linux, PlatformType.Windows, PlatformType.Osx]),
+            Is.True
+        );
 
     [Test]
     public void IsCompatible_CurrentPlatform_ReturnsTrue()
@@ -26,18 +20,17 @@ public class PlatformUtilsTests
     }
 
     [Test]
-    public void IsCompatible_AllPlatforms_ReturnsTrue()
-    {
-        Assert.That(
-            PlatformUtils.IsCompatible([PlatformType.Linux, PlatformType.Windows, PlatformType.Osx]),
-            Is.True
-        );
-    }
+    public void IsCompatible_EmptyArray_ReturnsTrue()
+        => Assert.That(PlatformUtils.IsCompatible([]), Is.True);
+
+    [Test]
+    public void IsCompatible_UnknownPlatform_ReturnsFalse()
+        => Assert.That(PlatformUtils.IsCompatible([PlatformType.Unknown]), Is.False);
 
     [Test]
     public void SystemdPlugin_HasLinuxPlatform()
     {
-        var plugin = new Arrr.Plugin.Systemd.SystemdJournalPlugin();
+        var plugin = new SystemdJournalPlugin();
         Assert.That(plugin.Platforms, Is.EquivalentTo(new[] { PlatformType.Linux }));
     }
 }

@@ -17,8 +17,7 @@ public class ImapPluginConfig
     [Description("Email address / login username")]
     public string Username { get; set; } = "";
 
-    [Sensitive]
-    [Description("Account password or app-specific password (stored encrypted)")]
+    [Sensitive, Description("Account password or app-specific password (stored encrypted)")]
     public string Password { get; set; } = "";
 
     [Description("Mailbox folder to monitor, e.g. INBOX")]

@@ -53,10 +53,10 @@ public class PushoverSinkPlugin : ISinkPlugin, IConfigurablePlugin
         try
         {
             var response = await _http.PostAsync(
-                "https://api.pushover.net/1/messages.json",
-                new FormUrlEncodedContent(fields),
-                ct
-            );
+                               "https://api.pushover.net/1/messages.json",
+                               new FormUrlEncodedContent(fields),
+                               ct
+                           );
             response.EnsureSuccessStatusCode();
         }
         catch (OperationCanceledException)
@@ -81,7 +81,10 @@ public class PushoverSinkPlugin : ISinkPlugin, IConfigurablePlugin
         }
         else
         {
-            context.Logger.LogInformation("Pushover sink ready → user {UserKey}", _config.UserKey[..Math.Min(4, _config.UserKey.Length)] + "****");
+            context.Logger.LogInformation(
+                "Pushover sink ready → user {UserKey}",
+                _config.UserKey[..Math.Min(4, _config.UserKey.Length)] + "****"
+            );
         }
     }
 

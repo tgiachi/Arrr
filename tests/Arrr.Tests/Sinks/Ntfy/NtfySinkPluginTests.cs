@@ -1,4 +1,3 @@
-using Arrr.Core.Data.Notifications;
 using System.Net;
 using Arrr.Tests.Support;
 using NtfySink;
