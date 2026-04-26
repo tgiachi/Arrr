@@ -69,6 +69,8 @@ export default function App() {
   const [sinkBusyIds, setSinkBusyIds] = useState<Set<string>>(new Set())
   const [configuringSink, setConfiguringSink] = useState<Sink | null>(null)
 
+  const [serviceVersion, setServiceVersion] = useState<string | null>(null)
+
   const apiRef = useRef<ArrrApi | null>(null)
   apiRef.current = new ArrrApi(settings.baseUrl || '', settings.apiKey || '')
 
@@ -114,6 +116,14 @@ export default function App() {
       setSettingsOpen(true)
     }
   }, [settings.apiKey, fetchPlugins, fetchSinks])
+
+  useEffect(() => {
+    if (!settings.baseUrl && !settings.apiKey) return
+    const a = new ArrrApi(settings.baseUrl || '', settings.apiKey || '')
+    a.getVersion()
+      .then((v) => setServiceVersion(v.version))
+      .catch(() => setServiceVersion(null))
+  }, [settings.baseUrl, settings.apiKey])
 
   const withBusy = async (id: string, fn: () => Promise<void>) => {
     setBusyIds((prev) => new Set(prev).add(id))
@@ -499,6 +509,35 @@ export default function App() {
             </Button>
           </Flex>
         )}
+      </Box>
+
+      {/* Version footer */}
+      <Box
+        as="footer"
+        borderTopWidth="1px"
+        borderColor="app.border"
+        py={2}
+        px={6}
+        mt={4}
+      >
+        <Flex justify="center" align="center" gap={3}>
+          {serviceVersion && (
+            <Text fontSize="10px" color="app.textDim" fontFamily="mono">
+              arrr v{serviceVersion}
+            </Text>
+          )}
+          <Text fontSize="10px" color="app.textDim" fontFamily="mono">
+            built with ❤️{' '}
+            <a
+              href="https://github.com/tgiachi/Arrr"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'inherit' }}
+            >
+              tom
+            </a>
+          </Text>
+        </Flex>
       </Box>
 
       {/* Modals */}

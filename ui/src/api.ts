@@ -102,6 +102,12 @@ export class ArrrApi {
     })
   }
 
+  async getVersion(): Promise<{ version: string; runtimeVersion: string; os: string }> {
+    const r = await fetch(`${this.baseUrl}/api/version`)
+    if (!r.ok) throw new Error(`${r.status}`)
+    return r.json()
+  }
+
   async getLogs(): Promise<string[]> {
     return (await this.req('/api/logs')).json()
   }

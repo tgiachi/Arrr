@@ -126,6 +126,7 @@ await ConsoleApp.RunAsync(
 
         app.MapHub<NotificationStreamHub>("/stream");
 
+        app.MapVersionApi();
         app.MapExternalApi();
         app.MapSinksApi();
         app.MapConfigBackupApi();
