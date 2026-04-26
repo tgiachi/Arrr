@@ -194,13 +194,18 @@ export function HistoryView({ api, onToast }: Props) {
             onChange={(e) => setInputSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && applySearch()}
             placeholder="Search title or body…"
-            variant="subtle"
             size="sm"
             flex={1}
+            minW={0}
+            bg="transparent"
+            borderWidth={0}
+            outline="none"
+            p={0}
             fontFamily="mono"
             fontSize="xs"
             color="app.inputColor"
             _placeholder={{ color: 'app.placeholder' }}
+            _focus={{ boxShadow: 'none' }}
           />
           {inputSearch && (
             <Box
@@ -231,13 +236,18 @@ export function HistoryView({ api, onToast }: Props) {
             onChange={(e) => setInputSource(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && applySearch()}
             placeholder="Source…"
-            variant="subtle"
             size="sm"
             flex={1}
+            minW={0}
+            bg="transparent"
+            borderWidth={0}
+            outline="none"
+            p={0}
             fontFamily="mono"
             fontSize="xs"
             color="app.inputColor"
             _placeholder={{ color: 'app.placeholder' }}
+            _focus={{ boxShadow: 'none' }}
           />
         </Flex>
 
