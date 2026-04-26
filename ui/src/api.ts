@@ -1,4 +1,4 @@
-import type { DaemonConfig, Plugin, PluginConfigResponse, Sink } from './types'
+import type { DaemonConfig, HistoryPage, Plugin, PluginConfigResponse, Sink } from './types'
 
 export class ArrrApi {
   constructor(
@@ -110,6 +110,17 @@ export class ArrrApi {
     const r = await fetch(`${this.baseUrl}/api/version`)
     if (!r.ok) throw new Error(`${r.status}`)
     return r.json()
+  }
+
+  async getHistory(page = 1, limit = 50, search?: string, source?: string): Promise<HistoryPage> {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+    if (search) params.set('search', search)
+    if (source) params.set('source', source)
+    return (await this.req(`/api/history?${params}`)).json()
+  }
+
+  async clearHistory(): Promise<void> {
+    await this.req('/api/history', { method: 'DELETE' })
   }
 
   async getDaemonConfig(): Promise<DaemonConfig> {

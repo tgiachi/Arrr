@@ -24,7 +24,8 @@ internal static class DaemonConfigEndpoint
                         c.IsDebug,
                         c.Web.Port,
                         c.Deduplication.Enabled,
-                        c.Deduplication.WindowSeconds
+                        c.Deduplication.WindowSeconds,
+                        c.HistoryEnabled
                     )
                 );
             }
@@ -45,6 +46,7 @@ internal static class DaemonConfigEndpoint
                 c.Web.Port = body.Port;
                 c.Deduplication.Enabled = body.DeduplicationEnabled;
                 c.Deduplication.WindowSeconds = body.DeduplicationWindowSeconds;
+                c.HistoryEnabled = body.HistoryEnabled;
                 configService.Save();
 
                 return Results.Ok();

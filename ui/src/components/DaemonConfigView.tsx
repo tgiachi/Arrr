@@ -14,6 +14,7 @@ import {
   Eye,
   EyeOff,
   Globe,
+  History,
   KeyRound,
   RefreshCcw,
   Save,
@@ -38,6 +39,7 @@ function diff(a: DaemonConfig, b: DaemonConfig): string[] {
     port: 'Port',
     deduplicationEnabled: 'Deduplication',
     deduplicationWindowSeconds: 'Window',
+    historyEnabled: 'History',
   }
   return (Object.keys(a) as (keyof DaemonConfig)[])
     .filter((k) => a[k] !== b[k])
@@ -407,6 +409,33 @@ export function DaemonConfigView({ api, onToast, onSettingsChanged }: Props) {
                 </Text>
               </Flex>
             </Flex>
+          </FieldRow>
+        </Pod>
+
+        {/* ── Notification History ── */}
+        <Pod
+          accent="#a78bfa"
+          icon={<History size={14} />}
+          title="Notification History"
+          subtitle="Persist incoming notifications to local SQLite database"
+          delay={160}
+        >
+          <FieldRow
+            label="enabled"
+            hint="Record every notification for later browsing"
+            dirty={form.historyEnabled !== original?.historyEnabled}
+          >
+            <Switch.Root
+              size="sm"
+              colorPalette="purple"
+              checked={form.historyEnabled}
+              onCheckedChange={(e) => set('historyEnabled', e.checked)}
+            >
+              <Switch.HiddenInput />
+              <Switch.Control>
+                <Switch.Thumb />
+              </Switch.Control>
+            </Switch.Root>
           </FieldRow>
         </Pod>
 

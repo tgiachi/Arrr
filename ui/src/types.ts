@@ -47,6 +47,24 @@ export interface DaemonConfig {
   port: number
   deduplicationEnabled: boolean
   deduplicationWindowSeconds: number
+  historyEnabled: boolean
+}
+
+export interface HistoryEntry {
+  id: string
+  source: string
+  title: string
+  body: string
+  timestamp: string
+  iconUrl: string | null
+  priority: number
+}
+
+export interface HistoryPage {
+  items: HistoryEntry[]
+  total: number
+  page: number
+  limit: number
 }
 
 export interface NotificationItem {

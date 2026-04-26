@@ -5,5 +5,6 @@ public record DaemonConfigDto(
     bool IsDebug,
     int Port,
     bool DeduplicationEnabled,
-    int DeduplicationWindowSeconds
+    int DeduplicationWindowSeconds,
+    bool HistoryEnabled
 );
