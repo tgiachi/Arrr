@@ -76,7 +76,7 @@ public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
 
         foreach (var evt in calendar.Events)
         {
-            var start = evt.DtStart.AsDateTimeOffset;
+            var start = new DateTimeOffset(evt.DtStart.AsUtc, TimeSpan.Zero);
 
             if (start < now || start > lookahead)
             {

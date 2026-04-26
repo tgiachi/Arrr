@@ -4,7 +4,6 @@ using Arrr.Core.Interfaces;
 using Arrr.Core.Utils;
 using Microsoft.Extensions.Logging;
 using MQTTnet;
-using MQTTnet.Client;
 using MqttSource.Data;
 
 namespace MqttSource;
@@ -48,7 +47,7 @@ public class MqttSourcePlugin : ISourcePlugin, IConfigurablePlugin, IDisposable
                            ? $"arrr-{Guid.NewGuid():N}"
                            : _config.ClientId;
 
-        _client = _injectedClient ?? new MqttFactory().CreateMqttClient();
+        _client = _injectedClient ?? new MqttClientFactory().CreateMqttClient();
         _client.ApplicationMessageReceivedAsync += HandleMessageAsync;
 
         var optionsBuilder = new MqttClientOptionsBuilder()
@@ -87,7 +86,7 @@ public class MqttSourcePlugin : ISourcePlugin, IConfigurablePlugin, IDisposable
             return;
         }
 
-        var subscribeOptions = new MqttFactory().CreateSubscribeOptionsBuilder()
+        var subscribeOptions = new MqttClientSubscribeOptionsBuilder()
                                                 .WithTopicFilter(f => f.WithTopic(_config.Topic))
                                                 .Build();
 
@@ -113,7 +112,8 @@ public class MqttSourcePlugin : ISourcePlugin, IConfigurablePlugin, IDisposable
         }
 
         var topic = e.ApplicationMessage.Topic;
-        var payload = Encoding.UTF8.GetString(e.ApplicationMessage.PayloadSegment);
+        var seq = e.ApplicationMessage.Payload;
+        var payload = seq.IsEmpty ? "" : Encoding.UTF8.GetString(seq.FirstSpan);
 
         var title = _config.TitleTemplate
                            .Replace("{topic}", topic)
