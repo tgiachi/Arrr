@@ -41,6 +41,14 @@ export interface Settings {
   baseUrl: string
 }
 
+export interface DaemonConfig {
+  apiKey: string
+  isDebug: boolean
+  port: number
+  deduplicationEnabled: boolean
+  deduplicationWindowSeconds: number
+}
+
 export interface NotificationItem {
   id: string
   source: string

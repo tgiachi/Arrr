@@ -1,4 +1,4 @@
-import type { Plugin, PluginConfigResponse, Sink } from './types'
+import type { DaemonConfig, Plugin, PluginConfigResponse, Sink } from './types'
 
 export class ArrrApi {
   constructor(
@@ -110,6 +110,14 @@ export class ArrrApi {
     const r = await fetch(`${this.baseUrl}/api/version`)
     if (!r.ok) throw new Error(`${r.status}`)
     return r.json()
+  }
+
+  async getDaemonConfig(): Promise<DaemonConfig> {
+    return (await this.req('/api/config')).json()
+  }
+
+  async saveDaemonConfig(config: DaemonConfig): Promise<void> {
+    await this.req('/api/config', { method: 'PUT', body: JSON.stringify(config) })
   }
 
   async getLogs(): Promise<string[]> {

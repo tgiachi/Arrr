@@ -21,12 +21,13 @@ import { InstallPanel } from './components/InstallPanel'
 import { SettingsPanel } from './components/SettingsPanel'
 import { LogsView } from './components/LogsView'
 import { StreamView } from './components/StreamView'
+import { DaemonConfigView } from './components/DaemonConfigView'
 import { ThemeToggle } from './components/ThemeToggle'
 import type { Plugin, Sink, Settings as AppSettings } from './types'
 
 const STORAGE_KEY = 'arrr-settings'
 
-type Tab = 'configurazione' | 'stream' | 'install' | 'logs'
+type Tab = 'configurazione' | 'stream' | 'install' | 'logs' | 'daemon'
 
 interface Toast {
   id: number
@@ -47,6 +48,7 @@ const TAB_LABELS: Record<Tab, string> = {
   stream: 'Stream',
   install: 'Install',
   logs: 'Logs',
+  daemon: 'Daemon',
 }
 
 export default function App() {
@@ -226,6 +228,14 @@ export default function App() {
   const handleSaveSettings = (s: AppSettings) => {
     setSettings(s)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(s))
+  }
+
+  const handleDaemonSettingsChanged = (patch: Partial<AppSettings>) => {
+    setSettings((prev) => {
+      const next = { ...prev, ...patch }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+      return next
+    })
   }
 
   const handleSettingsClick = () => {
@@ -502,6 +512,31 @@ export default function App() {
           <LogsView api={api()} />
         )}
         {activeTab === 'logs' && !settings.apiKey && (
+          <Flex direction="column" align="center" justify="center" h="300px" gap={3} color="app.textDim">
+            <Settings size={28} />
+            <Text fontFamily="mono" fontSize="sm">
+              Configure API key first
+            </Text>
+            <Button
+              size="sm"
+              variant="outline"
+              colorPalette="amber"
+              onClick={handleSettingsClick}
+            >
+              Open Settings
+            </Button>
+          </Flex>
+        )}
+
+        {/* ── TAB: Daemon ── */}
+        {activeTab === 'daemon' && settings.apiKey && (
+          <DaemonConfigView
+            api={api()}
+            onToast={toast}
+            onSettingsChanged={handleDaemonSettingsChanged}
+          />
+        )}
+        {activeTab === 'daemon' && !settings.apiKey && (
           <Flex direction="column" align="center" justify="center" h="300px" gap={3} color="app.textDim">
             <Settings size={28} />
             <Text fontFamily="mono" fontSize="sm">
