@@ -196,6 +196,7 @@ export function HistoryView({ api, onToast }: Props) {
             placeholder="Search title or body…"
             variant="subtle"
             size="sm"
+            flex={1}
             fontFamily="mono"
             fontSize="xs"
             color="app.inputColor"
@@ -232,6 +233,7 @@ export function HistoryView({ api, onToast }: Props) {
             placeholder="Source…"
             variant="subtle"
             size="sm"
+            flex={1}
             fontFamily="mono"
             fontSize="xs"
             color="app.inputColor"
