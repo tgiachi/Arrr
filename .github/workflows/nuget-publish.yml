@@ -96,3 +96,60 @@ jobs:
             --api-key ${{ secrets.NUGET_API_KEY }} \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate || true
+
+  publish-windows:
+    name: Build & Publish Windows-only NuGet packages
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Create local NuGet feed directory
+        run: New-Item -ItemType Directory -Force local-packages
+
+      - name: Restore & build Arrr.Core
+        run: |
+          dotnet restore src/Arrr.Core/Arrr.Core.csproj
+          dotnet build   src/Arrr.Core/Arrr.Core.csproj -c Release --no-restore
+
+      - name: Pack Arrr.Core to local feed
+        run: |
+          $VERSION = "$env:GITHUB_REF_NAME".TrimStart('v')
+          dotnet pack src/Arrr.Core/Arrr.Core.csproj -c Release --no-build -p:Version="$VERSION" -o ./local-packages
+
+      - name: Restore & build Windows plugins
+        run: |
+          foreach ($plugin in Get-ChildItem -Path plugins -Recurse -Filter "*.csproj") {
+            if (Select-String -Path $plugin.FullName -Pattern "windows" -Quiet) {
+              dotnet restore $plugin.FullName
+              dotnet build   $plugin.FullName -c Release --no-restore
+            }
+          }
+
+      - name: Pack Windows plugins
+        run: |
+          $VERSION = "$env:GITHUB_REF_NAME".TrimStart('v')
+          New-Item -ItemType Directory -Force nupkg
+          foreach ($plugin in Get-ChildItem -Path plugins -Recurse -Filter "*.csproj") {
+            if (Select-String -Path $plugin.FullName -Pattern "windows" -Quiet) {
+              dotnet pack $plugin.FullName -c Release --no-build -p:Version="$VERSION" -o ./nupkg
+            }
+          }
+
+      - name: Push to NuGet.org
+        run: |
+          dotnet nuget push "./nupkg/*.nupkg" `
+            --api-key ${{ secrets.NUGET_API_KEY }} `
+            --source https://api.nuget.org/v3/index.json `
+            --skip-duplicate
+          dotnet nuget push "./nupkg/*.snupkg" `
+            --api-key ${{ secrets.NUGET_API_KEY }} `
+            --source https://api.nuget.org/v3/index.json `
+            --skip-duplicate
