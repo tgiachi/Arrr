@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish (without v prefix, e.g. 1.6.0)"
+        required: true
 
 jobs:
   publish:
@@ -11,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      VERSION: ${{ github.event.inputs.version || github.ref_name }}
 
     steps:
       - uses: actions/checkout@v4
@@ -45,11 +52,11 @@ jobs:
 
       - name: Pack Arrr.Core to local feed
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VER="${VERSION#v}"
           dotnet pack src/Arrr.Core/Arrr.Core.csproj \
             -c Release \
             --no-build \
-            -p:Version="$VERSION" \
+            -p:Version="$VER" \
             -o ./local-packages
 
       - name: Restore & build plugins
@@ -68,22 +75,22 @@ jobs:
 
       - name: Pack
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
+          VER="${VERSION#v}"
           dotnet pack src/Arrr.Core/Arrr.Core.csproj \
             -c Release \
             --no-build \
-            -p:Version="$VERSION" \
+            -p:Version="$VER" \
             -o ./nupkg
           dotnet pack templates/Arrr.Templates.csproj \
             -c Release \
-            -p:Version="$VERSION" \
+            -p:Version="$VER" \
             -o ./nupkg
           for plugin in $(find plugins -name "*.csproj"); do
             if grep -q "windows" "$plugin"; then
               echo "Skipping Windows-only plugin on Linux: $plugin"
               continue
             fi
-            dotnet pack "$plugin" -c Release --no-build -p:Version="$VERSION" -o ./nupkg
+            dotnet pack "$plugin" -c Release --no-build -p:Version="$VER" -o ./nupkg
           done
 
       - name: Push to NuGet.org
@@ -102,6 +109,8 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: read
+    env:
+      VERSION: ${{ github.event.inputs.version || github.ref_name }}
 
     steps:
       - uses: actions/checkout@v4
@@ -121,8 +130,8 @@ jobs:
 
       - name: Pack Arrr.Core to local feed
         run: |
-          $VERSION = "$env:GITHUB_REF_NAME".TrimStart('v')
-          dotnet pack src/Arrr.Core/Arrr.Core.csproj -c Release --no-build -p:Version="$VERSION" -o ./local-packages
+          $VER = "$env:VERSION".TrimStart('v')
+          dotnet pack src/Arrr.Core/Arrr.Core.csproj -c Release --no-build -p:Version="$VER" -o ./local-packages
 
       - name: Restore & build Windows plugins
         run: |
@@ -135,11 +144,11 @@ jobs:
 
       - name: Pack Windows plugins
         run: |
-          $VERSION = "$env:GITHUB_REF_NAME".TrimStart('v')
+          $VER = "$env:VERSION".TrimStart('v')
           New-Item -ItemType Directory -Force nupkg
           foreach ($plugin in Get-ChildItem -Path plugins -Recurse -Filter "*.csproj") {
             if (Select-String -Path $plugin.FullName -Pattern "windows" -Quiet) {
-              dotnet pack $plugin.FullName -c Release --no-build -p:Version="$VERSION" -o ./nupkg
+              dotnet pack $plugin.FullName -c Release --no-build -p:Version="$VER" -o ./nupkg
             }
           }
 
