@@ -25,5 +25,6 @@
         <Project Path="plugins/Arrr.Plugin.Github/Arrr.Plugin.Github.csproj"/>
         <Project Path="plugins/Arrr.Plugin.Systemd/Arrr.Plugin.Systemd.csproj"/>
         <Project Path="plugins/Arrr.Sink.Bark/Arrr.Sink.Bark.csproj"/>
+        <Project Path="plugins/Arrr.Sink.WindowsNotify/Arrr.Sink.WindowsNotify.csproj"/>
     </Folder>
 </Solution>
