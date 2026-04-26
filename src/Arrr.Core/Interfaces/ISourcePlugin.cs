@@ -28,6 +28,12 @@ public interface ISourcePlugin
     string Icon { get; }
 
     /// <summary>
+    /// Supported OS platforms. Empty array means compatible with all platforms.
+    /// Use OS names from <see cref="System.Runtime.InteropServices.OSPlatform"/>: "Linux", "Windows", "OSX".
+    /// </summary>
+    string[] Platforms => [];
+
+    /// <summary>
     /// Starts the plugin. The plugin publishes events via <paramref name="context" />.EventBus
     /// until cancellation is requested.
     /// </summary>

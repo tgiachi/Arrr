@@ -497,6 +497,18 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
                 return;
             }
 
+            if (!PlatformUtils.IsCompatible(plugin.Platforms))
+            {
+                _logger.Warning(
+                    "Plugin {Id} requires platform(s) [{Platforms}], skipping on current OS",
+                    plugin.Id,
+                    string.Join(", ", plugin.Platforms)
+                );
+                context.Unload();
+
+                return;
+            }
+
             _dllPaths[plugin.Id] = dllPath;
 
             var entry = _config.Plugins.FirstOrDefault(p => p.Id == plugin.Id);

@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Arrr.Core.Types;
 
 namespace Arrr.Core.Utils;
@@ -53,4 +54,18 @@ public static class PlatformUtils
     /// <returns>True if running on Windows, otherwise false.</returns>
     public static bool IsRunningOnWindows()
         => OperatingSystem.IsWindows();
+
+    /// <summary>
+    /// Returns true if the current OS matches at least one of the specified platform names,
+    /// or if the array is empty (meaning all platforms are supported).
+    /// </summary>
+    public static bool IsCompatible(string[] platforms)
+    {
+        if (platforms.Length == 0)
+        {
+            return true;
+        }
+
+        return platforms.Any(p => RuntimeInformation.IsOSPlatform(OSPlatform.Create(p.ToUpperInvariant())));
+    }
 }

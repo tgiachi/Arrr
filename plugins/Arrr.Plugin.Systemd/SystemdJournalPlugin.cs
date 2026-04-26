@@ -22,6 +22,7 @@ public class SystemdJournalPlugin : ISourcePlugin, IConfigurablePlugin
     public string Description => "Tails the systemd journal and publishes log events as notifications.";
     public string[] Categories => ["system", "linux"];
     public string Icon => "🐧";
+    public string[] Platforms => ["Linux"];
     public Type ConfigType => typeof(SystemdConfig);
 
     public SystemdJournalPlugin() { }

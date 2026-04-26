@@ -30,6 +30,7 @@ internal class UnixSocketSink : ISinkPlugin, IConfigurablePlugin
     public string Author => "Arrr";
     public string Description => "Broadcasts notifications as newline-delimited JSON on a Unix domain socket.";
     public string Icon => "🔌";
+    public string[] Platforms => ["Linux", "OSX"];
     public Type ConfigType => typeof(UnixSocketSinkConfig);
 
     public async Task ConsumeAsync(Notification notification, CancellationToken ct)

@@ -6,6 +6,7 @@ using Arrr.Core.Data.Notifications;
 using Arrr.Core.Directories;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Types;
+using Arrr.Core.Utils;
 using Arrr.Service.Sinks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Serilog;
@@ -153,6 +154,13 @@ internal class SinkOrchestrator : BackgroundService, ISinkManager
                 }
 
                 if (Activator.CreateInstance(sinkType) is not ISinkPlugin sink)
+                {
+                    loadCtx.Unload();
+
+                    continue;
+                }
+
+                if (!PlatformUtils.IsCompatible(sink.Platforms))
                 {
                     loadCtx.Unload();
 
@@ -350,6 +358,18 @@ internal class SinkOrchestrator : BackgroundService, ISinkManager
                     continue;
                 }
 
+                if (!PlatformUtils.IsCompatible(sink.Platforms))
+                {
+                    _logger.Warning(
+                        "Sink {Id} requires platform(s) [{Platforms}], skipping on current OS",
+                        sink.Id,
+                        string.Join(", ", sink.Platforms)
+                    );
+                    loadCtx.Unload();
+
+                    continue;
+                }
+
                 var entry = config.Sinks.FirstOrDefault(s => s.Id == sink.Id);
 
                 if (entry is null || !entry.Enabled)
@@ -376,6 +396,17 @@ internal class SinkOrchestrator : BackgroundService, ISinkManager
 
         foreach (var sink in _builtIns)
         {
+            if (!PlatformUtils.IsCompatible(sink.Platforms))
+            {
+                _logger.Warning(
+                    "Built-in sink {Id} requires platform(s) [{Platforms}], skipping on current OS",
+                    sink.Id,
+                    string.Join(", ", sink.Platforms)
+                );
+
+                continue;
+            }
+
             var entry = config.Sinks.FirstOrDefault(s => s.Id == sink.Id);
 
             if (entry is { Enabled: false })

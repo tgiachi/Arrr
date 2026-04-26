@@ -11,6 +11,13 @@ public interface ISinkPlugin
     string Author { get; }
     string Description { get; }
     string Icon { get; }
+
+    /// <summary>
+    /// Supported OS platforms. Empty array means compatible with all platforms.
+    /// Use OS names from <see cref="System.Runtime.InteropServices.OSPlatform"/>: "Linux", "Windows", "OSX".
+    /// </summary>
+    string[] Platforms => [];
+
     Task ConsumeAsync(Notification notification, CancellationToken ct);
 
     Task StartAsync(ISinkContext context, CancellationToken ct);
