@@ -68,6 +68,7 @@ internal class NotificationHistoryService : INotificationHistoryService, IDispos
         {
             // Existing DB is unencrypted or from a different machine — discard and start fresh.
             conn.Dispose();
+            SqliteConnection.ClearAllPools(); // release pooled broken connection before retrying
             _logger.Warning(ex, "Could not open history DB with encryption key, recreating at {Path}", dbPath);
             if (File.Exists(dbPath))
                 File.Delete(dbPath);
