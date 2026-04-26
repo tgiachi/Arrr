@@ -49,14 +49,131 @@ public class TodoistSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposa
     public void Dispose()
         => _httpClient.Dispose();
 
-    public Task PollAsync(IPluginContext context, CancellationToken ct)
+    public async Task PollAsync(IPluginContext context, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(_config.ApiToken))
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        return Task.CompletedTask;
+        var now = _timeProvider.GetUtcNow();
+        var tasks = await FetchTasksAsync(ct);
+
+        foreach (var task in tasks)
+        {
+            if (task.Due?.Datetime is null)
+            {
+                continue;
+            }
+
+            if (!DateTimeOffset.TryParse(task.Due.Datetime, out var dueTime))
+            {
+                continue;
+            }
+
+            foreach (var alertMin in _config.AlertMinutes)
+            {
+                var triggerTime = dueTime - TimeSpan.FromMinutes(alertMin);
+                var key = $"{task.Id}_{alertMin}";
+
+                if (_firstPoll)
+                {
+                    if (triggerTime <= now)
+                    {
+                        _notifiedKeys.Add(key);
+                    }
+                    continue;
+                }
+
+                if (triggerTime > _lastPollTime && triggerTime <= now && _notifiedKeys.Add(key))
+                {
+                    await context.EventBus.PublishAsync(BuildDueDateNotification(task, alertMin, now), ct);
+                }
+            }
+        }
+
+        if (_config.NotifyReminders && _remindersAvailable)
+        {
+            await ProcessRemindersAsync(context, tasks, now, ct);
+        }
+
+        _lastPollTime = now;
+        _firstPoll = false;
+    }
+
+    private async Task ProcessRemindersAsync(
+        IPluginContext context,
+        IReadOnlyList<TodoistTaskResponse> tasks,
+        DateTimeOffset now,
+        CancellationToken ct)
+    {
+        List<TodoistReminderResponse> reminders;
+
+        try
+        {
+            reminders = await FetchRemindersAsync(ct);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
+        {
+            _context?.Logger.LogWarning("Reminders require Todoist Pro — disabling reminder fetching");
+            _remindersAvailable = false;
+            return;
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            _context?.Logger.LogError(ex, "Todoist: failed to fetch reminders");
+            return;
+        }
+
+        var taskMap = tasks.ToDictionary(t => t.Id);
+
+        foreach (var reminder in reminders)
+        {
+            if (reminder.Due.Datetime is null)
+            {
+                continue;
+            }
+
+            if (!DateTimeOffset.TryParse(reminder.Due.Datetime, out var reminderTime))
+            {
+                continue;
+            }
+
+            var key = $"reminder_{reminder.Id}";
+
+            if (_firstPoll)
+            {
+                if (reminderTime <= now)
+                {
+                    _notifiedKeys.Add(key);
+                }
+                continue;
+            }
+
+            if (reminderTime > _lastPollTime && reminderTime <= now && _notifiedKeys.Add(key))
+            {
+                taskMap.TryGetValue(reminder.TaskId, out var task);
+                var title = task is not null ? $"⏰ {task.Content}" : "⏰ Reminder";
+
+                await context.EventBus.PublishAsync(
+                    new Notification(
+                        Guid.NewGuid(),
+                        "com.arrr.plugin.todoist",
+                        title,
+                        "Reminder",
+                        now,
+                        null,
+                        Extras: new Dictionary<string, string>
+                        {
+                            ["todoist.task_id"] = reminder.TaskId,
+                            ["todoist.reminder_id"] = reminder.Id
+                        }
+                    ),
+                    ct
+                );
+            }
+        }
     }
 
     public async Task StartAsync(IPluginContext context, CancellationToken ct)

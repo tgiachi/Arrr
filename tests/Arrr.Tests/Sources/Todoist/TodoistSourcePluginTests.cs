@@ -255,7 +255,7 @@ public class TodoistSourcePluginTests
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
-            var url = request.RequestUri?.ToString() ?? "";
+            var url = request.RequestUri?.AbsoluteUri ?? "";
             RequestedUrls.Add(url);
 
             foreach (var (key, (code, content)) in _routes)
