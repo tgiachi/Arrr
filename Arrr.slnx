@@ -12,7 +12,6 @@
         <Project Path="plugins/Arrr.Sink.Ntfy/Arrr.Sink.Ntfy.csproj"/>
         <Project Path="plugins/Arrr.Sink.Smtp/Arrr.Sink.Smtp.csproj"/>
         <Project Path="plugins/Arrr.Plugin.CalDav/Arrr.Plugin.CalDav.csproj"/>
-        <Project Path="plugins/Arrr.Plugin.Digest/Arrr.Plugin.Digest.csproj"/>
         <Project Path="plugins/Arrr.Plugin.Healthcheck/Arrr.Plugin.Healthcheck.csproj"/>
         <Project Path="plugins/Arrr.Sink.Webhook/Arrr.Sink.Webhook.csproj"/>
         <Project Path="plugins/Arrr.Sink.Gotify/Arrr.Sink.Gotify.csproj"/>
