@@ -22,4 +22,7 @@ public class CalDavSourceConfig
 
     [Description("How many hours ahead to look for upcoming events")]
     public int LookaheadHours { get; set; } = 24;
+
+    [Description("Section heading used in digest notifications (e.g. \"Today's Calendar\")")]
+    public string DigestSectionTitle { get; set; } = "Calendar";
 }

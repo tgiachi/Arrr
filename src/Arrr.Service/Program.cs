@@ -70,6 +70,8 @@ await ConsoleApp.RunAsync(
         builder.Services.AddSingleton<INotificationHistoryService>(
             _ => new NotificationHistoryService(Path.Combine(directoriesConfig.Root, "history.db"))
         );
+        builder.Services.AddSingleton(TimeProvider.System);
+        builder.Services.AddHostedService<DigestService>();
         builder.Services.AddHostedService<EventBusHostedService>();
 
         builder.Services.AddCors(
