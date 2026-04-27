@@ -40,11 +40,14 @@ const defaultRule = (): RoutingRule => ({
 interface RuleRowProps {
   rule: RoutingRule
   index: number
+  total: number
   onChange: (r: RoutingRule) => void
   onDelete: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
 }
 
-function RuleRow({ rule, index, onChange, onDelete }: RuleRowProps) {
+function RuleRow({ rule, index, total, onChange, onDelete, onMoveUp, onMoveDown }: RuleRowProps) {
   const accent = '#f97316'
   const update = (patch: Partial<RoutingRule>) => onChange({ ...rule, ...patch })
 
@@ -82,6 +85,36 @@ function RuleRow({ rule, index, onChange, onDelete }: RuleRowProps) {
           _placeholder={{ color: 'app.placeholder' }}
           _focus={{ borderColor: accent, boxShadow: `0 0 0 1px ${accent}` }}
         />
+        <Flex gap={0.5} flexShrink={0}>
+          <Button
+            size="xs"
+            variant="ghost"
+            color="app.textDim"
+            _hover={{ color: accent, bg: 'rgba(249,115,22,0.08)' }}
+            onClick={onMoveUp}
+            disabled={index === 0}
+            px={1}
+            title="Move rule up"
+            fontFamily="mono"
+            fontSize="10px"
+          >
+            ▲
+          </Button>
+          <Button
+            size="xs"
+            variant="ghost"
+            color="app.textDim"
+            _hover={{ color: accent, bg: 'rgba(249,115,22,0.08)' }}
+            onClick={onMoveDown}
+            disabled={index === total - 1}
+            px={1}
+            title="Move rule down"
+            fontFamily="mono"
+            fontSize="10px"
+          >
+            ▼
+          </Button>
+        </Flex>
         <Button
           size="xs"
           variant="ghost"
@@ -609,6 +642,14 @@ export function RoutingView({ api, onToast }: Props) {
     patch({ rules: routing.rules.filter((_, idx) => idx !== i) })
   }
 
+  function moveRule(from: number, dir: -1 | 1) {
+    const to = from + dir
+    if (to < 0 || to >= routing.rules.length) return
+    const rules = [...routing.rules]
+    ;[rules[from], rules[to]] = [rules[to], rules[from]]
+    patch({ rules })
+  }
+
   if (loading) {
     return (
       <Flex justify="center" align="center" h="300px">
@@ -735,8 +776,11 @@ export function RoutingView({ api, onToast }: Props) {
                 key={i}
                 rule={rule}
                 index={i}
+                total={routing.rules.length}
                 onChange={(r) => updateRule(i, r)}
                 onDelete={() => deleteRule(i)}
+                onMoveUp={() => moveRule(i, -1)}
+                onMoveDown={() => moveRule(i, 1)}
               />
             ))}
           </VStack>
