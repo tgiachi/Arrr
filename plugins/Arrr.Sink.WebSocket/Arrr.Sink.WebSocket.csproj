@@ -8,7 +8,7 @@
         <RootNamespace>Arrr.Sink.WebSocket</RootNamespace>
 
         <PackageId>Arrr.Sink.WebSocket</PackageId>
-        <Version>1.6.0</Version>
+        <Version>1.7.0</Version>
         <Authors>Tom</Authors>
         <Company>orivega.io</Company>
         <Description>WebSocket sink for Arrr — broadcasts notifications as JSON frames to connected WebSocket clients.</Description>

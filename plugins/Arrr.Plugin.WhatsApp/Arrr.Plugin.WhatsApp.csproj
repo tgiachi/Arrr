@@ -8,7 +8,7 @@
         <RootNamespace>Arrr.Plugin.WhatsApp</RootNamespace>
 
         <PackageId>Arrr.Plugin.WhatsApp</PackageId>
-        <Version>1.6.0</Version>
+        <Version>1.7.0</Version>
         <Authors>Tom</Authors>
         <Company>orivega.io</Company>
         <Description>WhatsApp plugin for Arrr — receives messages via whatsapp-bridge (whatsmeow).</Description>
