@@ -19,4 +19,7 @@ public class TodoistConfig
 
     [Description("Also notify for explicit Todoist reminders (requires Todoist Pro/Business)")]
     public bool NotifyReminders { get; set; } = true;
+
+    [Description("Section heading used in digest notifications (e.g. \"Today's Tasks\")")]
+    public string DigestSectionTitle { get; set; } = "Tasks";
 }

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Arrr.Core.Data.Digest;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Types;
@@ -10,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Arrr.Plugin.Todoist;
 
-public class TodoistSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposable
+public class TodoistSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDigestProvider, IDisposable
 {
     private readonly HashSet<string> _notifiedKeys = [];
     private readonly HttpClient _httpClient;
@@ -46,8 +47,40 @@ public class TodoistSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposa
         _timeProvider = timeProvider;
     }
 
+    public string DigestSectionTitle => _config.DigestSectionTitle;
+
     public void Dispose()
         => _httpClient.Dispose();
+
+    public async Task<DigestSection> GetDigestSectionAsync(DateOnly forDate, CancellationToken ct)
+    {
+        var section = new DigestSection { Title = DigestSectionTitle };
+
+        if (string.IsNullOrEmpty(_config.ApiToken))
+        {
+            return section;
+        }
+
+        var tasks = await FetchTasksForDateAsync(forDate, ct);
+
+        foreach (var task in tasks)
+        {
+            string text;
+
+            if (task.Due?.Datetime is not null && DateTimeOffset.TryParse(task.Due.Datetime, out var dt))
+            {
+                text = $"{dt.ToLocalTime():HH:mm} - {task.Content}";
+            }
+            else
+            {
+                text = task.Content;
+            }
+
+            section.Items.Add(new DigestItem { Text = text });
+        }
+
+        return section;
+    }
 
     public async Task PollAsync(IPluginContext context, CancellationToken ct)
     {
@@ -164,6 +197,31 @@ public class TodoistSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposa
         catch (Exception ex)
         {
             _context?.Logger.LogError(ex, "Todoist: failed to fetch tasks");
+
+            return [];
+        }
+    }
+
+    private async Task<List<TodoistTaskResponse>> FetchTasksForDateAsync(DateOnly date, CancellationToken ct)
+    {
+        var filter = Uri.EscapeDataString($"due: {date:yyyy-MM-dd}");
+        var url = $"https://api.todoist.com/rest/v2/tasks?filter={filter}";
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Authorization = new("Bearer", _config.ApiToken);
+
+        try
+        {
+            var response = await _httpClient.SendAsync(request, ct);
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync(ct);
+
+            return JsonSerializer.Deserialize<List<TodoistTaskResponse>>(json, JsonOptions) ?? [];
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            _context?.Logger.LogError(ex, "Todoist digest: failed to fetch tasks for {Date}", date);
 
             return [];
         }
