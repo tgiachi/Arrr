@@ -53,6 +53,30 @@ export interface DigestConfig {
   schedule: DigestScheduleEntry[]
 }
 
+export interface ExtraCondition {
+  key: string
+  value: string
+}
+
+export interface RoutingRule {
+  name: string
+  enabled: boolean
+  sourcePattern: string
+  titleContains: string
+  bodyContains: string
+  minPriority: number
+  block: boolean
+  allowSinks: string[]
+  extraConditions: ExtraCondition[]
+  activeFrom: string
+  activeTo: string
+}
+
+export interface RoutingConfig {
+  enabled: boolean
+  rules: RoutingRule[]
+}
+
 export interface DaemonConfig {
   apiKey: string
   isDebug: boolean
@@ -61,6 +85,7 @@ export interface DaemonConfig {
   deduplicationWindowSeconds: number
   historyEnabled: boolean
   digest: DigestConfig
+  routing: RoutingConfig
 }
 
 export interface HistoryEntry {
@@ -78,6 +103,15 @@ export interface HistoryPage {
   total: number
   page: number
   limit: number
+}
+
+export interface RoutingLogEntry {
+  timestamp: string
+  ruleName: string
+  action: 'blocked' | 'restricted' | 'allowed'
+  notificationSource: string
+  notificationTitle: string
+  targetSinks: string[]
 }
 
 export interface NotificationItem {

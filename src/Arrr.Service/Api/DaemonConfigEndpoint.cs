@@ -26,7 +26,8 @@ internal static class DaemonConfigEndpoint
                         c.Deduplication.Enabled,
                         c.Deduplication.WindowSeconds,
                         c.HistoryEnabled,
-                        c.Digest
+                        c.Digest,
+                        c.Routing
                     )
                 );
             }
@@ -49,6 +50,7 @@ internal static class DaemonConfigEndpoint
                 c.Deduplication.WindowSeconds = body.DeduplicationWindowSeconds;
                 c.HistoryEnabled = body.HistoryEnabled;
                 c.Digest = body.Digest;
+                c.Routing = body.Routing;
                 configService.Save();
 
                 return Results.Ok();

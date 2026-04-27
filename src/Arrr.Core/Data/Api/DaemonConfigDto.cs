@@ -9,5 +9,6 @@ public record DaemonConfigDto(
     bool DeduplicationEnabled,
     int DeduplicationWindowSeconds,
     bool HistoryEnabled,
-    DigestConfig Digest
+    DigestConfig Digest,
+    RoutingConfig Routing
 );

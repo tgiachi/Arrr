@@ -43,13 +43,15 @@ function diff(a: DaemonConfig, b: DaemonConfig): string[] {
     deduplicationWindowSeconds: 'Window',
     historyEnabled: 'History',
     digest: 'Digest',
+    routing: 'Routing',
   }
   return (Object.keys(a) as (keyof DaemonConfig)[])
     .filter((k) => {
-      if (k === 'digest') return JSON.stringify(a[k]) !== JSON.stringify(b[k])
+      if (k === 'digest' || k === 'routing') return JSON.stringify(a[k]) !== JSON.stringify(b[k])
       return a[k] !== b[k]
     })
-    .map((k) => labels[k])
+    .map((k) => labels[k] ?? k)
+    .filter(Boolean)
 }
 
 // ─────────────────────────── Pod wrapper ────────────────────────────────────

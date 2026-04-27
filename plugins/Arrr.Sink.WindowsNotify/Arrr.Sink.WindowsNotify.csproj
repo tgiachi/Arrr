@@ -26,7 +26,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Arrr.Core" Version="*"/>
+        <PackageReference Include="Arrr.Core" Version="1.6.0" />
         <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3"/>
     </ItemGroup>
 

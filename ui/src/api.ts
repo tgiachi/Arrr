@@ -1,4 +1,4 @@
-import type { DaemonConfig, HistoryPage, Plugin, PluginConfigResponse, Sink } from './types'
+import type { DaemonConfig, HistoryPage, Plugin, PluginConfigResponse, RoutingLogEntry, Sink } from './types'
 
 export class ArrrApi {
   constructor(
@@ -133,6 +133,10 @@ export class ArrrApi {
 
   async getLogs(): Promise<string[]> {
     return (await this.req('/api/logs')).json()
+  }
+
+  async getRoutingLog(limit = 50): Promise<RoutingLogEntry[]> {
+    return (await this.req(`/api/routing/log?limit=${limit}`)).json()
   }
 
   async getQrCode(pluginId: string): Promise<string | null> {

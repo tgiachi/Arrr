@@ -23,12 +23,13 @@ import { LogsView } from './components/LogsView'
 import { StreamView } from './components/StreamView'
 import { DaemonConfigView } from './components/DaemonConfigView'
 import { HistoryView } from './components/HistoryView'
+import { RoutingView } from './components/RoutingView'
 import { ThemeToggle } from './components/ThemeToggle'
 import type { Plugin, Sink, Settings as AppSettings } from './types'
 
 const STORAGE_KEY = 'arrr-settings'
 
-type Tab = 'configurazione' | 'stream' | 'install' | 'logs' | 'daemon' | 'history'
+type Tab = 'configurazione' | 'stream' | 'install' | 'logs' | 'daemon' | 'history' | 'routing'
 
 interface Toast {
   id: number
@@ -51,6 +52,7 @@ const TAB_LABELS: Record<Tab, string> = {
   logs: 'Logs',
   daemon: 'Daemon',
   history: 'History',
+  routing: 'Routing',
 }
 
 export default function App() {
@@ -543,6 +545,20 @@ export default function App() {
           <HistoryView api={api()} onToast={toast} />
         )}
         {activeTab === 'history' && !settings.apiKey && (
+          <Flex direction="column" align="center" justify="center" h="300px" gap={3} color="app.textDim">
+            <Settings size={28} />
+            <Text fontFamily="mono" fontSize="sm">Configure API key first</Text>
+            <Button size="sm" variant="outline" colorPalette="amber" onClick={handleSettingsClick}>
+              Open Settings
+            </Button>
+          </Flex>
+        )}
+
+        {/* ── TAB: Routing ── */}
+        {activeTab === 'routing' && settings.apiKey && (
+          <RoutingView api={api()} onToast={toast} />
+        )}
+        {activeTab === 'routing' && !settings.apiKey && (
           <Flex direction="column" align="center" justify="center" h="300px" gap={3} color="app.textDim">
             <Settings size={28} />
             <Text fontFamily="mono" fontSize="sm">Configure API key first</Text>
