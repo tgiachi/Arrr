@@ -11,6 +11,9 @@ public class GitlabConfig
     [Description("GitLab Personal Access Token with 'api' scope"), Sensitive]
     public string PersonalAccessToken { get; set; } = "";
 
-    [Description("How often to poll for new to-dos, in minutes")]
+    [Description("How often to poll for new to-dos and pipeline statuses, in minutes")]
     public int PollIntervalMinutes { get; set; } = 5;
+
+    [Description("Project paths to monitor for CI pipeline status (e.g. [\"namespace/project\"])")]
+    public List<string> PipelineProjects { get; set; } = [];
 }

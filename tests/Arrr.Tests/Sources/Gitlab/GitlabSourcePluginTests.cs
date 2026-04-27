@@ -12,6 +12,8 @@ public class GitlabSourcePluginTests
     private FakeEventBus _eventBus = null!;
     private GitlabSourcePlugin? _plugin;
 
+    // ── todos ─────────────────────────────────────────────────────────────────
+
     [Test]
     public async Task PollAsync_DoesNotPublish_OnFirstPoll()
     {
@@ -149,6 +151,139 @@ public class GitlabSourcePluginTests
         Assert.That(n.GetExtra("gitlab.action"), Is.EqualTo("assigned"));
     }
 
+    // ── pipelines ─────────────────────────────────────────────────────────────
+
+    [Test]
+    public async Task PollAsync_Pipeline_DoesNotPublish_OnFirstPoll()
+    {
+        _handler.ResponsesByUrl["/todos"] = BuildTodosJson([]);
+        _handler.ResponsesByUrl["/pipelines"] = BuildPipelinesJson(
+            [new(100, "failed", "main", "https://gitlab.com/org/proj/-/pipelines/100")]
+        );
+
+        var ctx = MakeContextWithPipelines(["org/proj"]);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await _plugin!.StartAsync(ctx, cts.Token);
+        await _plugin.PollAsync(ctx, cts.Token);
+
+        Assert.That(_eventBus.Published, Is.Empty);
+    }
+
+    [Test]
+    public async Task PollAsync_Pipeline_PublishesOnTerminalStatus()
+    {
+        _handler.ResponsesByUrl["/todos"] = BuildTodosJson([]);
+        _handler.ResponsesByUrl["/pipelines"] = BuildPipelinesJson([]);
+
+        var ctx = MakeContextWithPipelines(["org/proj"]);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await _plugin!.StartAsync(ctx, cts.Token);
+        await _plugin.PollAsync(ctx, cts.Token); // seed
+
+        _handler.ResponsesByUrl["/pipelines"] = BuildPipelinesJson(
+            [new(200, "success", "main", "https://gitlab.com/org/proj/-/pipelines/200")]
+        );
+
+        await _plugin.PollAsync(ctx, cts.Token);
+
+        Assert.That(_eventBus.Published, Has.Count.EqualTo(1));
+        var n = (Notification)_eventBus.Published[0];
+        Assert.That(n.Title, Does.Contain("✅"));
+        Assert.That(n.Title, Does.Contain("org/proj"));
+        Assert.That(n.Title, Does.Contain("[main]"));
+        Assert.That(n.Body, Does.Contain("200"));
+    }
+
+    [Test]
+    public async Task PollAsync_Pipeline_DoesNotPublish_NonTerminalStatus()
+    {
+        _handler.ResponsesByUrl["/todos"] = BuildTodosJson([]);
+        _handler.ResponsesByUrl["/pipelines"] = BuildPipelinesJson([]);
+
+        var ctx = MakeContextWithPipelines(["org/proj"]);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await _plugin!.StartAsync(ctx, cts.Token);
+        await _plugin.PollAsync(ctx, cts.Token); // seed
+
+        _handler.ResponsesByUrl["/pipelines"] = BuildPipelinesJson(
+            [new(300, "running", "develop", "")]
+        );
+
+        await _plugin.PollAsync(ctx, cts.Token);
+
+        Assert.That(_eventBus.Published, Is.Empty);
+    }
+
+    [Test]
+    public async Task PollAsync_Pipeline_DoesNotPublish_Duplicates()
+    {
+        _handler.ResponsesByUrl["/todos"] = BuildTodosJson([]);
+        _handler.ResponsesByUrl["/pipelines"] = BuildPipelinesJson([]);
+
+        var ctx = MakeContextWithPipelines(["org/proj"]);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await _plugin!.StartAsync(ctx, cts.Token);
+        await _plugin.PollAsync(ctx, cts.Token); // seed
+
+        _handler.ResponsesByUrl["/pipelines"] = BuildPipelinesJson(
+            [new(400, "failed", "main", "")]
+        );
+
+        await _plugin.PollAsync(ctx, cts.Token); // publishes
+        await _plugin.PollAsync(ctx, cts.Token); // same — must NOT publish again
+
+        Assert.That(_eventBus.Published, Has.Count.EqualTo(1));
+    }
+
+    [Test]
+    public async Task PollAsync_Pipeline_FailedPipeline_HasHighPriority()
+    {
+        _handler.ResponsesByUrl["/todos"] = BuildTodosJson([]);
+        _handler.ResponsesByUrl["/pipelines"] = BuildPipelinesJson([]);
+
+        var ctx = MakeContextWithPipelines(["org/proj"]);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await _plugin!.StartAsync(ctx, cts.Token);
+        await _plugin.PollAsync(ctx, cts.Token); // seed
+
+        _handler.ResponsesByUrl["/pipelines"] = BuildPipelinesJson(
+            [new(500, "failed", "main", "")]
+        );
+
+        await _plugin.PollAsync(ctx, cts.Token);
+
+        var n = (Notification)_eventBus.Published[0];
+        Assert.That(n.Priority, Is.EqualTo(NotificationPriority.High));
+        Assert.That(n.Title, Does.Contain("❌"));
+    }
+
+    [Test]
+    public async Task PollAsync_Pipeline_SetsExtras()
+    {
+        _handler.ResponsesByUrl["/todos"] = BuildTodosJson([]);
+        _handler.ResponsesByUrl["/pipelines"] = BuildPipelinesJson([]);
+
+        var ctx = MakeContextWithPipelines(["org/proj"]);
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await _plugin!.StartAsync(ctx, cts.Token);
+        await _plugin.PollAsync(ctx, cts.Token); // seed
+
+        _handler.ResponsesByUrl["/pipelines"] = BuildPipelinesJson(
+            [new(600, "canceled", "feature/x", "https://gitlab.com/org/proj/-/pipelines/600")]
+        );
+
+        await _plugin.PollAsync(ctx, cts.Token);
+
+        var n = (Notification)_eventBus.Published[0];
+        Assert.That(n.GetExtra("gitlab.project"), Is.EqualTo("org/proj"));
+        Assert.That(n.GetExtra("gitlab.pipeline_id"), Is.EqualTo("600"));
+        Assert.That(n.GetExtra("gitlab.ref"), Is.EqualTo("feature/x"));
+        Assert.That(n.GetExtra("gitlab.status"), Is.EqualTo("canceled"));
+        Assert.That(n.Url, Is.EqualTo("https://gitlab.com/org/proj/-/pipelines/600"));
+    }
+
+    // ── helpers ───────────────────────────────────────────────────────────────
+
     [SetUp]
     public void SetUp()
     {
@@ -187,6 +322,37 @@ public class GitlabSourcePluginTests
         );
     }
 
+    private static string BuildPipelinesJson(
+        IEnumerable<(int Id, string Status, string Ref, string WebUrl)> items
+    )
+    {
+        var list = items.Select(
+            i => new
+            {
+                id = i.Id,
+                status = i.Status,
+                @ref = i.Ref,
+                web_url = i.WebUrl,
+                updated_at = DateTimeOffset.UtcNow
+            }
+        );
+
+        return JsonSerializer.Serialize(
+            list,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower }
+        );
+    }
+
     private FakePluginContext MakeContext()
         => new(_eventBus, _ => new GitlabConfig { PersonalAccessToken = "glpat_fake" });
+
+    private FakePluginContext MakeContextWithPipelines(List<string> projects)
+        => new(
+            _eventBus,
+            _ => new GitlabConfig
+            {
+                PersonalAccessToken = "glpat_fake",
+                PipelineProjects = projects
+            }
+        );
 }
