@@ -22,6 +22,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Normalize version (strip leading v)
+        run: echo "VERSION=${VERSION#v}" >> $GITHUB_ENV
+
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
@@ -114,6 +117,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Normalize version (strip leading v)
+        run: |
+          $ver = $env:VERSION -replace '^v', ''
+          echo "VERSION=$ver" >> $env:GITHUB_ENV
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
