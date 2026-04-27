@@ -154,7 +154,8 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
                         entry is { Enabled: true },
                         _hosts.ContainsKey(plugin.Id),
                         plugin is ICallbackPlugin,
-                        plugin is IQrPlugin
+                        plugin is IQrPlugin,
+                        plugin is ITestablePlugin
                     )
                 );
 
@@ -295,6 +296,40 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
 
             await using var stream = File.Create(configPath);
             await JsonSerializer.SerializeAsync(stream, config, configType, _jsonOpts, ct);
+        }
+        finally
+        {
+            ctx.Unload();
+        }
+    }
+
+    public async Task<PluginTestResult?> TestPluginAsync(
+        string pluginId,
+        JsonElement config,
+        CancellationToken ct = default)
+    {
+        var dll = ResolveDllPath(pluginId) ?? throw new KeyNotFoundException($"Plugin '{pluginId}' not found.");
+        var ctx = new PluginLoadContext(dll);
+
+        try
+        {
+            var assembly = ctx.LoadFromAssemblyPath(dll);
+            var pluginType = assembly.GetTypes()
+                                     .FirstOrDefault(t => !t.IsAbstract && t.IsAssignableTo(typeof(ISourcePlugin)));
+
+            if (pluginType is null || Activator.CreateInstance(pluginType) is not ISourcePlugin plugin)
+            {
+                return null;
+            }
+
+            if (plugin is not ITestablePlugin testable)
+            {
+                return null;
+            }
+
+            using var testCtx = new TestPluginContext(config);
+            await plugin.StartAsync(testCtx, ct);
+            return await testable.TestAsync(testCtx, ct);
         }
         finally
         {

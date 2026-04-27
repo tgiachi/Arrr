@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Arrr.Core.Data.Api;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Types;
@@ -8,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Arrr.Plugin.Gitlab;
 
-public class GitlabSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposable
+public class GitlabSourcePlugin : IPollingPlugin, IConfigurablePlugin, ITestablePlugin, IDisposable
 {
     private static readonly HashSet<string> TerminalStatuses = ["success", "failed", "canceled"];
 
@@ -288,6 +289,57 @@ public class GitlabSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
                 );
             }
         }
+    }
+
+    public async Task<PluginTestResult> TestAsync(IPluginContext context, CancellationToken ct)
+    {
+        if (_config.Servers.Count == 0)
+        {
+            return new(false, "No servers configured.");
+        }
+
+        var lines = new List<string>();
+        var allOk = true;
+
+        foreach (var server in _config.Servers)
+        {
+            if (string.IsNullOrEmpty(server.PersonalAccessToken))
+            {
+                lines.Add($"{server.GitlabUrl}: ⚠ no token");
+                allOk = false;
+                continue;
+            }
+
+            try
+            {
+                var baseUrl = server.GitlabUrl.TrimEnd('/');
+                var request = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/v4/user");
+                request.Headers.Add("PRIVATE-TOKEN", server.PersonalAccessToken);
+
+                var response = await _http.SendAsync(request, ct);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    lines.Add($"{server.GitlabUrl}: ✓ OK ({(int)response.StatusCode})");
+                }
+                else
+                {
+                    lines.Add($"{server.GitlabUrl}: ✗ {(int)response.StatusCode} {response.ReasonPhrase}");
+                    allOk = false;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                lines.Add($"{server.GitlabUrl}: ✗ {ex.Message}");
+                allOk = false;
+            }
+        }
+
+        return new(allOk, string.Join("\n", lines));
     }
 
     public void Dispose()

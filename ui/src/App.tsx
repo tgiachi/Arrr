@@ -718,6 +718,9 @@ export default function App() {
           name={configuringPlugin.name}
           getConfig={() => api().getConfig(configuringPlugin.id)}
           saveConfig={(c) => api().saveConfig(configuringPlugin.id, c)}
+          testConfig={configuringPlugin.hasTest
+            ? (c) => api().testConfig(configuringPlugin.id, c)
+            : undefined}
           onClose={() => setConfiguringPlugin(null)}
           onToast={toast}
         />

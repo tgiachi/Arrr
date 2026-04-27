@@ -23,6 +23,7 @@ export interface Plugin {
   running: boolean
   hasCallback: boolean
   hasQr: boolean
+  hasTest: boolean
 }
 
 export interface ConfigFieldInfo {

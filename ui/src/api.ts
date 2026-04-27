@@ -71,6 +71,13 @@ export class ArrrApi {
     })
   }
 
+  async testConfig(pluginId: string, config: Record<string, unknown>): Promise<{ success: boolean; message: string }> {
+    return (await this.req(`/api/plugins/${encodeURIComponent(pluginId)}/test`, {
+      method: 'POST',
+      body: JSON.stringify(config),
+    })).json()
+  }
+
   async sendCallback(pluginId: string, body: string) {
     await this.req(`/api/plugins/${encodeURIComponent(pluginId)}/callback`, {
       method: 'POST',

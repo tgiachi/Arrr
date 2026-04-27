@@ -45,4 +45,12 @@ public interface IPluginManager
     /// encrypting any <c>[Sensitive]</c> fields before writing.
     /// </summary>
     Task SavePluginConfigAsync(string pluginId, JsonElement config, CancellationToken ct = default);
+
+    /// <summary>
+    /// Instantiates the plugin with the provided <paramref name="config" /> (without persisting it)
+    /// and calls <see cref="ITestablePlugin.TestAsync" />.
+    /// Returns <c>null</c> if the plugin does not implement <see cref="ITestablePlugin" />.
+    /// Throws <see cref="KeyNotFoundException" /> if the plugin DLL is not found.
+    /// </summary>
+    Task<PluginTestResult?> TestPluginAsync(string pluginId, JsonElement config, CancellationToken ct = default);
 }

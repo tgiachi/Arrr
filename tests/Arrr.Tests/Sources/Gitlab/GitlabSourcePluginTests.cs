@@ -342,6 +342,66 @@ public class GitlabSourcePluginTests
         Assert.That(requestUrls, Has.Some.EqualTo("gitlab.com"));
     }
 
+    // ── test config ───────────────────────────────────────────────────────────
+
+    [Test]
+    public async Task TestAsync_ReturnsSuccess_WhenServerResponds()
+    {
+        _handler.ResponseContent = "{}";
+
+        var ctx = MakeContext();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await _plugin!.StartAsync(ctx, cts.Token);
+        var result = await _plugin.TestAsync(ctx, cts.Token);
+
+        Assert.That(result.Success, Is.True);
+        Assert.That(result.Message, Does.Contain("OK").IgnoreCase);
+    }
+
+    [Test]
+    public async Task TestAsync_ReturnsFailure_WhenServerReturns401()
+    {
+        _handler.ResponseStatusCode = System.Net.HttpStatusCode.Unauthorized;
+
+        var ctx = MakeContext();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await _plugin!.StartAsync(ctx, cts.Token);
+        var result = await _plugin.TestAsync(ctx, cts.Token);
+
+        Assert.That(result.Success, Is.False);
+        Assert.That(result.Message, Does.Contain("401").Or.Contain("Unauthorized").IgnoreCase);
+    }
+
+    [Test]
+    public async Task TestAsync_ReturnsFailure_WhenNoServersConfigured()
+    {
+        var ctx = new FakePluginContext(_eventBus, _ => new GitlabConfig { Servers = [] });
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await _plugin!.StartAsync(ctx, cts.Token);
+        var result = await _plugin.TestAsync(ctx, cts.Token);
+
+        Assert.That(result.Success, Is.False);
+    }
+
+    [Test]
+    public async Task TestAsync_MultiServer_ReportsEachServer()
+    {
+        _handler.ResponsesByUrl["gitlab.com"] = "{}";
+        _handler.ResponsesByUrl["self-hosted.example.com"] = "{}";
+
+        var ctx = MakeContextMultiServer(
+            new GitlabServerConfig { GitlabUrl = "https://gitlab.com", PersonalAccessToken = "tok1" },
+            new GitlabServerConfig { GitlabUrl = "https://self-hosted.example.com", PersonalAccessToken = "tok2" }
+        );
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await _plugin!.StartAsync(ctx, cts.Token);
+        var result = await _plugin.TestAsync(ctx, cts.Token);
+
+        Assert.That(result.Success, Is.True);
+        Assert.That(result.Message, Does.Contain("gitlab.com"));
+        Assert.That(result.Message, Does.Contain("self-hosted.example.com"));
+    }
+
     // ── helpers ───────────────────────────────────────────────────────────────
 
     [SetUp]

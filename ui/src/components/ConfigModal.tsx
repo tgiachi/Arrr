@@ -21,15 +21,18 @@ interface Props {
   onToast: (title: string, type: 'success' | 'error') => void
   getConfig: () => Promise<PluginConfigResponse>
   saveConfig: (config: Record<string, unknown>) => Promise<void>
+  testConfig?: (config: Record<string, unknown>) => Promise<{ success: boolean; message: string }>
 }
 
-export function ConfigModal({ id, name, onClose, onToast, getConfig, saveConfig }: Props) {
+export function ConfigModal({ id, name, onClose, onToast, getConfig, saveConfig, testConfig }: Props) {
   const [json, setJson] = useState('')
   const [schema, setSchema] = useState<ConfigFieldInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
   const [parseError, setParseError] = useState<string | null>(null)
   const [schemaOpen, setSchemaOpen] = useState(false)
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
 
   useEffect(() => {
     getConfig()
@@ -60,6 +63,27 @@ export function ConfigModal({ id, name, onClose, onToast, getConfig, saveConfig 
       onToast((e as Error).message, 'error')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleTest = async () => {
+    let parsed: Record<string, unknown>
+    try {
+      parsed = JSON.parse(json)
+      setParseError(null)
+    } catch {
+      setParseError('Invalid JSON')
+      return
+    }
+    setTesting(true)
+    setTestResult(null)
+    try {
+      const result = await testConfig!(parsed)
+      setTestResult(result)
+    } catch (e) {
+      setTestResult({ success: false, message: (e as Error).message })
+    } finally {
+      setTesting(false)
     }
   }
 
@@ -122,6 +146,27 @@ export function ConfigModal({ id, name, onClose, onToast, getConfig, saveConfig 
                 />
                 {parseError && (
                   <Text color="red.400" fontSize="xs" mt={1} fontFamily="mono">{parseError}</Text>
+                )}
+
+                {testResult && (
+                  <Box
+                    mt={2}
+                    px={3}
+                    py={2}
+                    borderRadius="md"
+                    bg={testResult.success ? 'green.900' : 'red.900'}
+                    borderWidth="1px"
+                    borderColor={testResult.success ? 'green.600' : 'red.600'}
+                  >
+                    <Text
+                      fontFamily="mono"
+                      fontSize="xs"
+                      whiteSpace="pre-wrap"
+                      color={testResult.success ? 'green.300' : 'red.300'}
+                    >
+                      {testResult.message}
+                    </Text>
+                  </Box>
                 )}
 
                 {describedFields.length > 0 && (
@@ -188,10 +233,22 @@ export function ConfigModal({ id, name, onClose, onToast, getConfig, saveConfig 
 
           <Dialog.Footer px={5} pb={5} pt={3}>
             <Flex gap={2} justify="flex-end" w="full">
-              <Button size="sm" variant="ghost" color="app.textMuted" onClick={onClose} disabled={saving}>
+              {testConfig && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  colorPalette="blue"
+                  onClick={handleTest}
+                  loading={testing}
+                  disabled={loading || saving}
+                >
+                  Test connection
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" color="app.textMuted" onClick={onClose} disabled={saving || testing}>
                 Cancel
               </Button>
-              <Button size="sm" colorPalette="amber" onClick={handleSave} loading={saving} disabled={loading}>
+              <Button size="sm" colorPalette="amber" onClick={handleSave} loading={saving} disabled={loading || testing}>
                 Save
               </Button>
             </Flex>

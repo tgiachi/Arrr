@@ -37,4 +37,7 @@ internal class FakePluginManager : IPluginManager
 
     public Task SavePluginConfigAsync(string pluginId, JsonElement config, CancellationToken ct = default)
         => Task.CompletedTask;
+
+    public Task<PluginTestResult?> TestPluginAsync(string pluginId, JsonElement config, CancellationToken ct = default)
+        => Task.FromResult<PluginTestResult?>(null);
 }
