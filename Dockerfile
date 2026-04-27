@@ -19,16 +19,18 @@ RUN dotnet publish src/Arrr.Service/Arrr.Service.csproj \
     -o /publish
 
 # ── Stage 3: Runtime image ───────────────────────────────────────────────────
-FROM mcr.microsoft.com/dotnet/runtime-deps:10.0-bookworm-slim
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0
 WORKDIR /app
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=dotnet-builder /publish/Arrr.Service ./arrr
+COPY --from=dotnet-builder /publish/ ./
 COPY docker-entrypoint.sh ./
-RUN chmod +x arrr docker-entrypoint.sh
+RUN mv Arrr.Service arrr \
+    && chmod +x arrr docker-entrypoint.sh \
+    && rm -f *.pdb arrr.config
 
 EXPOSE 5150
 VOLUME ["/data"]
@@ -37,7 +39,4 @@ ENV XDG_DATA_HOME=/data
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -sf http://localhost:5150/api/version || exit 1
 
-# Pass --log-to-file false by default so logs go to stdout only.
-# Override with: docker run ... arrr --log-to-file true
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
-CMD ["--log-to-file", "false"]
