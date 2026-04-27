@@ -5,8 +5,7 @@ namespace Arrr.Plugin.Todoist.Data;
 
 public class TodoistConfig
 {
-    [Description("Todoist API token (Settings → Integrations → Developer)")]
-    [Sensitive]
+    [Description("Todoist API token (Settings → Integrations → Developer)"), Sensitive]
     public string ApiToken { get; set; } = "";
 
     [Description("Todoist filter string (e.g. \"today | overdue\", \"#Work & @urgent\")")]

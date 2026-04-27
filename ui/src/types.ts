@@ -41,6 +41,18 @@ export interface Settings {
   baseUrl: string
 }
 
+export interface DigestScheduleEntry {
+  label: string
+  titleEmoji: string
+  fireAt: string
+  dayOffset: number
+}
+
+export interface DigestConfig {
+  enabled: boolean
+  schedule: DigestScheduleEntry[]
+}
+
 export interface DaemonConfig {
   apiKey: string
   isDebug: boolean
@@ -48,6 +60,7 @@ export interface DaemonConfig {
   deduplicationEnabled: boolean
   deduplicationWindowSeconds: number
   historyEnabled: boolean
+  digest: DigestConfig
 }
 
 export interface HistoryEntry {
