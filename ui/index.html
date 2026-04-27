@@ -16,6 +16,15 @@
       html { background: #080c14; }
       html.light { background: #f0f4f8; }
       body { margin: 0; background: inherit; }
+
+      /* Ambient depth — dark mode only */
+      html.dark body {
+        background-image:
+          radial-gradient(ellipse 70% 50% at 80% -5%, rgba(245,158,11,0.07) 0%, transparent 55%),
+          radial-gradient(ellipse 55% 40% at -15% 105%, rgba(56,189,248,0.05) 0%, transparent 55%);
+        background-attachment: fixed;
+      }
+
       @keyframes slideUp {
         from { opacity: 0; transform: translateY(16px); }
         to   { opacity: 1; transform: translateY(0); }
@@ -27,6 +36,15 @@
       @keyframes fadeIn {
         from { opacity: 0; transform: translateY(8px); }
         to { opacity: 1; transform: translateY(0); }
+      }
+
+      /* Accessibility: respect OS motion preference */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
       }
     </style>
   </head>

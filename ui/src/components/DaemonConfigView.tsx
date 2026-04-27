@@ -9,6 +9,7 @@ import {
   Switch,
   Text,
   Tooltip,
+  VStack,
 } from '@chakra-ui/react'
 import {
   ClipboardList,
@@ -74,6 +75,7 @@ function Pod({ accent, icon, title, subtitle, children, delay = 0 }: PodProps) {
       borderColor="app.cardBorder"
       borderRadius="xl"
       overflow="hidden"
+      boxShadow="inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 12px rgba(0,0,0,0.18)"
       style={{
         animation: `slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms both`,
       }}
@@ -513,7 +515,8 @@ export function DaemonConfigView({ api, onToast, onSettingsChanged }: Props) {
           </Box>
         </Flex>
 
-        {/* ── Security & Access ── */}
+        {/* ── Pods ── */}
+        <VStack gap={4} align="stretch">
         <Pod
           accent="var(--chakra-colors-amber-500)"
           icon={<ShieldCheck size={14} />}
@@ -710,6 +713,7 @@ export function DaemonConfigView({ api, onToast, onSettingsChanged }: Props) {
 
         {/* ── Digest ── */}
         <DigestPod form={form} original={original} setForm={setForm} />
+        </VStack>
 
         {/* ── API Key hint ── */}
         {original?.apiKey !== form.apiKey && (

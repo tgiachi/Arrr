@@ -31,8 +31,14 @@ export function SinkCard({ sink, busy, onToggle, onReload, onConfigure }: Props)
       borderColor="app.cardBorder"
       borderRadius="xl"
       overflow="hidden"
-      transition="all 0.2s"
-      _hover={{ borderColor: 'app.cardBorderHover', bg: 'app.cardBgHover', transform: 'translateY(-2px)' }}
+      transition="all 0.2s cubic-bezier(0.16,1,0.3,1)"
+      boxShadow="inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 12px rgba(0,0,0,0.2)"
+      _hover={{
+        borderColor: 'app.cardBorderHover',
+        bg: 'app.cardBgHover',
+        transform: 'translateY(-2px)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1), 0 8px 28px rgba(0,0,0,0.38)',
+      }}
       opacity={busy ? 0.6 : 1}
     >
       <Card.Body p={5}>

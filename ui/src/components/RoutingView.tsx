@@ -21,8 +21,18 @@ interface Props {
 
 const PRIORITY_LABELS = ['Normal', 'High', 'Critical']
 
+function uuid(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return uuid()
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
+  })
+}
+
 const defaultRule = (): RoutingRule => ({
-  id: crypto.randomUUID(),
+  id: uuid(),
   name: '',
   enabled: true,
   sourcePattern: '',
@@ -566,7 +576,7 @@ export function RoutingView({ api, onToast }: Props) {
     try {
       const cfg = await api.getDaemonConfig()
       const raw = cfg.routing ?? { enabled: false, rules: [] }
-      const r = { ...raw, rules: raw.rules.map((rule) => ({ id: crypto.randomUUID(), ...rule })) }
+      const r = { ...raw, rules: raw.rules.map((rule) => ({ id: uuid(), ...rule })) }
       setFullConfig(cfg)
       setRouting(r)
       setOriginal(r)
@@ -611,7 +621,7 @@ export function RoutingView({ api, onToast }: Props) {
       try {
         const parsed = JSON.parse(ev.target?.result as string)
         const rules: RoutingRule[] = (Array.isArray(parsed) ? parsed : parsed.rules ?? [])
-          .map((r: RoutingRule) => ({ id: crypto.randomUUID(), ...r }))
+          .map((r: RoutingRule) => ({ id: uuid(), ...r }))
         patch({ rules })
         onToast(`Imported ${rules.length} rule${rules.length !== 1 ? 's' : ''}`, 'success')
       } catch {
