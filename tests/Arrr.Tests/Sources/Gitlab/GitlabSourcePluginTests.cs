@@ -103,7 +103,14 @@ public class GitlabSourcePluginTests
     [Test]
     public async Task PollAsync_WhenTokenEmpty_DoesNotSend()
     {
-        var ctx = new FakePluginContext(_eventBus, _ => new GitlabConfig { PersonalAccessToken = "" });
+        var ctx = new FakePluginContext(
+            _eventBus,
+            _ => new GitlabConfig
+            {
+                Servers = [new GitlabServerConfig { PersonalAccessToken = "" }]
+            }
+        );
+
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await _plugin!.StartAsync(ctx, cts.Token);
         await _plugin.PollAsync(ctx, cts.Token);
@@ -282,6 +289,59 @@ public class GitlabSourcePluginTests
         Assert.That(n.Url, Is.EqualTo("https://gitlab.com/org/proj/-/pipelines/600"));
     }
 
+    // ── multi-server ──────────────────────────────────────────────────────────
+
+    [Test]
+    public async Task PollAsync_MultiServer_PublishesFromBothServers()
+    {
+        _handler.ResponsesByUrl["gitlab.com/api/v4/todos"] = BuildTodosJson([]);
+        _handler.ResponsesByUrl["self-hosted.example.com/api/v4/todos"] = BuildTodosJson([]);
+
+        var ctx = MakeContextMultiServer(
+            new GitlabServerConfig { GitlabUrl = "https://gitlab.com", PersonalAccessToken = "tok1" },
+            new GitlabServerConfig { GitlabUrl = "https://self-hosted.example.com", PersonalAccessToken = "tok2" }
+        );
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await _plugin!.StartAsync(ctx, cts.Token);
+        await _plugin.PollAsync(ctx, cts.Token); // seed both
+
+        _handler.ResponsesByUrl["gitlab.com/api/v4/todos"] = BuildTodosJson(
+            [new(1, "Todo on gitlab.com", "Issue", "mentioned", "org/repo", "")]
+        );
+        _handler.ResponsesByUrl["self-hosted.example.com/api/v4/todos"] = BuildTodosJson(
+            [new(1, "Todo on self-hosted", "Issue", "mentioned", "team/repo", "")]
+        );
+
+        await _plugin.PollAsync(ctx, cts.Token);
+
+        // Same ID (1) but different servers — both must be published
+        Assert.That(_eventBus.Published, Has.Count.EqualTo(2));
+        var bodies = _eventBus.Published.Cast<Notification>().Select(n => n.Body).ToList();
+        Assert.That(bodies, Has.Some.Contains("Todo on gitlab.com"));
+        Assert.That(bodies, Has.Some.Contains("Todo on self-hosted"));
+    }
+
+    [Test]
+    public async Task PollAsync_MultiServer_SkipsServerWithEmptyToken()
+    {
+        _handler.ResponseContent = BuildTodosJson([]);
+
+        var ctx = MakeContextMultiServer(
+            new GitlabServerConfig { GitlabUrl = "https://gitlab.com", PersonalAccessToken = "tok1" },
+            new GitlabServerConfig { GitlabUrl = "https://other.example.com", PersonalAccessToken = "" }
+        );
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await _plugin!.StartAsync(ctx, cts.Token);
+        await _plugin.PollAsync(ctx, cts.Token);
+
+        // Only one server polled (the one with a token)
+        var requestUrls = _handler.Requests.Select(r => r.RequestUri?.Host).ToList();
+        Assert.That(requestUrls, Has.None.EqualTo("other.example.com"));
+        Assert.That(requestUrls, Has.Some.EqualTo("gitlab.com"));
+    }
+
     // ── helpers ───────────────────────────────────────────────────────────────
 
     [SetUp]
@@ -344,15 +404,33 @@ public class GitlabSourcePluginTests
     }
 
     private FakePluginContext MakeContext()
-        => new(_eventBus, _ => new GitlabConfig { PersonalAccessToken = "glpat_fake" });
+        => new(
+            _eventBus,
+            _ => new GitlabConfig
+            {
+                Servers = [new GitlabServerConfig { PersonalAccessToken = "glpat_fake" }]
+            }
+        );
 
     private FakePluginContext MakeContextWithPipelines(List<string> projects)
         => new(
             _eventBus,
             _ => new GitlabConfig
             {
-                PersonalAccessToken = "glpat_fake",
-                PipelineProjects = projects
+                Servers =
+                [
+                    new GitlabServerConfig
+                    {
+                        PersonalAccessToken = "glpat_fake",
+                        PipelineProjects = projects
+                    }
+                ]
             }
+        );
+
+    private FakePluginContext MakeContextMultiServer(params GitlabServerConfig[] servers)
+        => new(
+            _eventBus,
+            _ => new GitlabConfig { Servers = [..servers] }
         );
 }

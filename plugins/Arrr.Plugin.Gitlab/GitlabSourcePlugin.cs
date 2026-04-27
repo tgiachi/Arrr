@@ -29,7 +29,7 @@ public class GitlabSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
     public string Name => "GitLab";
     public string Version => VersionUtils.Get(typeof(GitlabSourcePlugin));
     public string Author => "tom (tom@orivega.io)";
-    public string Description => "Polls GitLab to-dos and CI pipeline statuses, publishing them to the event bus.";
+    public string Description => "Polls GitLab to-dos and CI pipeline statuses across one or more GitLab instances.";
     public string[] Categories => ["development", "git", "ci"];
     public string Icon => "🦊";
     public Type ConfigType => typeof(GitlabConfig);
@@ -47,18 +47,18 @@ public class GitlabSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("Arrr/1.0");
     }
 
-    public void Dispose()
-        => _http.Dispose();
-
     public async Task PollAsync(IPluginContext context, CancellationToken ct)
     {
-        if (string.IsNullOrEmpty(_config.PersonalAccessToken))
+        foreach (var server in _config.Servers)
         {
-            return;
-        }
+            if (string.IsNullOrEmpty(server.PersonalAccessToken))
+            {
+                continue;
+            }
 
-        await PollTodosAsync(context, ct);
-        await PollPipelinesAsync(context, ct);
+            await PollTodosAsync(context, server, ct);
+            await PollPipelinesAsync(context, server, ct);
+        }
 
         if (_firstPoll)
         {
@@ -66,21 +66,21 @@ public class GitlabSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
         }
     }
 
-    private async Task PollTodosAsync(IPluginContext context, CancellationToken ct)
+    private async Task PollTodosAsync(IPluginContext context, GitlabServerConfig server, CancellationToken ct)
     {
         List<GitlabTodo>? todos;
 
         try
         {
-            var baseUrl = _config.GitlabUrl.TrimEnd('/');
+            var baseUrl = server.GitlabUrl.TrimEnd('/');
             var request = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/v4/todos?state=pending");
-            request.Headers.Add("PRIVATE-TOKEN", _config.PersonalAccessToken);
+            request.Headers.Add("PRIVATE-TOKEN", server.PersonalAccessToken);
 
             var response = await _http.SendAsync(request, ct);
 
             if (!response.IsSuccessStatusCode)
             {
-                _context?.Logger.LogWarning("GitLab todos API returned {Status}", response.StatusCode);
+                _context?.Logger.LogWarning("GitLab todos API returned {Status} for {Url}", response.StatusCode, server.GitlabUrl);
 
                 return;
             }
@@ -94,7 +94,7 @@ public class GitlabSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
         }
         catch (Exception ex)
         {
-            _context?.Logger.LogError(ex, "GitLab to-do fetch failed");
+            _context?.Logger.LogError(ex, "GitLab to-do fetch failed for {Url}", server.GitlabUrl);
 
             return;
         }
@@ -106,7 +106,7 @@ public class GitlabSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
 
         foreach (var todo in todos)
         {
-            var id = todo.Id.ToString();
+            var id = $"{server.GitlabUrl}:{todo.Id}";
 
             if (_firstPoll)
             {
@@ -137,6 +137,7 @@ public class GitlabSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
                         Url: todo.Target.WebUrl,
                         Extras: new Dictionary<string, string>
                         {
+                            ["gitlab.server"]      = server.GitlabUrl,
                             ["gitlab.project"]     = todo.Project.PathWithNamespace,
                             ["gitlab.target_type"] = todo.TargetType,
                             ["gitlab.action"]      = todo.ActionName
@@ -148,16 +149,16 @@ public class GitlabSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
         }
     }
 
-    private async Task PollPipelinesAsync(IPluginContext context, CancellationToken ct)
+    private async Task PollPipelinesAsync(IPluginContext context, GitlabServerConfig server, CancellationToken ct)
     {
-        if (_config.PipelineProjects.Count == 0)
+        if (server.PipelineProjects.Count == 0)
         {
             return;
         }
 
-        var baseUrl = _config.GitlabUrl.TrimEnd('/');
+        var baseUrl = server.GitlabUrl.TrimEnd('/');
 
-        foreach (var project in _config.PipelineProjects)
+        foreach (var project in server.PipelineProjects)
         {
             var encoded = Uri.EscapeDataString(project);
             List<GitlabPipeline>? pipelines;
@@ -168,16 +169,17 @@ public class GitlabSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
                     HttpMethod.Get,
                     $"{baseUrl}/api/v4/projects/{encoded}/pipelines?per_page=10&order_by=updated_at&sort=desc"
                 );
-                request.Headers.Add("PRIVATE-TOKEN", _config.PersonalAccessToken);
+                request.Headers.Add("PRIVATE-TOKEN", server.PersonalAccessToken);
 
                 var response = await _http.SendAsync(request, ct);
 
                 if (!response.IsSuccessStatusCode)
                 {
                     _context?.Logger.LogWarning(
-                        "GitLab pipeline API returned {Status} for project {Project}",
+                        "GitLab pipeline API returned {Status} for {Project} on {Url}",
                         response.StatusCode,
-                        project
+                        project,
+                        server.GitlabUrl
                     );
 
                     continue;
@@ -192,7 +194,7 @@ public class GitlabSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
             }
             catch (Exception ex)
             {
-                _context?.Logger.LogError(ex, "GitLab pipeline fetch failed for project {Project}", project);
+                _context?.Logger.LogError(ex, "GitLab pipeline fetch failed for {Project} on {Url}", project, server.GitlabUrl);
 
                 continue;
             }
@@ -204,7 +206,7 @@ public class GitlabSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
 
             foreach (var pipeline in pipelines)
             {
-                var key = $"{project}:{pipeline.Id}:{pipeline.Status}";
+                var key = $"{server.GitlabUrl}:{project}:{pipeline.Id}:{pipeline.Status}";
 
                 if (_firstPoll)
                 {
@@ -244,6 +246,7 @@ public class GitlabSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
                             Url: pipeline.WebUrl,
                             Extras: new Dictionary<string, string>
                             {
+                                ["gitlab.server"]      = server.GitlabUrl,
                                 ["gitlab.project"]     = project,
                                 ["gitlab.pipeline_id"] = pipeline.Id.ToString(),
                                 ["gitlab.ref"]         = pipeline.Ref,
@@ -262,18 +265,31 @@ public class GitlabSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
         _context = context;
         _config = await context.LoadConfigAsync<GitlabConfig>(ct);
 
-        if (string.IsNullOrEmpty(_config.PersonalAccessToken))
+        if (_config.Servers.Count == 0)
         {
-            context.Logger.LogWarning("GitLab plugin: PersonalAccessToken not configured");
+            context.Logger.LogWarning("GitLab plugin: no servers configured");
+
+            return;
         }
-        else
+
+        foreach (var server in _config.Servers)
         {
-            context.Logger.LogInformation(
-                "GitLab plugin ready ({Url}), polling every {Interval} min — monitoring {Count} project(s) for pipelines",
-                _config.GitlabUrl,
-                _config.PollIntervalMinutes,
-                _config.PipelineProjects.Count
-            );
+            if (string.IsNullOrEmpty(server.PersonalAccessToken))
+            {
+                context.Logger.LogWarning("GitLab plugin: PersonalAccessToken not configured for {Url}", server.GitlabUrl);
+            }
+            else
+            {
+                context.Logger.LogInformation(
+                    "GitLab plugin ready ({Url}), polling every {Interval} min — monitoring {Count} project(s) for pipelines",
+                    server.GitlabUrl,
+                    _config.PollIntervalMinutes,
+                    server.PipelineProjects.Count
+                );
+            }
         }
     }
+
+    public void Dispose()
+        => _http.Dispose();
 }
