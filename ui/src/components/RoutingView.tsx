@@ -10,7 +10,7 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react'
-import { Download, Plus, RefreshCcw, Save, Trash2, Upload } from 'lucide-react'
+import { Download, GripVertical, Plus, RefreshCcw, Save, Trash2, Upload } from 'lucide-react'
 import type { ArrrApi } from '../api'
 import type { DaemonConfig, RoutingConfig, RoutingLogEntry, RoutingRule } from '../types'
 
@@ -40,28 +40,50 @@ const defaultRule = (): RoutingRule => ({
 interface RuleRowProps {
   rule: RoutingRule
   index: number
-  total: number
   onChange: (r: RoutingRule) => void
   onDelete: () => void
-  onMoveUp: () => void
-  onMoveDown: () => void
+  isDragging: boolean
+  isDropTarget: boolean
+  onDragStart: () => void
+  onDragOver: (e: React.DragEvent) => void
+  onDrop: () => void
+  onDragEnd: () => void
 }
 
-function RuleRow({ rule, index, total, onChange, onDelete, onMoveUp, onMoveDown }: RuleRowProps) {
+function RuleRow({ rule, index, onChange, onDelete, isDragging, isDropTarget, onDragStart, onDragOver, onDrop, onDragEnd }: RuleRowProps) {
   const accent = '#f97316'
   const update = (patch: Partial<RoutingRule>) => onChange({ ...rule, ...patch })
 
   return (
     <Box
-      borderWidth="1px"
-      borderColor="rgba(249,115,22,0.25)"
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      borderWidth="2px"
+      borderColor={isDropTarget ? accent : 'rgba(249,115,22,0.25)'}
       borderRadius="lg"
       p={3}
-      bg="rgba(249,115,22,0.04)"
-      style={{ animation: `slideUp 0.25s cubic-bezier(0.16,1,0.3,1) ${index * 40}ms both` }}
+      bg={isDropTarget ? 'rgba(249,115,22,0.08)' : 'rgba(249,115,22,0.04)'}
+      opacity={isDragging ? 0.4 : 1}
+      style={{
+        animation: `slideUp 0.25s cubic-bezier(0.16,1,0.3,1) ${index * 40}ms both`,
+        transition: 'border-color 0.15s, background 0.15s, opacity 0.15s',
+        cursor: 'default',
+      }}
     >
       {/* Header */}
       <Flex align="center" gap={2} mb={2.5}>
+        <Box
+          color="app.textDim"
+          _hover={{ color: accent }}
+          flexShrink={0}
+          style={{ cursor: 'grab' }}
+          title="Drag to reorder"
+        >
+          <GripVertical size={14} />
+        </Box>
         <Switch.Root
           size="sm"
           colorPalette="orange"
@@ -85,36 +107,6 @@ function RuleRow({ rule, index, total, onChange, onDelete, onMoveUp, onMoveDown 
           _placeholder={{ color: 'app.placeholder' }}
           _focus={{ borderColor: accent, boxShadow: `0 0 0 1px ${accent}` }}
         />
-        <Flex gap={0.5} flexShrink={0}>
-          <Button
-            size="xs"
-            variant="ghost"
-            color="app.textDim"
-            _hover={{ color: accent, bg: 'rgba(249,115,22,0.08)' }}
-            onClick={onMoveUp}
-            disabled={index === 0}
-            px={1}
-            title="Move rule up"
-            fontFamily="mono"
-            fontSize="10px"
-          >
-            ▲
-          </Button>
-          <Button
-            size="xs"
-            variant="ghost"
-            color="app.textDim"
-            _hover={{ color: accent, bg: 'rgba(249,115,22,0.08)' }}
-            onClick={onMoveDown}
-            disabled={index === total - 1}
-            px={1}
-            title="Move rule down"
-            fontFamily="mono"
-            fontSize="10px"
-          >
-            ▼
-          </Button>
-        </Flex>
         <Button
           size="xs"
           variant="ghost"
@@ -560,6 +552,8 @@ export function RoutingView({ api, onToast }: Props) {
   const [original, setOriginal] = useState<RoutingConfig>({ enabled: false, rules: [] })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [dropIndex, setDropIndex] = useState<number | null>(null)
 
   const isDirty = JSON.stringify(routing) !== JSON.stringify(original)
   const importRef = useRef<HTMLInputElement>(null)
@@ -642,12 +636,32 @@ export function RoutingView({ api, onToast }: Props) {
     patch({ rules: routing.rules.filter((_, idx) => idx !== i) })
   }
 
-  function moveRule(from: number, dir: -1 | 1) {
-    const to = from + dir
-    if (to < 0 || to >= routing.rules.length) return
+  function handleDragStart(i: number) {
+    setDragIndex(i)
+  }
+
+  function handleDragOver(e: React.DragEvent, i: number) {
+    e.preventDefault()
+    if (i !== dropIndex) setDropIndex(i)
+  }
+
+  function handleDrop(i: number) {
+    if (dragIndex === null || dragIndex === i) {
+      setDragIndex(null)
+      setDropIndex(null)
+      return
+    }
     const rules = [...routing.rules]
-    ;[rules[from], rules[to]] = [rules[to], rules[from]]
+    const [removed] = rules.splice(dragIndex, 1)
+    rules.splice(i, 0, removed)
     patch({ rules })
+    setDragIndex(null)
+    setDropIndex(null)
+  }
+
+  function handleDragEnd() {
+    setDragIndex(null)
+    setDropIndex(null)
   }
 
   if (loading) {
@@ -776,11 +790,14 @@ export function RoutingView({ api, onToast }: Props) {
                 key={i}
                 rule={rule}
                 index={i}
-                total={routing.rules.length}
                 onChange={(r) => updateRule(i, r)}
                 onDelete={() => deleteRule(i)}
-                onMoveUp={() => moveRule(i, -1)}
-                onMoveDown={() => moveRule(i, 1)}
+                isDragging={dragIndex === i}
+                isDropTarget={dropIndex === i && dragIndex !== i}
+                onDragStart={() => handleDragStart(i)}
+                onDragOver={(e) => handleDragOver(e, i)}
+                onDrop={() => handleDrop(i)}
+                onDragEnd={handleDragEnd}
               />
             ))}
           </VStack>
