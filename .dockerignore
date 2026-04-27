@@ -1,0 +1,17 @@
+.git/
+.github/
+node_modules/
+local-packages/
+tests/
+plugins/
+packaging/
+scripts/
+docs/
+ui/node_modules/
+ui/dist/
+src/*/bin/
+src/*/obj/
+src/Arrr.Service/wwwroot/
+**/*.user
+**/*.suo
+.env
