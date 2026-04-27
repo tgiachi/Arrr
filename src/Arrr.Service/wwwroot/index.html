@@ -1,38 +1,56 @@
 <!DOCTYPE html>
-<html class="dark" lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <link href="/logo.png" rel="icon" type="image/png"/>
-  <title>Arrr!</title>
-  <link href="https://fonts.googleapis.com" rel="preconnect"/>
-  <link crossorigin href="https://fonts.gstatic.com" rel="preconnect"/>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
-    rel="stylesheet"
-  />
-  <style>
-    *, *::before, *::after {
-      box-sizing: border-box;
-    }
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <title>Arrr!</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      html { background: #080c14; }
+      html.light { background: #f0f4f8; }
+      body { margin: 0; background: inherit; }
 
-    html {
-      background: #080c14;
-    }
+      /* Ambient depth — dark mode only */
+      html.dark body {
+        background-image:
+          radial-gradient(ellipse 70% 50% at 80% -5%, rgba(245,158,11,0.07) 0%, transparent 55%),
+          radial-gradient(ellipse 55% 40% at -15% 105%, rgba(56,189,248,0.05) 0%, transparent 55%);
+        background-attachment: fixed;
+      }
 
-    html.light {
-      background: #f0f4f8;
-    }
+      @keyframes slideUp {
+        from { opacity: 0; transform: translateY(16px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
 
-    body {
-      margin: 0;
-      background: inherit;
-    }
-  </style>
-  <script crossorigin src="/assets/index-C5IZPIjt.js" type="module"></script>
-  <link crossorigin href="/assets/chakra-BVdF2T_N.js" rel="modulepreload">
-</head>
-<body>
-<div id="root"></div>
-</body>
+      /* Accessibility: respect OS motion preference */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+    <script type="module" crossorigin src="/assets/index-lJqhjSwe.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/chakra-C_P6ZH7h.js">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
 </html>

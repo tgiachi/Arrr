@@ -32,7 +32,7 @@ const config = defineConfig({
         },
         // ── Dividers / borders ──
         'app.border': {
-          value: { _dark: 'rgba(255,255,255,0.05)', _light: 'rgba(30,60,100,0.08)' },
+          value: { _dark: 'rgba(255,255,255,0.07)', _light: 'rgba(30,60,100,0.08)' },
         },
         // ── Body text ──
         'app.text': {
@@ -44,7 +44,7 @@ const config = defineConfig({
         },
         // ── Dimmer muted (section labels, counters) ──
         'app.textDim': {
-          value: { _dark: '#374151', _light: '#7a99bb' },
+          value: { _dark: '#52627a', _light: '#7a99bb' },
         },
         // ── Scrollbar thumb ──
         'app.scrollThumb': {
@@ -84,7 +84,7 @@ const config = defineConfig({
           value: { _dark: '#e5e7eb', _light: '#0d1f3c' },
         },
         'app.placeholder': {
-          value: { _dark: '#374151', _light: '#7a99bb' },
+          value: { _dark: '#3d4f66', _light: '#7a99bb' },
         },
 
         // ── Icon buttons ──

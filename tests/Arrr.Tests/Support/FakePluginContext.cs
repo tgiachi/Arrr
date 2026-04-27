@@ -12,6 +12,7 @@ internal class FakePluginContext : IPluginContext
     public ILogger Logger => NullLogger.Instance;
     public string CallbackUrl => "/callback/fake";
     public IEventBus EventBus { get; }
+    public HttpClient Http { get; } = new();
 
     public FakePluginContext(IEventBus eventBus, Func<Type, object>? configFactory = null)
     {

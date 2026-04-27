@@ -5,8 +5,7 @@ namespace Arrr.Plugin.Todoist.Data;
 
 public class TodoistConfig
 {
-    [Description("Todoist API token (Settings → Integrations → Developer)")]
-    [Sensitive]
+    [Description("Todoist API token (Settings → Integrations → Developer)"), Sensitive]
     public string ApiToken { get; set; } = "";
 
     [Description("Todoist filter string (e.g. \"today | overdue\", \"#Work & @urgent\")")]
@@ -20,4 +19,7 @@ public class TodoistConfig
 
     [Description("Also notify for explicit Todoist reminders (requires Todoist Pro/Business)")]
     public bool NotifyReminders { get; set; } = true;
+
+    [Description("Section heading used in digest notifications (e.g. \"Today's Tasks\")")]
+    public string DigestSectionTitle { get; set; } = "Tasks";
 }

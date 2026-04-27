@@ -9,15 +9,20 @@ using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Arrr.Service.Internal;
 
-internal class PluginContextFactory
+internal class PluginContextFactory : IDisposable
 {
     private readonly IEventBus _eventBus;
     private readonly DirectoriesConfig _directoriesConfig;
+    private readonly SocketsHttpHandler _httpHandler;
 
     public PluginContextFactory(IEventBus eventBus, DirectoriesConfig directoriesConfig)
     {
         _eventBus = eventBus;
         _directoriesConfig = directoriesConfig;
+        _httpHandler = new SocketsHttpHandler
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(2)
+        };
     }
 
     public IPluginContext Create(ISourcePlugin plugin)
@@ -39,12 +44,18 @@ internal class PluginContextFactory
                             .CreateLogger();
 
         var logger = new SerilogLoggerFactory(serilogLogger).CreateLogger(plugin.Id);
+        var http = new HttpClient(_httpHandler, disposeHandler: false);
 
-        return new PluginContext(configPath, logger, callbackUrl, _eventBus);
+        return new PluginContext(configPath, logger, callbackUrl, _eventBus, http);
     }
 
     public string GetConfigPath(string pluginId)
         => Path.Combine(_directoriesConfig[DirectoryType.Configs], $"{pluginId}.config");
+
+    public void Dispose()
+    {
+        _httpHandler.Dispose();
+    }
 }
 
 internal sealed class PluginContext : IPluginContext
@@ -59,13 +70,15 @@ internal sealed class PluginContext : IPluginContext
     public ILogger Logger { get; }
     public string CallbackUrl { get; }
     public IEventBus EventBus { get; }
+    public HttpClient Http { get; }
 
-    public PluginContext(string configPath, ILogger logger, string callbackUrl, IEventBus eventBus)
+    public PluginContext(string configPath, ILogger logger, string callbackUrl, IEventBus eventBus, HttpClient http)
     {
         ConfigPath = configPath;
         Logger = logger;
         CallbackUrl = callbackUrl;
         EventBus = eventBus;
+        Http = http;
     }
 
     public async Task<T> LoadConfigAsync<T>(CancellationToken ct = default) where T : new()

@@ -9,22 +9,26 @@ import {
   Switch,
   Text,
   Tooltip,
+  VStack,
 } from '@chakra-ui/react'
 import {
+  ClipboardList,
   Eye,
   EyeOff,
   Globe,
   History,
   KeyRound,
+  Plus,
   RefreshCcw,
   Save,
   Settings,
   ShieldCheck,
   Timer,
+  Trash2,
   Zap,
 } from 'lucide-react'
 import type { ArrrApi } from '../api'
-import type { DaemonConfig, Settings as AppSettings } from '../types'
+import type { DaemonConfig, DigestScheduleEntry, Settings as AppSettings } from '../types'
 
 interface Props {
   api: ArrrApi
@@ -40,10 +44,16 @@ function diff(a: DaemonConfig, b: DaemonConfig): string[] {
     deduplicationEnabled: 'Deduplication',
     deduplicationWindowSeconds: 'Window',
     historyEnabled: 'History',
+    digest: 'Digest',
+    routing: 'Routing',
   }
   return (Object.keys(a) as (keyof DaemonConfig)[])
-    .filter((k) => a[k] !== b[k])
-    .map((k) => labels[k])
+    .filter((k) => {
+      if (k === 'digest' || k === 'routing') return JSON.stringify(a[k]) !== JSON.stringify(b[k])
+      return a[k] !== b[k]
+    })
+    .map((k) => labels[k] ?? k)
+    .filter(Boolean)
 }
 
 // ─────────────────────────── Pod wrapper ────────────────────────────────────
@@ -65,6 +75,7 @@ function Pod({ accent, icon, title, subtitle, children, delay = 0 }: PodProps) {
       borderColor="app.cardBorder"
       borderRadius="xl"
       overflow="hidden"
+      boxShadow="inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 12px rgba(0,0,0,0.18)"
       style={{
         animation: `slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms both`,
       }}
@@ -152,6 +163,262 @@ function FieldRow({ label, hint, dirty, children }: FieldRowProps) {
   )
 }
 
+// ─────────────────────────── Digest slot row ────────────────────────────────
+
+interface SlotRowProps {
+  entry: DigestScheduleEntry
+  index: number
+  onChange: (index: number, patch: Partial<DigestScheduleEntry>) => void
+  onDelete: (index: number) => void
+}
+
+function SlotRow({ entry, index, onChange, onDelete }: SlotRowProps) {
+  const accent = '#2dd4bf'
+
+  return (
+    <Flex
+      align="center"
+      gap={2.5}
+      py={2.5}
+      px={3}
+      borderRadius="lg"
+      borderWidth="1px"
+      borderColor="app.cardBorder"
+      bg="app.inputBg"
+      _hover={{ borderColor: accent + '44' }}
+      style={{
+        animation: `slideUp 0.25s cubic-bezier(0.16,1,0.3,1) ${index * 40}ms both`,
+        transition: 'border-color 0.2s',
+      }}
+    >
+      {/* Emoji pill */}
+      <Input
+        value={entry.titleEmoji}
+        onChange={(e) => onChange(index, { titleEmoji: e.target.value })}
+        size="xs"
+        w="44px"
+        textAlign="center"
+        fontSize="lg"
+        bg="transparent"
+        border="none"
+        p={0}
+        _focus={{ outline: 'none', boxShadow: 'none' }}
+        title="Emoji"
+      />
+
+      {/* Time badge */}
+      <Box
+        px={2.5}
+        py={1}
+        borderRadius="md"
+        bg="rgba(45,212,191,0.08)"
+        borderWidth="1px"
+        borderColor="rgba(45,212,191,0.2)"
+        flexShrink={0}
+      >
+        <input
+          type="time"
+          value={entry.fireAt}
+          onChange={(e) => onChange(index, { fireAt: e.target.value })}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            color: accent,
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            fontWeight: 700,
+            letterSpacing: '0.05em',
+            width: '72px',
+            cursor: 'pointer',
+          }}
+        />
+      </Box>
+
+      {/* Label */}
+      <Input
+        value={entry.label}
+        onChange={(e) => onChange(index, { label: e.target.value })}
+        placeholder="Label…"
+        size="xs"
+        flex={1}
+        bg="transparent"
+        borderColor="app.cardBorder"
+        color="app.inputColor"
+        fontFamily="mono"
+        fontSize="xs"
+        _placeholder={{ color: 'app.placeholder' }}
+        _focus={{ borderColor: accent, boxShadow: `0 0 0 1px ${accent}` }}
+      />
+
+      {/* Day offset toggle */}
+      <Flex
+        as="button"
+        align="center"
+        gap={1}
+        px={2}
+        py={1}
+        borderRadius="md"
+        borderWidth="1px"
+        borderColor={entry.dayOffset === 0 ? 'rgba(45,212,191,0.4)' : 'rgba(167,139,250,0.4)'}
+        bg={entry.dayOffset === 0 ? 'rgba(45,212,191,0.07)' : 'rgba(167,139,250,0.07)'}
+        onClick={() => onChange(index, { dayOffset: entry.dayOffset === 0 ? 1 : 0 })}
+        flexShrink={0}
+        cursor="pointer"
+        style={{ transition: 'all 0.2s' }}
+        title="Toggle today/tomorrow"
+      >
+        <Text
+          fontFamily="mono"
+          fontSize="10px"
+          fontWeight="600"
+          color={entry.dayOffset === 0 ? '#2dd4bf' : '#a78bfa'}
+          textTransform="uppercase"
+          letterSpacing="wider"
+          style={{ transition: 'color 0.2s' }}
+        >
+          {entry.dayOffset === 0 ? 'Today' : 'Tomorrow'}
+        </Text>
+      </Flex>
+
+      {/* Delete */}
+      <Button
+        size="xs"
+        variant="ghost"
+        color="app.textDim"
+        _hover={{ color: 'red.400', bg: 'rgba(248,113,113,0.08)' }}
+        onClick={() => onDelete(index)}
+        px={1.5}
+        flexShrink={0}
+      >
+        <Trash2 size={12} />
+      </Button>
+    </Flex>
+  )
+}
+
+// ─────────────────────────── Digest pod ─────────────────────────────────────
+
+interface DigestPodProps {
+  form: DaemonConfig
+  original: DaemonConfig | null
+  setForm: React.Dispatch<React.SetStateAction<DaemonConfig | null>>
+}
+
+function DigestPod({ form, original, setForm }: DigestPodProps) {
+  const accent = '#2dd4bf'
+  const digest = form.digest ?? { enabled: false, schedule: [] }
+  const isDirty = JSON.stringify(digest) !== JSON.stringify(original?.digest)
+
+  function patchDigest(patch: Partial<typeof digest>) {
+    setForm((prev) =>
+      prev ? { ...prev, digest: { ...prev.digest, ...patch } } : prev
+    )
+  }
+
+  function updateSlot(index: number, patch: Partial<DigestScheduleEntry>) {
+    const next = digest.schedule.map((e, i) => (i === index ? { ...e, ...patch } : e))
+    patchDigest({ schedule: next })
+  }
+
+  function deleteSlot(index: number) {
+    patchDigest({ schedule: digest.schedule.filter((_, i) => i !== index) })
+  }
+
+  function addSlot() {
+    const newEntry: DigestScheduleEntry = {
+      label: 'Digest',
+      titleEmoji: '📋',
+      fireAt: '08:00',
+      dayOffset: 0,
+    }
+    patchDigest({ schedule: [...digest.schedule, newEntry] })
+  }
+
+  return (
+    <Pod
+      accent={isDirty ? accent : 'var(--chakra-colors-teal-600)'}
+      icon={<ClipboardList size={14} />}
+      title="Digest"
+      subtitle="Morning & evening notification digests from registered providers"
+      delay={200}
+    >
+      {/* Enable toggle */}
+      <FieldRow
+        label="enabled"
+        hint="DigestService fires when any plugin implements IDigestProvider"
+        dirty={digest.enabled !== original?.digest?.enabled}
+      >
+        <Switch.Root
+          size="sm"
+          colorPalette="teal"
+          checked={digest.enabled}
+          onCheckedChange={(e) => patchDigest({ enabled: e.checked })}
+        >
+          <Switch.HiddenInput />
+          <Switch.Control>
+            <Switch.Thumb />
+          </Switch.Control>
+        </Switch.Root>
+      </FieldRow>
+
+      {/* Schedule list */}
+      <Box mt={3}>
+        <Flex align="center" justify="space-between" mb={2}>
+          <Text fontFamily="mono" fontSize="10px" color="app.textDim" textTransform="uppercase" letterSpacing="widest">
+            Schedule — {digest.schedule.length} slot{digest.schedule.length !== 1 ? 's' : ''}
+          </Text>
+          <Button
+            size="xs"
+            variant="ghost"
+            color={accent}
+            _hover={{ bg: 'rgba(45,212,191,0.08)' }}
+            onClick={addSlot}
+            gap={1}
+            fontFamily="mono"
+            fontSize="10px"
+          >
+            <Plus size={11} />
+            Add slot
+          </Button>
+        </Flex>
+
+        {digest.schedule.length === 0 ? (
+          <Flex
+            align="center"
+            justify="center"
+            direction="column"
+            gap={1.5}
+            py={6}
+            borderRadius="lg"
+            borderWidth="1px"
+            borderStyle="dashed"
+            borderColor="app.cardBorder"
+            opacity={0.6}
+          >
+            <Box color="app.textDim" opacity={0.5}><ClipboardList size={20} /></Box>
+            <Text fontFamily="mono" fontSize="10px" color="app.textDim">
+              No digest slots configured
+            </Text>
+          </Flex>
+        ) : (
+          <Flex direction="column" gap={1.5}>
+            {digest.schedule.map((entry, i) => (
+              <SlotRow
+                key={i}
+                entry={entry}
+                index={i}
+                onChange={updateSlot}
+                onDelete={deleteSlot}
+              />
+            ))}
+          </Flex>
+        )}
+      </Box>
+    </Pod>
+  )
+}
+
 // ─────────────────────────── Main view ──────────────────────────────────────
 
 export function DaemonConfigView({ api, onToast, onSettingsChanged }: Props) {
@@ -172,8 +439,12 @@ export function DaemonConfigView({ api, onToast, onSettingsChanged }: Props) {
     setLoading(true)
     try {
       const cfg = await api.getDaemonConfig()
-      setOriginal(cfg)
-      setForm(cfg)
+      const normalized = {
+        ...cfg,
+        digest: cfg.digest ?? { enabled: false, schedule: [] },
+      }
+      setOriginal(normalized)
+      setForm(normalized)
     } catch (e) {
       onToast((e as Error).message, 'error')
     } finally {
@@ -221,7 +492,7 @@ export function DaemonConfigView({ api, onToast, onSettingsChanged }: Props) {
 
   return (
     <>
-      <Box maxW="680px" mx="auto" pb={isDirty ? '80px' : '0'} style={{ transition: 'padding-bottom 0.3s' }}>
+      <Box maxW="720px" mx="auto" pb={isDirty ? '80px' : '0'} style={{ transition: 'padding-bottom 0.3s' }}>
         {/* Page header */}
         <Flex align="center" gap={3} mb={6} style={{ animation: 'slideUp 0.3s ease both' }}>
           <Box color="app.textDim">
@@ -244,7 +515,8 @@ export function DaemonConfigView({ api, onToast, onSettingsChanged }: Props) {
           </Box>
         </Flex>
 
-        {/* ── Security & Access ── */}
+        {/* ── Pods ── */}
+        <VStack gap={4} align="stretch">
         <Pod
           accent="var(--chakra-colors-amber-500)"
           icon={<ShieldCheck size={14} />}
@@ -439,6 +711,10 @@ export function DaemonConfigView({ api, onToast, onSettingsChanged }: Props) {
           </FieldRow>
         </Pod>
 
+        {/* ── Digest ── */}
+        <DigestPod form={form} original={original} setForm={setForm} />
+        </VStack>
+
         {/* ── API Key hint ── */}
         {original?.apiKey !== form.apiKey && (
           <Box
@@ -495,7 +771,7 @@ export function DaemonConfigView({ api, onToast, onSettingsChanged }: Props) {
             opacity={0.6}
           />
 
-          <Flex align="center" justify="space-between" maxW="680px" mx="auto">
+          <Flex align="center" justify="space-between" maxW="720px" mx="auto">
             <Flex align="center" gap={3}>
               <Box
                 w="6px"
@@ -544,12 +820,6 @@ export function DaemonConfigView({ api, onToast, onSettingsChanged }: Props) {
         </Box>
       </Box>
 
-      <style>{`
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(16px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </>
   )
 }

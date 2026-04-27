@@ -18,6 +18,12 @@ public interface IPluginContext
     IEventBus EventBus { get; }
 
     /// <summary>
+    /// Pre-configured <see cref="HttpClient"/> backed by a shared socket pool.
+    /// Plugins should use this instead of creating their own instances to avoid socket exhaustion.
+    /// </summary>
+    HttpClient Http { get; }
+
+    /// <summary>
     /// Deserializes the plugin config from <see cref="ConfigPath" />.
     /// Properties marked with <c>[Sensitive]</c> are decrypted automatically.
     /// Returns a default instance if the file does not exist.

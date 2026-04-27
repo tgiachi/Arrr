@@ -1,5 +1,6 @@
-using System.Net.Http.Headers;
+using System.Net;
 using System.Text.Json;
+using Arrr.Core.Data.Digest;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Types;
@@ -10,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Arrr.Plugin.Todoist;
 
-public class TodoistSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposable
+public class TodoistSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDigestProvider, IDisposable
 {
     private readonly HashSet<string> _notifiedKeys = [];
     private readonly HttpClient _httpClient;
@@ -36,18 +37,50 @@ public class TodoistSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposa
 
     public TodoistSourcePlugin()
     {
-        _httpClient = new HttpClient();
+        _httpClient = new();
         _timeProvider = TimeProvider.System;
     }
 
     internal TodoistSourcePlugin(HttpMessageHandler handler, TimeProvider timeProvider)
     {
-        _httpClient = new HttpClient(handler);
+        _httpClient = new(handler);
         _timeProvider = timeProvider;
     }
 
+    public string DigestSectionTitle => _config.DigestSectionTitle;
+
     public void Dispose()
         => _httpClient.Dispose();
+
+    public async Task<DigestSection> GetDigestSectionAsync(DateOnly forDate, CancellationToken ct)
+    {
+        var section = new DigestSection { Title = DigestSectionTitle };
+
+        if (string.IsNullOrEmpty(_config.ApiToken))
+        {
+            return section;
+        }
+
+        var tasks = await FetchTasksForDateAsync(forDate, ct);
+
+        foreach (var task in tasks)
+        {
+            string text;
+
+            if (task.Due?.Datetime is not null && DateTimeOffset.TryParse(task.Due.Datetime, out var dt))
+            {
+                text = $"{dt.ToLocalTime():HH:mm} - {task.Content}";
+            }
+            else
+            {
+                text = task.Content;
+            }
+
+            section.Items.Add(new DigestItem { Text = text });
+        }
+
+        return section;
+    }
 
     public async Task PollAsync(IPluginContext context, CancellationToken ct)
     {
@@ -82,6 +115,7 @@ public class TodoistSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposa
                     {
                         _notifiedKeys.Add(key);
                     }
+
                     continue;
                 }
 
@@ -101,11 +135,112 @@ public class TodoistSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposa
         _firstPoll = false;
     }
 
+    public async Task StartAsync(IPluginContext context, CancellationToken ct)
+    {
+        _context = context;
+        _config = await context.LoadConfigAsync<TodoistConfig>(ct);
+        context.Logger.LogInformation("Todoist plugin loaded, filter: {Filter}", _config.Filter);
+    }
+
+    private static Notification BuildDueDateNotification(TodoistTaskResponse task, int alertMin, DateTimeOffset now)
+    {
+        var body = alertMin > 0 ? $"In {alertMin} min" : "Due now";
+
+        return new(
+            Guid.NewGuid(),
+            "com.arrr.plugin.todoist",
+            $"✅ {task.Content}",
+            body,
+            now,
+            null,
+            MapPriority(task.Priority),
+            Extras: new Dictionary<string, string>
+            {
+                ["todoist.task_id"] = task.Id,
+                ["todoist.project_id"] = task.ProjectId,
+                ["todoist.priority"] = task.Priority.ToString(),
+                ["todoist.due_datetime"] = task.Due?.Datetime ?? ""
+            }
+        );
+    }
+
+    private async Task<List<TodoistReminderResponse>> FetchRemindersAsync(CancellationToken ct)
+    {
+        const string url = "https://api.todoist.com/rest/v2/reminders";
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Authorization = new("Bearer", _config.ApiToken);
+
+        var response = await _httpClient.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadAsStringAsync(ct);
+
+        return JsonSerializer.Deserialize<List<TodoistReminderResponse>>(json, JsonOptions) ?? [];
+    }
+
+    private async Task<List<TodoistTaskResponse>> FetchTasksAsync(CancellationToken ct)
+    {
+        var encoded = Uri.EscapeDataString(_config.Filter);
+        var url = $"https://api.todoist.com/rest/v2/tasks?filter={encoded}";
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Authorization = new("Bearer", _config.ApiToken);
+
+        try
+        {
+            var response = await _httpClient.SendAsync(request, ct);
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync(ct);
+
+            return JsonSerializer.Deserialize<List<TodoistTaskResponse>>(json, JsonOptions) ?? [];
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            _context?.Logger.LogError(ex, "Todoist: failed to fetch tasks");
+
+            return [];
+        }
+    }
+
+    private async Task<List<TodoistTaskResponse>> FetchTasksForDateAsync(DateOnly date, CancellationToken ct)
+    {
+        var filter = Uri.EscapeDataString($"due: {date:yyyy-MM-dd}");
+        var url = $"https://api.todoist.com/rest/v2/tasks?filter={filter}";
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Authorization = new("Bearer", _config.ApiToken);
+
+        try
+        {
+            var response = await _httpClient.SendAsync(request, ct);
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync(ct);
+
+            return JsonSerializer.Deserialize<List<TodoistTaskResponse>>(json, JsonOptions) ?? [];
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            _context?.Logger.LogError(ex, "Todoist digest: failed to fetch tasks for {Date}", date);
+
+            return [];
+        }
+    }
+
+    private static NotificationPriority MapPriority(int todoistPriority)
+        => todoistPriority switch
+        {
+            4 => NotificationPriority.Critical,
+            3 => NotificationPriority.High,
+            _ => NotificationPriority.Normal
+        };
+
     private async Task ProcessRemindersAsync(
         IPluginContext context,
         IReadOnlyList<TodoistTaskResponse> tasks,
         DateTimeOffset now,
-        CancellationToken ct)
+        CancellationToken ct
+    )
     {
         List<TodoistReminderResponse> reminders;
 
@@ -113,16 +248,18 @@ public class TodoistSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposa
         {
             reminders = await FetchRemindersAsync(ct);
         }
-        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Forbidden)
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.Forbidden)
         {
             _context?.Logger.LogWarning("Reminders require Todoist Pro — disabling reminder fetching");
             _remindersAvailable = false;
+
             return;
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
             _context?.Logger.LogError(ex, "Todoist: failed to fetch reminders");
+
             return;
         }
 
@@ -148,6 +285,7 @@ public class TodoistSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposa
                 {
                     _notifiedKeys.Add(key);
                 }
+
                 continue;
             }
 
@@ -175,76 +313,4 @@ public class TodoistSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposa
             }
         }
     }
-
-    public async Task StartAsync(IPluginContext context, CancellationToken ct)
-    {
-        _context = context;
-        _config = await context.LoadConfigAsync<TodoistConfig>(ct);
-        context.Logger.LogInformation("Todoist plugin loaded, filter: {Filter}", _config.Filter);
-    }
-
-    private async Task<List<TodoistTaskResponse>> FetchTasksAsync(CancellationToken ct)
-    {
-        var encoded = Uri.EscapeDataString(_config.Filter);
-        var url = $"https://api.todoist.com/rest/v2/tasks?filter={encoded}";
-
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _config.ApiToken);
-
-        try
-        {
-            var response = await _httpClient.SendAsync(request, ct);
-            response.EnsureSuccessStatusCode();
-            var json = await response.Content.ReadAsStringAsync(ct);
-            return JsonSerializer.Deserialize<List<TodoistTaskResponse>>(json, JsonOptions) ?? [];
-        }
-        catch (OperationCanceledException) { throw; }
-        catch (Exception ex)
-        {
-            _context?.Logger.LogError(ex, "Todoist: failed to fetch tasks");
-            return [];
-        }
-    }
-
-    private async Task<List<TodoistReminderResponse>> FetchRemindersAsync(CancellationToken ct)
-    {
-        const string url = "https://api.todoist.com/rest/v2/reminders";
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _config.ApiToken);
-
-        var response = await _httpClient.SendAsync(request, ct);
-        response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync(ct);
-        return JsonSerializer.Deserialize<List<TodoistReminderResponse>>(json, JsonOptions) ?? [];
-    }
-
-    private static Notification BuildDueDateNotification(TodoistTaskResponse task, int alertMin, DateTimeOffset now)
-    {
-        var body = alertMin > 0 ? $"In {alertMin} min" : "Due now";
-
-        return new Notification(
-            Guid.NewGuid(),
-            "com.arrr.plugin.todoist",
-            $"✅ {task.Content}",
-            body,
-            now,
-            null,
-            Priority: MapPriority(task.Priority),
-            Extras: new Dictionary<string, string>
-            {
-                ["todoist.task_id"] = task.Id,
-                ["todoist.project_id"] = task.ProjectId,
-                ["todoist.priority"] = task.Priority.ToString(),
-                ["todoist.due_datetime"] = task.Due?.Datetime ?? ""
-            }
-        );
-    }
-
-    private static NotificationPriority MapPriority(int todoistPriority)
-        => todoistPriority switch
-        {
-            4 => NotificationPriority.Critical,
-            3 => NotificationPriority.High,
-            _ => NotificationPriority.Normal
-        };
 }

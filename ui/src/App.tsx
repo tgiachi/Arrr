@@ -8,8 +8,9 @@ import {
   SimpleGrid,
   Spinner,
   Text,
+  Tooltip,
 } from '@chakra-ui/react'
-import { RefreshCcw, Settings, Skull } from 'lucide-react'
+import { Bell, BellOff, RefreshCcw, Settings, Skull } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrrApi } from './api'
 import { PluginCard } from './components/PluginCard'
@@ -23,12 +24,13 @@ import { LogsView } from './components/LogsView'
 import { StreamView } from './components/StreamView'
 import { DaemonConfigView } from './components/DaemonConfigView'
 import { HistoryView } from './components/HistoryView'
+import { RoutingView } from './components/RoutingView'
 import { ThemeToggle } from './components/ThemeToggle'
 import type { Plugin, Sink, Settings as AppSettings } from './types'
 
 const STORAGE_KEY = 'arrr-settings'
 
-type Tab = 'configurazione' | 'stream' | 'install' | 'logs' | 'daemon' | 'history'
+type Tab = 'configurazione' | 'stream' | 'install' | 'logs' | 'daemon' | 'history' | 'routing'
 
 interface Toast {
   id: number
@@ -51,6 +53,7 @@ const TAB_LABELS: Record<Tab, string> = {
   logs: 'Logs',
   daemon: 'Daemon',
   history: 'History',
+  routing: 'Routing',
 }
 
 export default function App() {
@@ -74,6 +77,8 @@ export default function App() {
   const [configuringSink, setConfiguringSink] = useState<Sink | null>(null)
 
   const [serviceVersion, setServiceVersion] = useState<string | null>(null)
+  const [dndEnabled, setDndEnabled] = useState(false)
+  const [dndBusy, setDndBusy] = useState(false)
 
   const apiRef = useRef<ArrrApi | null>(null)
   apiRef.current = new ArrrApi(settings.baseUrl || '', settings.apiKey || '')
@@ -116,10 +121,11 @@ export default function App() {
     if (settings.apiKey) {
       fetchPlugins()
       fetchSinks()
+      api().getDnd().then((s) => setDndEnabled(s.enabled)).catch(() => {})
     } else {
       setSettingsOpen(true)
     }
-  }, [settings.apiKey, fetchPlugins, fetchSinks])
+  }, [settings.apiKey, fetchPlugins, fetchSinks]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!settings.baseUrl && !settings.apiKey) return
@@ -240,6 +246,18 @@ export default function App() {
     })
   }
 
+  const handleDndToggle = async () => {
+    setDndBusy(true)
+    try {
+      const s = await api().setDnd(!dndEnabled)
+      setDndEnabled(s.enabled)
+    } catch (e) {
+      toast((e as Error).message, 'error')
+    } finally {
+      setDndBusy(false)
+    }
+  }
+
   const handleSettingsClick = () => {
     setActiveTab('configurazione')
     setSettingsOpen((o) => !o)
@@ -305,6 +323,34 @@ export default function App() {
                 Reload all
               </Button>
             )}
+            {settings.apiKey && (
+              <Tooltip.Root>
+                <Tooltip.Trigger asChild>
+                  <Button
+                    aria-label={dndEnabled ? 'Do Not Disturb active — click to disable' : 'Enable Do Not Disturb'}
+                    size="sm"
+                    variant="ghost"
+                    color={dndEnabled ? 'red.400' : 'app.textMuted'}
+                    _hover={{ color: dndEnabled ? 'red.300' : 'red.400', bg: 'whiteAlpha.50' }}
+                    onClick={handleDndToggle}
+                    loading={dndBusy}
+                    gap={1.5}
+                    fontFamily="mono"
+                    fontSize="xs"
+                    fontWeight={dndEnabled ? '700' : '400'}
+                    letterSpacing="wider"
+                  >
+                    {dndEnabled ? <BellOff size={14} /> : <Bell size={14} />}
+                    DND
+                  </Button>
+                </Tooltip.Trigger>
+                <Tooltip.Positioner>
+                  <Tooltip.Content fontFamily="mono" fontSize="xs">
+                    {dndEnabled ? 'DND on — click to disable' : 'Enable Do Not Disturb'}
+                  </Tooltip.Content>
+                </Tooltip.Positioner>
+              </Tooltip.Root>
+            )}
             <ThemeToggle />
             <IconButton
               aria-label="Settings"
@@ -316,22 +362,31 @@ export default function App() {
             >
               <Settings size={15} />
             </IconButton>
-            <IconButton
-              aria-label="Refresh"
-              size="sm"
-              variant="ghost"
-              color="app.textMuted"
-              _hover={{ color: 'white', bg: 'whiteAlpha.50' }}
-              onClick={fetchPlugins}
-              loading={loading}
-            >
-              <RefreshCcw size={15} />
-            </IconButton>
+            <Tooltip.Root>
+              <Tooltip.Trigger asChild>
+                <IconButton
+                  aria-label="Refresh plugin list"
+                  size="sm"
+                  variant="ghost"
+                  color="app.textMuted"
+                  _hover={{ color: 'white', bg: 'whiteAlpha.50' }}
+                  onClick={fetchPlugins}
+                  loading={loading}
+                >
+                  <RefreshCcw size={15} />
+                </IconButton>
+              </Tooltip.Trigger>
+              <Tooltip.Positioner>
+                <Tooltip.Content fontFamily="mono" fontSize="xs">Refresh plugin list</Tooltip.Content>
+              </Tooltip.Positioner>
+            </Tooltip.Root>
           </HStack>
         </Flex>
 
         {/* Tab row */}
-        <Flex px={4} gap={0} borderTopWidth="1px" borderColor="app.border">
+        <Flex px={4} gap={0} borderTopWidth="1px" borderColor="app.border" overflowX="auto"
+          css={{ scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}
+        >
           {(Object.keys(TAB_LABELS) as Tab[]).map((tab) => {
             const active = activeTab === tab
             return (
@@ -365,6 +420,38 @@ export default function App() {
             )
           })}
         </Flex>
+        {/* DND banner */}
+        {dndEnabled && (
+          <Flex
+            align="center"
+            justify="space-between"
+            px={5}
+            py={1.5}
+            bg="rgba(239,68,68,0.08)"
+            borderTopWidth="1px"
+            borderColor="rgba(239,68,68,0.25)"
+            style={{ animation: 'fadeIn 0.2s ease both' }}
+          >
+            <HStack gap={2}>
+              <BellOff size={12} color="#f87171" />
+              <Text fontFamily="mono" fontSize="xs" color="red.400" fontWeight="600" letterSpacing="wider">
+                DO NOT DISTURB — notifications are suppressed
+              </Text>
+            </HStack>
+            <Button
+              size="xs"
+              variant="ghost"
+              color="red.400"
+              _hover={{ color: 'red.300', bg: 'rgba(239,68,68,0.1)' }}
+              fontFamily="mono"
+              fontSize="10px"
+              onClick={handleDndToggle}
+              loading={dndBusy}
+            >
+              Disable
+            </Button>
+          </Flex>
+        )}
       </Box>
 
       {/* Main content */}
@@ -552,6 +639,20 @@ export default function App() {
           </Flex>
         )}
 
+        {/* ── TAB: Routing ── */}
+        {activeTab === 'routing' && settings.apiKey && (
+          <RoutingView api={api()} onToast={toast} />
+        )}
+        {activeTab === 'routing' && !settings.apiKey && (
+          <Flex direction="column" align="center" justify="center" h="300px" gap={3} color="app.textDim">
+            <Settings size={28} />
+            <Text fontFamily="mono" fontSize="sm">Configure API key first</Text>
+            <Button size="sm" variant="outline" colorPalette="amber" onClick={handleSettingsClick}>
+              Open Settings
+            </Button>
+          </Flex>
+        )}
+
         {activeTab === 'daemon' && !settings.apiKey && (
           <Flex direction="column" align="center" justify="center" h="300px" gap={3} color="app.textDim">
             <Settings size={28} />
@@ -662,16 +763,6 @@ export default function App() {
         ))}
       </Box>
 
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </Box>
   )
 }

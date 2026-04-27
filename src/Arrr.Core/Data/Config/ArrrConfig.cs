@@ -10,4 +10,5 @@ public class ArrrConfig
     public List<PluginEntry> Plugins { get; set; } = [];
     public List<SinkEntry> Sinks { get; set; } = [];
     public DigestConfig Digest { get; set; } = new();
+    public RoutingConfig Routing { get; set; } = new();
 }

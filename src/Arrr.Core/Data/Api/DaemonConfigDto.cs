@@ -1,3 +1,5 @@
+using Arrr.Core.Data.Config;
+
 namespace Arrr.Core.Data.Api;
 
 public record DaemonConfigDto(
@@ -6,5 +8,7 @@ public record DaemonConfigDto(
     int Port,
     bool DeduplicationEnabled,
     int DeduplicationWindowSeconds,
-    bool HistoryEnabled
+    bool HistoryEnabled,
+    DigestConfig Digest,
+    RoutingConfig Routing
 );
