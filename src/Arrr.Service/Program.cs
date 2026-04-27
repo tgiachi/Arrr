@@ -14,6 +14,7 @@ using Arrr.Service.Interfaces;
 using Arrr.Service.Internal;
 using Arrr.Service.Services;
 using ConsoleAppFramework;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -52,6 +53,10 @@ await ConsoleApp.RunAsync(
         Log.Logger.Information("Root directory: {RootDirectory}", rootDirectory);
 
         var builder = WebApplication.CreateBuilder(args);
+
+        builder.WebHost.ConfigureKestrel(
+            opt => opt.ConfigureEndpointDefaults(lo => lo.Protocols = HttpProtocols.Http1AndHttp2)
+        );
 
         builder.Services.AddSingleton(directoriesConfig);
         builder.Services.AddSingleton<IConfigService, ConfigService>();
@@ -93,6 +98,9 @@ await ConsoleApp.RunAsync(
                );
 
         builder.Services.AddHostedService<NotificationStreamService>();
+
+        builder.Services.AddGrpc();
+        builder.Services.AddSingleton<NotificationGrpcService>();
 
         builder.Services.AddOpenApi();
         builder.Logging.ClearProviders().AddSerilog();
@@ -144,6 +152,7 @@ await ConsoleApp.RunAsync(
         app.UseWebSockets();
 
         app.MapHub<NotificationStreamHub>("/stream");
+        app.MapGrpcService<NotificationGrpcService>();
 
         app.MapVersionApi();
         app.MapExternalApi();

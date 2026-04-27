@@ -18,8 +18,13 @@ Arrr is a Linux desktop notification aggregator daemon. It runs as a background 
 - **Notification history** — optional SQLite-backed history with full-text search, source filter, and pagination (encrypted at rest)
 - **D-Bus delivery** — notifications appear as native desktop popups via `org.freedesktop.Notifications`
 - **REST API** — HTTP endpoints to send notifications from any language and manage plugins/sinks
+- **gRPC streaming** — server-streaming endpoint so remote clients (e.g. a PC) can subscribe to live notifications over the network
+- **Routing rules** — filter or redirect notifications by source, title, body, priority, extras, and time-of-day; first-match-wins, disabled by default
+- **Do Not Disturb** — pause all sink delivery with a single toggle (REST or gRPC), without stopping sources
+- **Digest** — schedule batched notification summaries (hourly, daily, …) delivered via any sink
 - **Deduplication** — configurable time window to suppress duplicate notifications
 - **NuGet installer** — install community plugins directly from NuGet.org via the API or web UI
+- **Docker image** — `tgiachi/arrr` on Docker Hub; first-start API key generation, `/data` volume for persistence
 - **systemd user service** — runs as a user unit, logs to the journal
 - **Self-contained binary** — no .NET runtime required on the target machine
 
@@ -28,26 +33,32 @@ Arrr is a Linux desktop notification aggregator daemon. It runs as a background 
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────┐
-│                     Arrr.Service                     │
-│                                                      │
-│  Source Plugins ──┐                                  │
+┌──────────────────────────────────────────────────────────────┐
+│                        Arrr.Service                          │
+│                                                              │
+│  Source Plugins ──┐                                          │
 │  REST /api/notify ┼──▶  EventBus ──▶  SinkOrchestrator ──▶ D-Bus popup
-│                   │                        │         │ ──▶ Ntfy / SMTP / Pushover
-│                   │                        │         │ ──▶ Webhook / WebSocket
-│                   │              HistoryService       │ ──▶ SignalR hub
-│                                                      │ ──▶ … (sink plugins)
-└──────────────────────────────────────────────────────┘
+│                   │         │              │                 │ ──▶ Ntfy / SMTP / Pushover
+│                   │         │         RoutingRules           │ ──▶ Webhook / WebSocket
+│                   │         │         DnD guard              │ ──▶ SignalR hub
+│                   │         │              │                 │ ──▶ … (sink plugins)
+│                   │         │         HistoryService         │
+│                   │         │                                │
+│                   │         └──▶  NotificationGrpcService   │
+│                   │                    │                     │
+│                                  gRPC stream :5150           │
+└──────────────────────────────────────────────────────────────┘
                           │
                     Web UI :5150
 ```
 
 1. The daemon starts and loads plugins from the configured `plugins/` directory.
-2. Each plugin receives an `IPluginContext` (event bus, logger, per-plugin config) and runs on its own task.
+2. Each plugin receives an `IPluginContext` (event bus, logger, shared HTTP client, per-plugin config) and runs on its own task.
 3. Plugins publish `Notification` events onto the internal event bus.
-4. `SinkOrchestrator` fans every notification out to all enabled sinks in parallel.
-5. If `historyEnabled: true`, every notification is also persisted to an encrypted SQLite database.
-6. External processes can inject notifications via `POST /api/notify`.
+4. `SinkOrchestrator` evaluates routing rules and the DND flag, then fans matching notifications out to enabled sinks.
+5. If `historyEnabled: true`, every notification is persisted to an encrypted SQLite database.
+6. `NotificationGrpcService` streams events (notifications and DND changes) to all connected gRPC clients.
+7. External processes can inject notifications via `POST /api/notify`.
 
 ---
 
@@ -56,9 +67,11 @@ Arrr is a Linux desktop notification aggregator daemon. It runs as a background 
 ### Install from AUR (Arch Linux)
 
 ```bash
+# Pre-built binary (fast):
 yay -S arrr-bin
-# or
-paru -S arrr-bin
+
+# Build from source (latest git HEAD):
+yay -S arrr-git
 ```
 
 ### Install from package
@@ -79,6 +92,29 @@ sudo rpm -i arrr-<version>-1.x86_64.rpm
 ```bash
 sudo pacman -U arrr-<version>-1-x86_64.pkg.tar.zst
 ```
+
+### Docker
+
+```bash
+docker run -d \
+  --name arrr \
+  -p 5150:5150 \
+  -v arrr-data:/data \
+  tgiachi/arrr:latest
+```
+
+On first start Arrr prints a randomly generated API key to the log. Pass `ARRR_API_KEY` to use a fixed key:
+
+```bash
+docker run -d \
+  --name arrr \
+  -p 5150:5150 \
+  -v arrr-data:/data \
+  -e ARRR_API_KEY=my-secret-key \
+  tgiachi/arrr:latest
+```
+
+> D-Bus and Unix socket sinks are disabled in the Docker image. Use Ntfy, SMTP, Webhook, or gRPC clients to receive notifications from a containerised instance.
 
 ### Enable the systemd user service
 
@@ -113,13 +149,10 @@ On first run Arrr creates `$XDG_DATA_HOME/arrr/arrr.config` (defaults to `~/.loc
   "apiKey": "",
   "isDebug": false,
   "historyEnabled": false,
-  "web": {
-    "port": 5150
-  },
-  "deduplication": {
-    "enabled": false,
-    "windowSeconds": 300
-  },
+  "web": { "port": 5150 },
+  "deduplication": { "enabled": false, "windowSeconds": 300 },
+  "digest": { "enabled": false, "schedule": [] },
+  "routing": { "enabled": false, "rules": [] },
   "plugins": [],
   "sinks": []
 }
@@ -127,12 +160,15 @@ On first run Arrr creates `$XDG_DATA_HOME/arrr/arrr.config` (defaults to `~/.loc
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| `apiKey` | `""` | API key for REST endpoints; leave empty to disable auth |
+| `apiKey` | `""` | API key for REST and gRPC endpoints; leave empty to disable auth |
 | `isDebug` | `false` | Enables OpenAPI (`/openapi/v1.json`) and Scalar UI (`/scalar/v1`) |
 | `historyEnabled` | `false` | Persist all notifications to an encrypted SQLite database |
-| `web.port` | `5150` | HTTP port for the REST API and web UI |
+| `web.port` | `5150` | HTTP/gRPC port for the REST API and web UI |
 | `deduplication.enabled` | `false` | Suppress duplicate notifications within the time window |
 | `deduplication.windowSeconds` | `300` | Window (seconds) for duplicate suppression |
+| `digest.enabled` | `false` | Enable scheduled digest delivery |
+| `routing.enabled` | `false` | Enable the routing rules engine |
+| `routing.rules` | `[]` | Ordered list of routing rules (see [Routing Rules](#routing-rules)) |
 | `plugins` | `[]` | List of enabled source plugins |
 | `sinks` | `[]` | List of enabled sink plugins |
 
@@ -155,9 +191,12 @@ Content-Type: application/json
   "source": "my-script",
   "title": "Hello!",
   "body": "This is a notification from a shell script.",
-  "iconUrl": null
+  "iconUrl": null,
+  "priority": 0
 }
 ```
+
+`priority`: `0` = Normal, `1` = High, `2` = Critical.
 
 ### Notification history
 
@@ -167,6 +206,18 @@ X-Api-Key: <your-key>
 ```
 
 Requires `historyEnabled: true`. Supports full-text search across title and body, source filter, and pagination.
+
+### Do Not Disturb
+
+```http
+GET /api/dnd
+PUT /api/dnd
+Content-Type: application/json
+
+{ "enabled": true }
+```
+
+When DND is enabled, notifications are still collected and stored in history but not dispatched to any sink. DND state changes are also streamed to gRPC subscribers.
 
 ### Plugins
 
@@ -213,6 +264,100 @@ POST /api/config/restore                   # import previously exported JSON
 
 ---
 
+## gRPC
+
+Arrr exposes a gRPC server-streaming endpoint on the **same port** as the REST API (HTTP/1.1 and HTTP/2 share port 5150). This lets a remote client — e.g. a desktop app on another machine — subscribe to live events without polling.
+
+### Proto
+
+```protobuf
+service NotificationService {
+  // Subscribe to live events (notifications + DND changes)
+  rpc Subscribe (SubscribeRequest) returns (stream ArrEvent);
+  // Toggle DND remotely
+  rpc SetDnd    (SetDndRequest)   returns (DndResponse);
+  rpc GetDnd    (GetDndRequest)   returns (DndResponse);
+}
+```
+
+The proto file is at `src/Arrr.Service/Protos/notifications.proto`.
+
+`ArrEvent` is a `oneof` that carries either a `NotificationEvent` or a `DndEvent`, so a single persistent stream receives both.
+
+`SubscribeRequest.sources` is an optional list of source IDs to filter by — empty means all sources.
+
+Authentication uses the `x-api-key` gRPC metadata header.
+
+### Usage with grpcurl
+
+```bash
+# Subscribe to all events
+grpcurl -plaintext \
+  -proto src/Arrr.Service/Protos/notifications.proto \
+  -H 'x-api-key: <key>' \
+  localhost:5150 notifications.NotificationService/Subscribe
+
+# Subscribe to a specific plugin only
+grpcurl -plaintext \
+  -proto src/Arrr.Service/Protos/notifications.proto \
+  -H 'x-api-key: <key>' \
+  -d '{"sources": ["com.arrr.plugin.todoist"]}' \
+  localhost:5150 notifications.NotificationService/Subscribe
+
+# Enable DND remotely
+grpcurl -plaintext \
+  -proto src/Arrr.Service/Protos/notifications.proto \
+  -H 'x-api-key: <key>' \
+  -d '{"enabled": true}' \
+  localhost:5150 notifications.NotificationService/SetDnd
+```
+
+---
+
+## Routing Rules
+
+Routing rules let you filter or redirect notifications before they reach sinks. Rules are evaluated in order; the first match wins. Routing is **disabled by default** — enable it with `routing.enabled: true`.
+
+```json
+{
+  "routing": {
+    "enabled": true,
+    "rules": [
+      {
+        "name": "Block low-priority RSS at night",
+        "enabled": true,
+        "sourcePattern": "com.arrr.plugin.rss",
+        "minPriority": 0,
+        "activeFrom": "22:00",
+        "activeTo": "08:00",
+        "block": true
+      },
+      {
+        "name": "Critical alerts → SMTP only",
+        "enabled": true,
+        "minPriority": 2,
+        "allowSinks": ["com.arrr.sink.smtp"]
+      }
+    ]
+  }
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `sourcePattern` | Exact source ID or trailing wildcard (`com.arrr.plugin.*`). Empty = any source. |
+| `titleContains` | Case-insensitive substring match on the notification title. |
+| `bodyContains` | Case-insensitive substring match on the notification body. |
+| `minPriority` | `0` = Normal, `1` = High, `2` = Critical. Matches notifications at or above this level. |
+| `extraConditions` | Additional key/value checks against `Notification.Extras`. |
+| `activeFrom` / `activeTo` | Local time range (`HH:mm`, 24-hour). Supports midnight crossing. Empty = always active. |
+| `block` | If `true`, the notification is dropped entirely. |
+| `allowSinks` | Restrict delivery to these sink IDs. Empty = all running sinks. Ignored when `block: true`. |
+
+All conditions on a rule are AND-ed. Rules are managed from the web UI → **Config** tab.
+
+---
+
 ## Available Source Plugins
 
 | Plugin | NuGet | Description |
@@ -226,6 +371,7 @@ POST /api/config/restore                   # import previously exported JSON
 | **Healthcheck** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.Healthcheck)](https://www.nuget.org/packages/Arrr.Plugin.Healthcheck) | Polls HTTP endpoints and notifies on up/down state changes |
 | **MQTT** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.Mqtt)](https://www.nuget.org/packages/Arrr.Plugin.Mqtt) | Subscribes to MQTT topics and emits a notification per message |
 | **systemd Journal** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.Systemd)](https://www.nuget.org/packages/Arrr.Plugin.Systemd) | Tails `journalctl` and publishes log events as notifications |
+| **Todoist** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.Todoist)](https://www.nuget.org/packages/Arrr.Plugin.Todoist) | Polls Todoist tasks and fires alerts for due dates and reminders |
 
 ---
 
@@ -270,6 +416,9 @@ public class MyPlugin : ISourcePlugin
     {
         while (!ct.IsCancellationRequested)
         {
+            // Use the shared HttpClient — no socket exhaustion, no manual disposal
+            var response = await context.Http.GetStringAsync("https://example.com/feed", ct);
+
             await context.EventBus.PublishAsync(
                 new Notification(Guid.NewGuid(), Id, "Hello", "World", DateTimeOffset.UtcNow, null),
                 ct
@@ -279,6 +428,16 @@ public class MyPlugin : ISourcePlugin
     }
 }
 ```
+
+`IPluginContext` provides:
+
+| Member | Description |
+|--------|-------------|
+| `EventBus` | Publish notifications and subscribe to internal events |
+| `Http` | Shared `HttpClient` backed by a pooled `SocketsHttpHandler`; one instance per plugin, safe to use directly |
+| `Logger` | Scoped Serilog logger |
+| `LoadConfigAsync<T>()` | Load (and hot-reload) typed per-plugin config |
+| `SaveConfigAsync<T>()` | Persist typed per-plugin config |
 
 **Optional interfaces** a plugin can add:
 
