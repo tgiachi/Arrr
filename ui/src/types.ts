@@ -115,6 +115,10 @@ export interface RoutingLogEntry {
   targetSinks: string[]
 }
 
+export interface DndStatus {
+  enabled: boolean
+}
+
 export interface NotificationItem {
   id: string
   source: string
