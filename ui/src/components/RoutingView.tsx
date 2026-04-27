@@ -10,7 +10,7 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react'
-import { Download, GripVertical, Plus, RefreshCcw, Save, Trash2, Upload } from 'lucide-react'
+import { ChevronDown, ChevronUp, Download, GripVertical, Plus, RefreshCcw, Save, Shuffle, Trash2, Upload } from 'lucide-react'
 import type { ArrrApi } from '../api'
 import type { DaemonConfig, RoutingConfig, RoutingLogEntry, RoutingRule } from '../types'
 
@@ -22,9 +22,10 @@ interface Props {
 const PRIORITY_LABELS = ['Normal', 'High', 'Critical']
 
 const defaultRule = (): RoutingRule => ({
+  id: crypto.randomUUID(),
   name: '',
   enabled: true,
-  sourcePattern: '*',
+  sourcePattern: '',
   titleContains: '',
   bodyContains: '',
   minPriority: 0,
@@ -443,7 +444,7 @@ function RuleHistoryPanel({ api }: { api: ArrrApi }) {
         </Flex>
         <Flex align="center" gap={2}>
           {loading && <Spinner size="xs" color="orange.500" />}
-          <Text fontFamily="mono" fontSize="10px" color="app.textDim">{open ? '▲' : '▼'}</Text>
+          <Box color="app.textDim">{open ? <ChevronUp size={13} /> : <ChevronDown size={13} />}</Box>
         </Flex>
       </Flex>
 
@@ -564,7 +565,8 @@ export function RoutingView({ api, onToast }: Props) {
     setLoading(true)
     try {
       const cfg = await api.getDaemonConfig()
-      const r = cfg.routing ?? { enabled: false, rules: [] }
+      const raw = cfg.routing ?? { enabled: false, rules: [] }
+      const r = { ...raw, rules: raw.rules.map((rule) => ({ id: crypto.randomUUID(), ...rule })) }
       setFullConfig(cfg)
       setRouting(r)
       setOriginal(r)
@@ -608,7 +610,8 @@ export function RoutingView({ api, onToast }: Props) {
     reader.onload = (ev) => {
       try {
         const parsed = JSON.parse(ev.target?.result as string)
-        const rules: RoutingRule[] = Array.isArray(parsed) ? parsed : parsed.rules ?? []
+        const rules: RoutingRule[] = (Array.isArray(parsed) ? parsed : parsed.rules ?? [])
+          .map((r: RoutingRule) => ({ id: crypto.randomUUID(), ...r }))
         patch({ rules })
         onToast(`Imported ${rules.length} rule${rules.length !== 1 ? 's' : ''}`, 'success')
       } catch {
@@ -774,7 +777,7 @@ export function RoutingView({ api, onToast }: Props) {
             borderColor="app.cardBorder"
             opacity={0.6}
           >
-            <Text fontSize="2xl">🔀</Text>
+            <Box color="app.textDim" opacity={0.5}><Shuffle size={28} strokeWidth={1.5} /></Box>
             <Text fontFamily="mono" fontSize="xs" color="app.textDim">
               No rules — all notifications go to all sinks
             </Text>
@@ -787,7 +790,7 @@ export function RoutingView({ api, onToast }: Props) {
           <VStack gap={2}>
             {routing.rules.map((rule, i) => (
               <RuleRow
-                key={i}
+                key={rule.id ?? i}
                 rule={rule}
                 index={i}
                 onChange={(r) => updateRule(i, r)}
@@ -881,16 +884,6 @@ export function RoutingView({ api, onToast }: Props) {
         </Box>
       </Box>
 
-      <style>{`
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(16px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
-        }
-      `}</style>
     </>
   )
 }

@@ -8,6 +8,7 @@ import {
   SimpleGrid,
   Spinner,
   Text,
+  Tooltip,
 } from '@chakra-ui/react'
 import { RefreshCcw, Settings, Skull } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -318,22 +319,31 @@ export default function App() {
             >
               <Settings size={15} />
             </IconButton>
-            <IconButton
-              aria-label="Refresh"
-              size="sm"
-              variant="ghost"
-              color="app.textMuted"
-              _hover={{ color: 'white', bg: 'whiteAlpha.50' }}
-              onClick={fetchPlugins}
-              loading={loading}
-            >
-              <RefreshCcw size={15} />
-            </IconButton>
+            <Tooltip.Root>
+              <Tooltip.Trigger asChild>
+                <IconButton
+                  aria-label="Refresh plugin list"
+                  size="sm"
+                  variant="ghost"
+                  color="app.textMuted"
+                  _hover={{ color: 'white', bg: 'whiteAlpha.50' }}
+                  onClick={fetchPlugins}
+                  loading={loading}
+                >
+                  <RefreshCcw size={15} />
+                </IconButton>
+              </Tooltip.Trigger>
+              <Tooltip.Positioner>
+                <Tooltip.Content fontFamily="mono" fontSize="xs">Refresh plugin list</Tooltip.Content>
+              </Tooltip.Positioner>
+            </Tooltip.Root>
           </HStack>
         </Flex>
 
         {/* Tab row */}
-        <Flex px={4} gap={0} borderTopWidth="1px" borderColor="app.border">
+        <Flex px={4} gap={0} borderTopWidth="1px" borderColor="app.border" overflowX="auto"
+          css={{ scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}
+        >
           {(Object.keys(TAB_LABELS) as Tab[]).map((tab) => {
             const active = activeTab === tab
             return (
@@ -678,16 +688,6 @@ export default function App() {
         ))}
       </Box>
 
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </Box>
   )
 }

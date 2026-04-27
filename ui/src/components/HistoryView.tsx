@@ -115,6 +115,7 @@ export function HistoryView({ api, onToast }: Props) {
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [clearing, setClearing] = useState(false)
+  const [confirmClear, setConfirmClear] = useState(false)
 
   const [search, setSearch] = useState('')
   const [sourceFilter, setSourceFilter] = useState('')
@@ -156,7 +157,12 @@ export function HistoryView({ api, onToast }: Props) {
   }
 
   async function handleClear() {
-    if (!confirm('Delete all notification history?')) return
+    if (!confirmClear) {
+      setConfirmClear(true)
+      setTimeout(() => setConfirmClear(false), 3000)
+      return
+    }
+    setConfirmClear(false)
     setClearing(true)
     try {
       await api.clearHistory()
@@ -286,18 +292,24 @@ export function HistoryView({ api, onToast }: Props) {
           <Tooltip.Trigger asChild>
             <Button
               size="sm"
-              variant="ghost"
-              color="app.textMuted"
-              _hover={{ color: 'red.400' }}
+              variant={confirmClear ? 'solid' : 'ghost'}
+              colorPalette={confirmClear ? 'red' : undefined}
+              color={confirmClear ? undefined : 'app.textMuted'}
+              _hover={{ color: confirmClear ? undefined : 'red.400' }}
               onClick={handleClear}
               loading={clearing}
-              px={2}
+              px={confirmClear ? 3 : 2}
+              fontFamily="mono"
+              fontSize="xs"
+              style={{ transition: 'all 0.2s' }}
             >
-              <Trash2 size={13} />
+              {confirmClear ? 'Confirm?' : <Trash2 size={13} />}
             </Button>
           </Tooltip.Trigger>
           <Tooltip.Positioner>
-            <Tooltip.Content fontFamily="mono" fontSize="xs">Clear all history</Tooltip.Content>
+            <Tooltip.Content fontFamily="mono" fontSize="xs">
+              {confirmClear ? 'Click again to confirm' : 'Clear all history'}
+            </Tooltip.Content>
           </Tooltip.Positioner>
         </Tooltip.Root>
       </Flex>

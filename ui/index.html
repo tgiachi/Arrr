@@ -16,6 +16,18 @@
       html { background: #080c14; }
       html.light { background: #f0f4f8; }
       body { margin: 0; background: inherit; }
+      @keyframes slideUp {
+        from { opacity: 0; transform: translateY(16px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
     </style>
   </head>
   <body>

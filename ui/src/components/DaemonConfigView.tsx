@@ -11,6 +11,7 @@ import {
   Tooltip,
 } from '@chakra-ui/react'
 import {
+  ClipboardList,
   Eye,
   EyeOff,
   Globe,
@@ -335,7 +336,7 @@ function DigestPod({ form, original, setForm }: DigestPodProps) {
   return (
     <Pod
       accent={isDirty ? accent : 'var(--chakra-colors-teal-600)'}
-      icon={<span style={{ fontSize: 14 }}>📋</span>}
+      icon={<ClipboardList size={14} />}
       title="Digest"
       subtitle="Morning & evening notification digests from registered providers"
       delay={200}
@@ -393,7 +394,7 @@ function DigestPod({ form, original, setForm }: DigestPodProps) {
             borderColor="app.cardBorder"
             opacity={0.6}
           >
-            <Text fontSize="18px">📋</Text>
+            <Box color="app.textDim" opacity={0.5}><ClipboardList size={20} /></Box>
             <Text fontFamily="mono" fontSize="10px" color="app.textDim">
               No digest slots configured
             </Text>
@@ -489,7 +490,7 @@ export function DaemonConfigView({ api, onToast, onSettingsChanged }: Props) {
 
   return (
     <>
-      <Box maxW="680px" mx="auto" pb={isDirty ? '80px' : '0'} style={{ transition: 'padding-bottom 0.3s' }}>
+      <Box maxW="720px" mx="auto" pb={isDirty ? '80px' : '0'} style={{ transition: 'padding-bottom 0.3s' }}>
         {/* Page header */}
         <Flex align="center" gap={3} mb={6} style={{ animation: 'slideUp 0.3s ease both' }}>
           <Box color="app.textDim">
@@ -766,7 +767,7 @@ export function DaemonConfigView({ api, onToast, onSettingsChanged }: Props) {
             opacity={0.6}
           />
 
-          <Flex align="center" justify="space-between" maxW="680px" mx="auto">
+          <Flex align="center" justify="space-between" maxW="720px" mx="auto">
             <Flex align="center" gap={3}>
               <Box
                 w="6px"
@@ -815,12 +816,6 @@ export function DaemonConfigView({ api, onToast, onSettingsChanged }: Props) {
         </Box>
       </Box>
 
-      <style>{`
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(16px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </>
   )
 }

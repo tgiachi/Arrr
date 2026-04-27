@@ -59,6 +59,7 @@ export interface ExtraCondition {
 }
 
 export interface RoutingRule {
+  id?: string
   name: string
   enabled: boolean
   sourcePattern: string
