@@ -7,6 +7,7 @@ using Arrr.Core.Directories;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Types;
 using Arrr.Core.Utils;
+using Arrr.Service.Interfaces;
 using Arrr.Service.Sinks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Serilog;
@@ -31,6 +32,7 @@ internal class SinkOrchestrator : BackgroundService, ISinkManager
     private readonly ISinkPlugin[] _builtIns;
     private readonly Dictionary<string, ISinkPlugin> _running = [];
     private readonly List<(ISinkPlugin Sink, bool Enabled)> _testEntries = [];
+    private readonly IRoutingHistoryService? _routingHistory;
 
     internal SinkOrchestrator(IEventBus eventBus)
     {
@@ -38,11 +40,12 @@ internal class SinkOrchestrator : BackgroundService, ISinkManager
         _builtIns = [];
     }
 
-    public SinkOrchestrator(IEventBus eventBus, IConfigService configService, DirectoriesConfig directoriesConfig)
+    public SinkOrchestrator(IEventBus eventBus, IConfigService configService, DirectoriesConfig directoriesConfig, IRoutingHistoryService routingHistory)
     {
         _eventBus = eventBus;
         _configService = configService;
         _directoriesConfig = directoriesConfig;
+        _routingHistory = routingHistory;
         _builtIns = [new DbusNotifySink(), new UnixSocketSink()];
     }
 
@@ -441,8 +444,18 @@ internal class SinkOrchestrator : BackgroundService, ISinkManager
         => _eventBus.Subscribe<Notification>(
             async (notification, ct) =>
             {
+                var routingConfig = _configService?.Config.Routing ?? new();
+                var decision = NotificationRouter.RouteWithDecision(notification, routingConfig, _running.Keys, DateTimeOffset.Now, _logger);
+                _routingHistory?.Record(decision, notification);
+                var targetIds = decision.SinkIds.ToHashSet();
+
                 foreach (var sink in _running.Values.ToList())
                 {
+                    if (!targetIds.Contains(sink.Id))
+                    {
+                        continue;
+                    }
+
                     try
                     {
                         await sink.ConsumeAsync(notification, ct);
