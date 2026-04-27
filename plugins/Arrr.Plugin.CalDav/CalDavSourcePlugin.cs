@@ -1,4 +1,5 @@
 using System.Text;
+using Arrr.Core.Data.Digest;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Utils;
@@ -8,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CalDavSource;
 
-public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposable
+public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDigestProvider, IDisposable
 {
     private readonly HashSet<string> _notifiedKeys = [];
     private readonly HttpClient _httpClient;
@@ -39,6 +40,64 @@ public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
     {
         _httpClient = new(handler);
         _timeProvider = timeProvider;
+    }
+
+    public string DigestSectionTitle => _config.DigestSectionTitle;
+
+    public async Task<DigestSection> GetDigestSectionAsync(DateOnly forDate, CancellationToken ct)
+    {
+        var section = new DigestSection { Title = DigestSectionTitle };
+
+        if (string.IsNullOrEmpty(_config.CalendarUrl))
+        {
+            return section;
+        }
+
+        var icsContent = await FetchIcsAsync(ct);
+
+        if (icsContent is null)
+        {
+            return section;
+        }
+
+        Calendar calendar;
+
+        try
+        {
+            calendar = Calendar.Load(icsContent);
+        }
+        catch (Exception ex)
+        {
+            _context?.Logger.LogError(ex, "CalDAV: failed to parse ICS for digest");
+
+            return section;
+        }
+
+        var targetDate = forDate.ToDateTime(TimeOnly.MinValue).Date;
+
+        var events = calendar.Events
+            .Where(e => GetEventLocalDate(e) == targetDate)
+            .OrderBy(e => e.IsAllDay ? DateTime.MinValue : e.DtStart.AsUtc.ToLocalTime())
+            .ToList();
+
+        foreach (var evt in events)
+        {
+            string text;
+
+            if (evt.IsAllDay)
+            {
+                text = $"{evt.Summary} (all day)";
+            }
+            else
+            {
+                var localTime = evt.DtStart.AsUtc.ToLocalTime();
+                text = $"{localTime:HH:mm} - {evt.Summary}";
+            }
+
+            section.Items.Add(new DigestItem { Text = text });
+        }
+
+        return section;
     }
 
     public void Dispose()
@@ -142,6 +201,11 @@ public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
 
         return $"In {alertMinutes} minutes: {summary}{desc}";
     }
+
+    private static DateTime GetEventLocalDate(Ical.Net.CalendarComponents.CalendarEvent evt)
+        => evt.IsAllDay
+            ? evt.DtStart.Value.Date
+            : evt.DtStart.AsUtc.ToLocalTime().Date;
 
     private async Task<string?> FetchIcsAsync(CancellationToken ct)
     {

@@ -9,4 +9,5 @@ public class ArrrConfig
     public bool HistoryEnabled { get; set; } = false;
     public List<PluginEntry> Plugins { get; set; } = [];
     public List<SinkEntry> Sinks { get; set; } = [];
+    public DigestConfig Digest { get; set; } = new();
 }
