@@ -20,6 +20,18 @@ That's it. No cloud account, no mobile app, no SaaS. A daemon that runs on my Li
 
 Arrr runs as a background service, collects notifications from multiple sources via a plugin system, and delivers them to your desktop through D-Bus and configurable sink plugins. A built-in web UI lets you browse notification history, manage plugins and sinks, and tweak settings — all from a browser.
 
+## Screenshots
+
+<p align="center">
+  <img src="assets/screenshot_1.png" alt="Web UI — plugin and sink overview" width="100%"/>
+  <br/><em>Web UI — plugin and sink management</em>
+</p>
+
+<p align="center">
+  <img src="assets/screenshot_2.png" alt="Web UI — plugin detail view" width="100%"/>
+  <br/><em>Web UI — plugin cards with status and controls</em>
+</p>
+
 ---
 
 ## Features
