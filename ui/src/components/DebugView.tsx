@@ -86,13 +86,6 @@ export function DebugView({ api }: Props) {
       fontFamily="mono"
       position="relative"
     >
-      {/* scanline texture overlay */}
-      <Box
-        position="fixed" inset={0} pointerEvents="none" zIndex={0}
-        style={{
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px)',
-        }}
-      />
 
       {/* header */}
       <Flex align="center" gap={3} mb={6} position="relative" zIndex={1}>
