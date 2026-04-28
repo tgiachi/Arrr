@@ -143,15 +143,15 @@ public class WhatsAppPlugin : ISourcePlugin, IConfigurablePlugin, IQrPlugin
                                         ? dto
                                         : DateTimeOffset.UtcNow;
 
-                    var title = body.Length > 80 ? body[..80] + "…" : body;
-                    var subtitle = string.IsNullOrEmpty(chat) ? from : $"{from} → {chat}";
+                    var title = string.IsNullOrEmpty(chat) ? from : $"{from} → {chat}";
+                    var messageBody = body.Length > 500 ? body[..500] + "…" : body;
 
                     _ = context.EventBus.PublishAsync(
                         new Notification(
                             Guid.NewGuid(),
                             Id,
                             title,
-                            subtitle,
+                            messageBody,
                             timestamp,
                             null,
                             Extras: new Dictionary<string, string>
