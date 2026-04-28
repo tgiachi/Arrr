@@ -1,0 +1,19 @@
+name: Update AUR arrr-tray-git package
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update-aur-tray-git:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Push arrr-tray-git to AUR
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: bash scripts/update-aur-tray-git.sh

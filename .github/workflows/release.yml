@@ -114,10 +114,17 @@ jobs:
           # capture the released version for downstream steps
           echo "version=$(git describe --tags --abbrev=0 | sed 's/^v//')" >> "$GITHUB_OUTPUT"
 
-      - name: Update AUR package
+      - name: Update AUR arrr-bin package
         if: steps.release_check.outputs.should_release == 'true' && steps.semrel.outputs.version != ''
         env:
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
         run: |
           bash scripts/update-aur.sh "${{ steps.semrel.outputs.version }}"
+
+      - name: Update AUR arrr-tray-bin package
+        if: steps.release_check.outputs.should_release == 'true' && steps.semrel.outputs.version != ''
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: |
+          bash scripts/update-aur-tray.sh "${{ steps.semrel.outputs.version }}"
 
