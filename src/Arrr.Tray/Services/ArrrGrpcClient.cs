@@ -13,6 +13,7 @@ public sealed class ArrrGrpcClient : IDisposable
     private NotificationService.NotificationServiceClient? _client;
     private CancellationTokenSource? _subscribeCts;
     private string? _serverUrl;
+    private bool _streamWasUp;
 
     public bool IsConnected { get; private set; }
 
@@ -91,6 +92,7 @@ public sealed class ArrrGrpcClient : IDisposable
             try
             {
                 var call = _client!.Subscribe(new SubscribeRequest(), cancellationToken: ct);
+                _streamWasUp = true;
                 SubscriptionConnected?.Invoke();
 
                 while (await call.ResponseStream.MoveNext(ct))
@@ -113,7 +115,13 @@ public sealed class ArrrGrpcClient : IDisposable
             }
             catch
             {
-                SubscriptionDisconnected?.Invoke();
+                // Only signal disconnected if the stream was previously up
+                if (_streamWasUp)
+                {
+                    _streamWasUp = false;
+                    SubscriptionDisconnected?.Invoke();
+                }
+
                 await Task.Delay(TimeSpan.FromSeconds(5), ct).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
             }
         }
@@ -127,6 +135,7 @@ public sealed class ArrrGrpcClient : IDisposable
         _channel?.Dispose();
         _channel = null;
         _client = null;
+        _streamWasUp = false;
         IsConnected = false;
     }
 }
