@@ -1,3 +1,47 @@
+## [1.8.0](https://github.com/tgiachi/Arrr/compare/v1.7.0...v1.8.0) (2026-04-28)
+
+### Features
+
+* **debug:** gate debug tab on service IsDebug flag, not npm DEV mode ([c488ab7](https://github.com/tgiachi/Arrr/commit/c488ab7fcd7954fdf4f8ae63278d98d20b2db39e)), closes [#if](https://github.com/tgiachi/Arrr/issues/if)
+* **docker:** add Docker image with CI/CD push to Docker Hub ([9b75f0c](https://github.com/tgiachi/Arrr/commit/9b75f0c4d485b62616b185c81ba3e167758ca15f))
+* **gitlab:** add CI pipeline status monitoring ([460338a](https://github.com/tgiachi/Arrr/commit/460338ab45c2d6b0da762efe6ec947dd6fc35658))
+* **gitlab:** support multiple GitLab server instances ([b76a5f0](https://github.com/tgiachi/Arrr/commit/b76a5f02a77b0a12c657915cabfc1af7474d6d06))
+* **grpc:** add gRPC streaming endpoint for remote notification clients ([8827592](https://github.com/tgiachi/Arrr/commit/8827592d29ed3c7474094dea4875770d63b7bd17))
+* **plugin:** add GitLab source plugin ([f4ec980](https://github.com/tgiachi/Arrr/commit/f4ec980089ade7fc954c9a22beb6d3746d0d9424))
+* **plugins:** add ITestablePlugin interface for config validation ([f199fb9](https://github.com/tgiachi/Arrr/commit/f199fb96cf0af10c71efeaf8f57e9bff5677c36d))
+* **plugins:** add ITestableSink interface and TestAsync to all plugins ([3d854c5](https://github.com/tgiachi/Arrr/commit/3d854c5d7a2932ca0fbe2d3576f66f1cd0e7d8c2))
+* **tray,service:** replace gRPC with SignalR, tray improvements ([ec65e6c](https://github.com/tgiachi/Arrr/commit/ec65e6c86ed8b8b040b6223ba0d5be29844694d2))
+* **tray:** add About window, icon support and D-Bus improvements ([5da92af](https://github.com/tgiachi/Arrr/commit/5da92afc8c4e1fe5930d7a7ebee00b9f5d9b2e58))
+* **tray:** add AppSettings model and SettingsService ([81ba09a](https://github.com/tgiachi/Arrr/commit/81ba09a0ba1fd291d11d2396f6cbd5538e91e27b))
+* **tray:** add connection status item with green/red icon (20px) ([ae681e6](https://github.com/tgiachi/Arrr/commit/ae681e62af8c43f36c95cba09732beb34c32e544))
+* **tray:** add gRPC client wrapper with DND and subscription retry ([44ddcf8](https://github.com/tgiachi/Arrr/commit/44ddcf828a1d6631173138fce8376087854fc787))
+* **tray:** add TrayViewModel with DND toggle, settings and exit commands ([335fca9](https://github.com/tgiachi/Arrr/commit/335fca92dcea7d32656c88ffd459dc40916660a1))
+* **tray:** app shell with tray icon wiring ([3e266b6](https://github.com/tgiachi/Arrr/commit/3e266b6ac8dfe523238e4da8bd2b291c1f87e568))
+* **tray:** forward NotificationEvent to desktop via notify-send ([f7b6f7b](https://github.com/tgiachi/Arrr/commit/f7b6f7bf3d672e77cc1941f125492a7f4cb001cf))
+* **tray:** packaging for deb/rpm/AUR (arrr-tray-bin) ([c6098f9](https://github.com/tgiachi/Arrr/commit/c6098f9bbdf8037f7769ae1ecb00373b4fd57614))
+* **tray:** restore Tmds.DBus for D-Bus notification delivery ([ca8a1c7](https://github.com/tgiachi/Arrr/commit/ca8a1c7374d47e49241346b050b6aaaf94801c71))
+* **tray:** scaffold Avalonia 12 MVVM project with gRPC proto and assets ([b63d9ae](https://github.com/tgiachi/Arrr/commit/b63d9ae4b598fa87916042ee6b60efe80af761e2))
+* **tray:** settings window + view model ([712e2e1](https://github.com/tgiachi/Arrr/commit/712e2e173568ac6dafc7369c8bb5893fe7f49952))
+* **tray:** show server version in context menu when connected ([ba86b1e](https://github.com/tgiachi/Arrr/commit/ba86b1e3295028718a804b4a2b05b556acda198e))
+* **ui:** add Debug tab with notification injector (DEV only) ([51302c3](https://github.com/tgiachi/Arrr/commit/51302c3b0329650f6b285133fdc502a94ecce458))
+
+### Bug Fixes
+
+* **ci:** strip v prefix from VERSION before dotnet build/test ([0709fe1](https://github.com/tgiachi/Arrr/commit/0709fe1393340d6e04194d4cbeff9e0669981440))
+* **docker:** copy full publish dir to include libe_sqlcipher.so and wwwroot; fix runtime-deps tag ([0dd9c2a](https://github.com/tgiachi/Arrr/commit/0dd9c2a16bdc7eecd5c0b4d27692dfe62c8615b8))
+* **tray,service:** separate gRPC port (Http2) from REST port (Http1) ([19adb44](https://github.com/tgiachi/Arrr/commit/19adb44bdc8c63717c0bd9da4a69ec037b035de5))
+* **tray:** connection status stuck on Disconnected ([736c4c9](https://github.com/tgiachi/Arrr/commit/736c4c984d32103be103b4c20ccc97ef990fbeaf))
+* **tray:** defer settings window show past menu-close event ([6560e59](https://github.com/tgiachi/Arrr/commit/6560e59f3be2f5c367dd4e42c1dcb7756a4ebac6))
+* **tray:** fire SubscriptionConnected only after first successful MoveNext ([e02d141](https://github.com/tgiachi/Arrr/commit/e02d141dd5a125dc485c99233624705f8c74f413))
+* **tray:** guard OpenSettings dispatcher action + make Exit bulletproof ([443d204](https://github.com/tgiachi/Arrr/commit/443d204ce56c195b72edbb26abb6ecf141a59811))
+* **tray:** make IFreedesktopNotifications public for Tmds.DBus proxy codegen ([7235017](https://github.com/tgiachi/Arrr/commit/7235017a50d582a0babe3f4c78f186187db86805))
+* **tray:** remove IsEnabled=false from version and status menu items ([c9e4777](https://github.com/tgiachi/Arrr/commit/c9e4777246c9efc6f34a668d85215175442de2ff))
+* **tray:** send x-api-key header on all gRPC calls ([a97df89](https://github.com/tgiachi/Arrr/commit/a97df89038e43a18d4d55e2bbca7c8261d3633c5))
+* **tray:** use correct assembly name in avares:// URI for icon loading ([b543c0c](https://github.com/tgiachi/Arrr/commit/b543c0c9e7ee56d2094a57d8851b22f8e03c7d02))
+* **ui:** redesign DebugView with semantic tokens for light/dark theme ([53240a5](https://github.com/tgiachi/Arrr/commit/53240a5a8175d2db33a8ad8f75c7e63f0d3ddd03))
+* **ui:** remove scanline overlay from DebugView ([886284c](https://github.com/tgiachi/Arrr/commit/886284c6d8d3f90f397ea1c46a0deccb5eb7b463))
+* **whatsapp:** swap title and body in notifications ([2afd79e](https://github.com/tgiachi/Arrr/commit/2afd79ec0669fe042fcf4e93d77fcd82ba19499f))
+
 ## [1.7.0](https://github.com/tgiachi/Arrr/compare/v1.6.0...v1.7.0) (2026-04-27)
 
 ### Features

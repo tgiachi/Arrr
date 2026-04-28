@@ -7,7 +7,7 @@
 
         <!-- NuGet package metadata -->
         <PackageId>Arrr.Core</PackageId>
-        <Version>1.7.0</Version>
+        <Version>1.8.0</Version>
         <!-- Pin assembly version to 1.0.0.0 so plugins compiled against any NuGet release
              are always satisfied by the host's loaded assembly (no version mismatch). -->
         <AssemblyVersion>1.0.0.0</AssemblyVersion>

@@ -8,7 +8,7 @@
         <RootNamespace>Arrr.Plugin.Mqtt</RootNamespace>
 
         <PackageId>Arrr.Plugin.Mqtt</PackageId>
-        <Version>1.7.0</Version>
+        <Version>1.8.0</Version>
         <Authors>Tom</Authors>
         <Company>orivega.io</Company>
         <Description>MQTT source for Arrr — subscribes to MQTT topics and emits a notification per message.</Description>
