@@ -69,7 +69,7 @@ public partial class App : Application
 
     private static WindowIcon LoadIcon(string fileName)
     {
-        var uri = new Uri($"avares://Arrr.Tray/Assets/{fileName}");
+        var uri = new Uri($"avares://arrr-tray/Assets/{fileName}");
         return new WindowIcon(AssetLoader.Open(uri));
     }
 }
