@@ -13,6 +13,7 @@ public sealed class ArrrGrpcClient : IDisposable
     public bool IsConnected { get; private set; }
 
     public event Action<bool>? DndChanged;
+    public event Action<Grpc.NotificationEvent>? NotificationReceived;
 
     public void Connect(string serverUrl)
     {
@@ -72,6 +73,10 @@ public sealed class ArrrGrpcClient : IDisposable
                     if (ev.PayloadCase == ArrEvent.PayloadOneofCase.Dnd)
                     {
                         DndChanged?.Invoke(ev.Dnd.Enabled);
+                    }
+                    else if (ev.PayloadCase == ArrEvent.PayloadOneofCase.Notification)
+                    {
+                        NotificationReceived?.Invoke(ev.Notification);
                     }
                 }
             }
