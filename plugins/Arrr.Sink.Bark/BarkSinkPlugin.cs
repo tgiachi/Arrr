@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using Arrr.Core.Data.Api;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Utils;
@@ -8,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Arrr.Sink.Bark;
 
-public class BarkSinkPlugin : ISinkPlugin, IConfigurablePlugin
+public class BarkSinkPlugin : ISinkPlugin, IConfigurablePlugin, ITestableSink
 {
     private readonly HttpMessageHandler? _handler;
 
@@ -84,6 +85,32 @@ public class BarkSinkPlugin : ISinkPlugin, IConfigurablePlugin
         else
         {
             context.Logger.LogInformation("Bark sink ready → {Server}", _config.ServerUrl);
+        }
+    }
+
+    public async Task<PluginTestResult> TestAsync(ISinkContext context, CancellationToken ct)
+    {
+        if (_http is null)
+        {
+            return new(false, "Sink not started.");
+        }
+
+        try
+        {
+            var url = $"{_config.ServerUrl.TrimEnd('/')}/ping";
+            var response = await _http.GetAsync(url, ct);
+
+            return response.IsSuccessStatusCode
+                ? new(true, $"✓ OK ({(int)response.StatusCode})")
+                : new(false, $"✗ {(int)response.StatusCode} {response.ReasonPhrase}");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return new(false, ex.Message);
         }
     }
 

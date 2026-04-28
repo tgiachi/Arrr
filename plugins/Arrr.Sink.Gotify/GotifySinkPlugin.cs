@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using Arrr.Core.Data.Api;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Utils;
@@ -8,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace GotifySink;
 
-public class GotifySinkPlugin : ISinkPlugin, IConfigurablePlugin
+public class GotifySinkPlugin : ISinkPlugin, IConfigurablePlugin, ITestableSink
 {
     private readonly HttpMessageHandler? _handler;
 
@@ -85,6 +86,35 @@ public class GotifySinkPlugin : ISinkPlugin, IConfigurablePlugin
         else
         {
             context.Logger.LogInformation("Gotify sink ready → {Url}", _config.ServerUrl);
+        }
+    }
+
+    public async Task<PluginTestResult> TestAsync(ISinkContext context, CancellationToken ct)
+    {
+        if (_http is null || string.IsNullOrEmpty(_config.AppToken))
+        {
+            return new(false, "AppToken not configured.");
+        }
+
+        try
+        {
+            var url = $"{_config.ServerUrl.TrimEnd('/')}/health";
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("X-Gotify-Key", _config.AppToken);
+
+            var response = await _http.SendAsync(request, ct);
+
+            return response.IsSuccessStatusCode
+                ? new(true, $"✓ OK ({(int)response.StatusCode})")
+                : new(false, $"✗ {(int)response.StatusCode} {response.ReasonPhrase}");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return new(false, ex.Message);
         }
     }
 

@@ -51,6 +51,7 @@ public class SinksEndpointTests
             true,
             true,
             true,
+            false,
             false
         );
         var (client, app, _) = await CreateHostAsync("secret", [sinkA]);

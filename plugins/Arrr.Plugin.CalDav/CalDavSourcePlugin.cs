@@ -1,4 +1,5 @@
 using System.Text;
+using Arrr.Core.Data.Api;
 using Arrr.Core.Data.Digest;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
@@ -10,7 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CalDavSource;
 
-public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDigestProvider, IDisposable
+public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDigestProvider, ITestablePlugin, IDisposable
 {
     private readonly HashSet<string> _notifiedKeys = [];
     private readonly HttpClient _httpClient;
@@ -44,6 +45,39 @@ public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDigestPr
     }
 
     public string DigestSectionTitle => _config.DigestSectionTitle;
+
+    public async Task<PluginTestResult> TestAsync(IPluginContext context, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(_config.CalendarUrl))
+        {
+            return new(false, "CalendarUrl not configured.");
+        }
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, _config.CalendarUrl);
+
+            if (!string.IsNullOrEmpty(_config.Username) && !string.IsNullOrEmpty(_config.Password))
+            {
+                var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_config.Username}:{_config.Password}"));
+                request.Headers.Authorization = new("Basic", credentials);
+            }
+
+            var response = await _httpClient.SendAsync(request, ct);
+
+            return response.IsSuccessStatusCode
+                ? new(true, $"✓ OK ({(int)response.StatusCode})")
+                : new(false, $"✗ {(int)response.StatusCode} {response.ReasonPhrase}");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return new(false, ex.Message);
+        }
+    }
 
     public void Dispose()
         => _httpClient.Dispose();

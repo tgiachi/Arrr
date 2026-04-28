@@ -133,6 +133,10 @@ internal class NuGetPluginInstaller : IPluginInstaller
 
     public async Task UpdateAsync(string packageId, CancellationToken ct)
     {
+        // Resolve the latest version BEFORE touching any files so a missing/non-NuGet package
+        // fails fast without leaving the user with a deleted plugin and nothing to replace it.
+        var latestVersion = await ResolveLatestVersionAsync(packageId, ct);
+
         var entry = _manifest.Remove(packageId);
 
         if (entry is not null)
@@ -150,7 +154,19 @@ internal class NuGetPluginInstaller : IPluginInstaller
             _logger.Information("Removed old files for {PackageId} before update", packageId);
         }
 
-        await InstallAsync(packageId, null, ct);
+        await InstallAsync(packageId, latestVersion.ToString(), ct);
+    }
+
+    private async Task<NuGetVersion> ResolveLatestVersionAsync(string packageId, CancellationToken ct)
+    {
+        var source = Repository.Factory.GetCoreV3("https://api.nuget.org/v3/index.json");
+        using var cache = new SourceCacheContext();
+        var resource = await source.GetResourceAsync<FindPackageByIdResource>(ct);
+        var versions = (await resource.GetAllVersionsAsync(packageId, cache, NullLogger.Instance, ct)).ToList();
+
+        return versions.Count > 0
+                   ? versions.Max()!
+                   : throw new InvalidOperationException($"Package '{packageId}' not found on NuGet.org — only NuGet-installed plugins can be updated this way.");
     }
 
     private async Task DownloadPackageAsync(

@@ -114,7 +114,8 @@ internal class SinkOrchestrator : BackgroundService, ISinkManager
                                        e.Enabled,
                                        _running.ContainsKey(e.Sink.Id),
                                        false,
-                                       e.Sink is IConfigurablePlugin
+                                       e.Sink is IConfigurablePlugin,
+                                       e.Sink is ITestableSink
                                    )
                                )
                                .ToList();
@@ -137,7 +138,8 @@ internal class SinkOrchestrator : BackgroundService, ISinkManager
                     entry is null || entry.Enabled,
                     _running.ContainsKey(sink.Id),
                     true,
-                    sink is IConfigurablePlugin
+                    sink is IConfigurablePlugin,
+                    sink is ITestableSink
                 )
             );
         }
@@ -184,7 +186,8 @@ internal class SinkOrchestrator : BackgroundService, ISinkManager
                         entry?.Enabled ?? false,
                         _running.ContainsKey(sink.Id),
                         false,
-                        sink is IConfigurablePlugin
+                        sink is IConfigurablePlugin,
+                        sink is ITestableSink
                     )
                 );
                 loadCtx.Unload();
@@ -266,6 +269,70 @@ internal class SinkOrchestrator : BackgroundService, ISinkManager
 
         await using var stream = File.Create(configPath);
         await JsonSerializer.SerializeAsync(stream, config, configType, JsonOpts, ct);
+    }
+
+    public async Task<PluginTestResult?> TestSinkAsync(
+        string sinkId,
+        JsonElement config,
+        CancellationToken ct = default)
+    {
+        var pluginsPath = _directoriesConfig![DirectoryType.Plugins];
+
+        foreach (var dll in Directory.EnumerateFiles(pluginsPath, "*.dll"))
+        {
+            try
+            {
+                var loadCtx = new PluginLoadContext(dll);
+                var asm = loadCtx.LoadFromAssemblyPath(dll);
+                var sinkType = asm.GetTypes()
+                                  .FirstOrDefault(t => !t.IsAbstract && t.IsAssignableTo(typeof(ISinkPlugin)));
+
+                if (sinkType is null || Activator.CreateInstance(sinkType) is not ISinkPlugin sink)
+                {
+                    loadCtx.Unload();
+
+                    continue;
+                }
+
+                if (sink.Id != sinkId)
+                {
+                    loadCtx.Unload();
+
+                    continue;
+                }
+
+                if (sink is not ITestableSink testable)
+                {
+                    loadCtx.Unload();
+
+                    return null;
+                }
+
+                try
+                {
+                    var testCtx = new TestSinkContext(config);
+                    await sink.StartAsync(testCtx, ct);
+                    return await testable.TestAsync(testCtx, ct);
+                }
+                finally
+                {
+                    await sink.StopAsync();
+                    loadCtx.Unload();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "TestSinkAsync failed for {SinkId}", sinkId);
+
+                return new PluginTestResult(false, ex.Message);
+            }
+        }
+
+        throw new KeyNotFoundException($"Sink '{sinkId}' not found.");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

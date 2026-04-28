@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Arrr.Core.Data.Api;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Types;
@@ -8,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Arrr.Plugin.Healthcheck;
 
-public class HealthcheckPlugin : IPollingPlugin, IConfigurablePlugin, IDisposable
+public class HealthcheckPlugin : IPollingPlugin, IConfigurablePlugin, ITestablePlugin, IDisposable
 {
     // null = never checked, true = up, false = down
     private readonly Dictionary<string, bool?> _states = [];
@@ -38,6 +39,49 @@ public class HealthcheckPlugin : IPollingPlugin, IConfigurablePlugin, IDisposabl
     {
         _httpClient = new(handler);
         _timeProvider = timeProvider;
+    }
+
+    public async Task<PluginTestResult> TestAsync(IPluginContext context, CancellationToken ct)
+    {
+        if (_config.Endpoints.Count == 0)
+        {
+            return new(false, "No endpoints configured.");
+        }
+
+        var lines = new List<string>();
+        var allOk = true;
+
+        foreach (var endpoint in _config.Endpoints)
+        {
+            var name = string.IsNullOrWhiteSpace(endpoint.Name) ? endpoint.Url : endpoint.Name;
+
+            try
+            {
+                using var response = await _httpClient.GetAsync(endpoint.Url, HttpCompletionOption.ResponseHeadersRead, ct);
+                var isOk = IsExpectedStatus((int)response.StatusCode, endpoint.ExpectedStatusCodes);
+
+                if (isOk)
+                {
+                    lines.Add($"{name}: ✓ OK ({(int)response.StatusCode})");
+                }
+                else
+                {
+                    lines.Add($"{name}: ✗ {(int)response.StatusCode} {response.ReasonPhrase}");
+                    allOk = false;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                lines.Add($"{name}: ✗ {ex.Message}");
+                allOk = false;
+            }
+        }
+
+        return new(allOk, string.Join("\n", lines));
     }
 
     public void Dispose()

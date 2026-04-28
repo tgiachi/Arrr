@@ -12,4 +12,12 @@ public interface ISinkManager
     Task<PluginConfigResponse?> GetSinkConfigAsync(string sinkId, CancellationToken ct = default);
     Task ReloadAsync(string sinkId, CancellationToken ct);
     Task SaveSinkConfigAsync(string sinkId, JsonElement config, CancellationToken ct = default);
+
+    /// <summary>
+    /// Instantiates the sink with the provided <paramref name="config" /> (without persisting it)
+    /// and calls <see cref="ITestableSink.TestAsync" />.
+    /// Returns <c>null</c> if the sink does not implement <see cref="ITestableSink" />.
+    /// Throws <see cref="KeyNotFoundException" /> if the sink is not found.
+    /// </summary>
+    Task<PluginTestResult?> TestSinkAsync(string sinkId, JsonElement config, CancellationToken ct = default);
 }

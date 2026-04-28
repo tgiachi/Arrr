@@ -1,5 +1,6 @@
 using System.ServiceModel.Syndication;
 using System.Xml;
+using Arrr.Core.Data.Api;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Utils;
@@ -8,7 +9,7 @@ using RssPlugin.Data;
 
 namespace RssPlugin;
 
-public class RssPlugin : IPollingPlugin, IConfigurablePlugin
+public class RssPlugin : IPollingPlugin, IConfigurablePlugin, ITestablePlugin
 {
     private readonly HttpClient _httpClient = new()
     {
@@ -30,6 +31,46 @@ public class RssPlugin : IPollingPlugin, IConfigurablePlugin
     public Type ConfigType => typeof(RssPluginConfig);
 
     public TimeSpan Interval => TimeSpan.FromMinutes(5);
+
+    public async Task<PluginTestResult> TestAsync(IPluginContext context, CancellationToken ct)
+    {
+        if (_config.Feeds.Count == 0)
+        {
+            return new(false, "No feeds configured.");
+        }
+
+        var lines = new List<string>();
+        var allOk = true;
+
+        foreach (var feed in _config.Feeds)
+        {
+            try
+            {
+                using var response = await _httpClient.GetAsync(feed.Url, HttpCompletionOption.ResponseHeadersRead, ct);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    lines.Add($"{feed.Url}: ✓ OK ({(int)response.StatusCode})");
+                }
+                else
+                {
+                    lines.Add($"{feed.Url}: ✗ {(int)response.StatusCode} {response.ReasonPhrase}");
+                    allOk = false;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                lines.Add($"{feed.Url}: ✗ {ex.Message}");
+                allOk = false;
+            }
+        }
+
+        return new(allOk, string.Join("\n", lines));
+    }
 
     public void Dispose()
         => _httpClient.Dispose();

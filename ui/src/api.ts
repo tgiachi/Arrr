@@ -113,6 +113,13 @@ export class ArrrApi {
     })
   }
 
+  async testSinkConfig(sinkId: string, config: Record<string, unknown>): Promise<{ success: boolean; message: string }> {
+    return (await this.req(`/api/sinks/${encodeURIComponent(sinkId)}/test`, {
+      method: 'POST',
+      body: JSON.stringify(config),
+    })).json()
+  }
+
   async getVersion(): Promise<{ version: string; runtimeVersion: string; os: string }> {
     const r = await fetch(`${this.baseUrl}/api/version`)
     if (!r.ok) throw new Error(`${r.status}`)

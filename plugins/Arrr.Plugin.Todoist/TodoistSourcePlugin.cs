@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Arrr.Core.Data.Api;
 using Arrr.Core.Data.Digest;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
@@ -11,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Arrr.Plugin.Todoist;
 
-public class TodoistSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDigestProvider, IDisposable
+public class TodoistSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDigestProvider, ITestablePlugin, IDisposable
 {
     private readonly HashSet<string> _notifiedKeys = [];
     private readonly HttpClient _httpClient;
@@ -48,6 +49,34 @@ public class TodoistSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDigestP
     }
 
     public string DigestSectionTitle => _config.DigestSectionTitle;
+
+    public async Task<PluginTestResult> TestAsync(IPluginContext context, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(_config.ApiToken))
+        {
+            return new(false, "ApiToken not configured.");
+        }
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.todoist.com/rest/v2/projects");
+            request.Headers.Authorization = new("Bearer", _config.ApiToken);
+
+            var response = await _httpClient.SendAsync(request, ct);
+
+            return response.IsSuccessStatusCode
+                ? new(true, $"✓ OK ({(int)response.StatusCode})")
+                : new(false, $"✗ {(int)response.StatusCode} {response.ReasonPhrase}");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return new(false, ex.Message);
+        }
+    }
 
     public void Dispose()
         => _httpClient.Dispose();

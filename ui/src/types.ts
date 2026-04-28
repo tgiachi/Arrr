@@ -9,6 +9,7 @@ export interface Sink {
   running: boolean
   isBuiltIn: boolean
   hasConfig: boolean
+  hasTest: boolean
 }
 
 export interface Plugin {

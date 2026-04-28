@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using Arrr.Core.Data.Api;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Utils;
@@ -8,7 +9,7 @@ using WebhookSink.Data;
 
 namespace WebhookSink;
 
-public class WebhookSinkPlugin : ISinkPlugin, IConfigurablePlugin
+public class WebhookSinkPlugin : ISinkPlugin, IConfigurablePlugin, ITestableSink
 {
     private readonly HttpMessageHandler? _handler;
 
@@ -80,6 +81,41 @@ public class WebhookSinkPlugin : ISinkPlugin, IConfigurablePlugin
         else
         {
             context.Logger.LogInformation("Webhook sink ready → {Url}", _config.Url);
+        }
+    }
+
+    public async Task<PluginTestResult> TestAsync(ISinkContext context, CancellationToken ct)
+    {
+        if (_http is null || string.IsNullOrEmpty(_config.Url))
+        {
+            return new(false, "Url not configured.");
+        }
+
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Head, _config.Url);
+
+            if (!string.IsNullOrEmpty(_config.AuthToken))
+            {
+                request.Headers.Authorization = new("Bearer", _config.AuthToken);
+            }
+
+            var response = await _http.SendAsync(request, ct);
+
+            // 405 Method Not Allowed means the server is reachable but HEAD is not supported — still reachable
+            var reachable = response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.MethodNotAllowed;
+
+            return reachable
+                ? new(true, $"✓ Reachable ({(int)response.StatusCode})")
+                : new(false, $"✗ {(int)response.StatusCode} {response.ReasonPhrase}");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return new(false, ex.Message);
         }
     }
 

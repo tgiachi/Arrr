@@ -731,6 +731,9 @@ export default function App() {
           name={configuringSink.name}
           getConfig={() => api().getSinkConfig(configuringSink.id)}
           saveConfig={(c) => api().saveSinkConfig(configuringSink.id, c)}
+          testConfig={configuringSink.hasTest
+            ? (c) => api().testSinkConfig(configuringSink.id, c)
+            : undefined}
           onClose={() => setConfiguringSink(null)}
           onToast={toast}
         />
