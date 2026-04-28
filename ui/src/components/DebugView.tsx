@@ -1,5 +1,5 @@
 import { Box, Flex, Text, Input, Textarea, Button, Grid } from '@chakra-ui/react'
-import { Zap, Terminal, Clock, CheckCircle, XCircle } from 'lucide-react'
+import { Zap, Clock, CheckCircle, XCircle } from 'lucide-react'
 import { useState, useRef } from 'react'
 import type { ArrrApi } from '../api'
 
@@ -13,12 +13,15 @@ interface ShotEntry {
   error?: string
 }
 
-const PRIORITIES = [
-  { value: 0, label: 'Low',      color: '#6b7280' },
-  { value: 1, label: 'Normal',   color: '#3b82f6' },
-  { value: 2, label: 'High',     color: '#f59e0b' },
-  { value: 3, label: 'Critical', color: '#ef4444' },
+const PRIORITIES: { value: number; label: string; palette: string }[] = [
+  { value: 0, label: 'Low',      palette: 'gray'   },
+  { value: 1, label: 'Normal',   palette: 'blue'   },
+  { value: 2, label: 'orange',   palette: 'orange' },
+  { value: 3, label: 'Critical', palette: 'red'    },
 ]
+
+// fix label separately
+const PRIORITY_LABELS = ['Low', 'Normal', 'High', 'Critical']
 
 interface Props {
   api: ArrrApi
@@ -39,11 +42,7 @@ export function DebugView({ api }: Props) {
 
   const parsedExtras = (): Record<string, string> | undefined => {
     if (!extras.trim()) return undefined
-    try {
-      return JSON.parse(extras)
-    } catch {
-      return undefined
-    }
+    try { return JSON.parse(extras) } catch { return undefined }
   }
 
   const fire = async () => {
@@ -53,17 +52,14 @@ export function DebugView({ api }: Props) {
     const ts = new Date().toLocaleTimeString()
     try {
       await api.sendNotification({
-        source,
-        title,
-        body,
-        priority,
+        source, title, body, priority,
         iconUrl: iconUrl || undefined,
         url:     url     || undefined,
         extras:  parsedExtras(),
       })
       setShots(prev => [{ id, ts, source, title, priority, ok: true }, ...prev].slice(0, 30))
       setFlashOk(true)
-      setTimeout(() => setFlashOk(false), 600)
+      setTimeout(() => setFlashOk(false), 700)
     } catch (e) {
       setShots(prev => [{ id, ts, source, title, priority, ok: false, error: String(e) }, ...prev].slice(0, 30))
     } finally {
@@ -71,193 +67,150 @@ export function DebugView({ api }: Props) {
     }
   }
 
-  const extrasError = extras.trim() && (() => {
-    try { JSON.parse(extras); return null }
-    catch (e) { return String(e) }
-  })()
+  const extrasError = extras.trim() ? (() => {
+    try { JSON.parse(extras); return null } catch (e) { return String(e) }
+  })() : null
 
-  const pColor = PRIORITIES[priority]?.color ?? '#6b7280'
+  const palette = PRIORITIES[priority]?.palette ?? 'blue'
 
   return (
-    <Box
-      minH="calc(100vh - 120px)"
-      px={{ base: 4, md: 8 }}
-      py={6}
-      fontFamily="mono"
-      position="relative"
-    >
+    <Box px={{ base: 4, md: 8 }} py={6}>
 
       {/* header */}
-      <Flex align="center" gap={3} mb={6} position="relative" zIndex={1}>
-        <Box color="#f59e0b">
-          <Terminal size={18} />
-        </Box>
-        <Text fontSize="xs" letterSpacing="0.2em" textTransform="uppercase" color="#f59e0b" fontWeight="700">
+      <Flex align="center" gap={3} mb={6}>
+        <Zap size={15} />
+        <Text
+          fontSize="xs" fontFamily="mono" fontWeight="700"
+          letterSpacing="0.18em" textTransform="uppercase" color="app.text"
+        >
           Notification Injector
         </Text>
-        <Box flex={1} h="1px" bg="rgba(245,158,11,0.2)" />
-        <Text fontSize="10px" color="app.textDim" letterSpacing="0.1em">
-          DEV MODE
-        </Text>
+        <Box flex={1} h="1px" bg="app.border" />
+        <Box
+          px={2} py="2px" borderRadius="sm" borderWidth="1px"
+          borderColor="app.border" bg="app.cardBg"
+        >
+          <Text fontSize="9px" fontFamily="mono" fontWeight="700"
+            letterSpacing="0.15em" color="app.textDim" textTransform="uppercase">
+            debug
+          </Text>
+        </Box>
       </Flex>
 
-      <Grid templateColumns={{ base: '1fr', lg: '1fr 380px' }} gap={6} position="relative" zIndex={1}>
+      <Grid templateColumns={{ base: '1fr', lg: '1fr 360px' }} gap={5}>
 
-        {/* ── Left: composer ── */}
+        {/* ── composer ── */}
         <Box
-          bg="rgba(0,0,0,0.4)"
+          bg="app.cardBg"
           borderWidth="1px"
-          borderColor={flashOk ? 'rgba(34,197,94,0.5)' : 'rgba(245,158,11,0.15)'}
-          borderRadius="lg"
+          borderColor={flashOk ? 'green.500' : 'app.cardBorder'}
+          borderRadius="xl"
           p={5}
-          style={{
-            transition: 'border-color 0.3s ease',
-            boxShadow: flashOk
-              ? '0 0 20px rgba(34,197,94,0.15)'
-              : '0 0 0 transparent',
-          }}
+          style={{ transition: 'border-color 0.4s ease' }}
         >
           <Grid templateColumns="1fr 1fr" gap={4} mb={4}>
-            <Field label="SOURCE">
-              <Input
-                value={source}
-                onChange={e => setSource(e.target.value)}
-                placeholder="debug.manual"
-                {...inputStyle}
-              />
+            <Field label="Source">
+              <Input value={source} onChange={e => setSource(e.target.value)}
+                placeholder="debug.manual" {...inp} />
             </Field>
-            <Field label="ICON URL">
-              <Input
-                value={iconUrl}
-                onChange={e => setIconUrl(e.target.value)}
-                placeholder="https://…/icon.png"
-                {...inputStyle}
-              />
+            <Field label="Icon URL">
+              <Input value={iconUrl} onChange={e => setIconUrl(e.target.value)}
+                placeholder="https://…/icon.png" {...inp} />
             </Field>
           </Grid>
 
-          <Field label="TITLE" mb={4}>
-            <Input
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder="Notification title"
-              {...inputStyle}
-            />
+          <Field label="Title" mb={4}>
+            <Input value={title} onChange={e => setTitle(e.target.value)}
+              placeholder="Notification title" {...inp} />
           </Field>
 
-          <Field label="BODY" mb={4}>
-            <Textarea
-              value={body}
-              onChange={e => setBody(e.target.value)}
-              rows={3}
-              placeholder="Notification body…"
-              {...inputStyle}
-              resize="vertical"
-            />
+          <Field label="Body" mb={4}>
+            <Textarea value={body} onChange={e => setBody(e.target.value)}
+              rows={3} placeholder="Notification body…" {...inp} resize="vertical" />
           </Field>
 
-          <Field label="URL (optional)" mb={4}>
-            <Input
-              value={url}
-              onChange={e => setUrl(e.target.value)}
-              placeholder="https://…"
-              {...inputStyle}
-            />
+          <Field label="URL" mb={4}>
+            <Input value={url} onChange={e => setUrl(e.target.value)}
+              placeholder="https://…" {...inp} />
           </Field>
 
-          {/* Priority */}
+          {/* priority */}
           <Box mb={5}>
-            <Text fontSize="10px" letterSpacing="0.15em" color="app.textDim" mb={2}>
-              PRIORITY
+            <Text fontSize="11px" fontFamily="mono" color="app.textDim" fontWeight="600" mb={2}>
+              Priority
             </Text>
-            <Flex gap={2}>
-              {PRIORITIES.map(p => (
+            <Flex gap={2} flexWrap="wrap">
+              {PRIORITIES.map((p, i) => (
                 <Box
                   key={p.value}
                   as="button"
                   onClick={() => setPriority(p.value)}
-                  px={3} py={1}
+                  px={3} py="5px"
                   borderRadius="md"
                   fontSize="xs"
                   fontFamily="mono"
                   fontWeight="600"
-                  letterSpacing="0.05em"
                   borderWidth="1px"
-                  borderColor={priority === p.value ? p.color : 'rgba(255,255,255,0.08)'}
-                  color={priority === p.value ? p.color : 'app.textMuted'}
-                  bg={priority === p.value ? `${p.color}18` : 'transparent'}
-                  style={{ transition: 'all 0.15s ease', cursor: 'pointer' }}
-                  _hover={{ borderColor: p.color, color: p.color }}
+                  borderColor={priority === p.value ? `${p.palette}.500` : 'app.cardBorder'}
+                  color={priority === p.value ? `${p.palette}.500` : 'app.textMuted'}
+                  bg={priority === p.value ? `${p.palette}.500/10` : 'transparent'}
+                  _hover={{ borderColor: `${p.palette}.500`, color: `${p.palette}.500` }}
+                  style={{ transition: 'all 0.15s', cursor: 'pointer' }}
                 >
-                  {p.label}
+                  {PRIORITY_LABELS[i]}
                 </Box>
               ))}
             </Flex>
           </Box>
 
-          {/* Extras */}
-          <Field
-            label="EXTRAS (JSON)"
-            error={extrasError ?? undefined}
-            mb={6}
-          >
+          {/* extras */}
+          <Field label="Extras (JSON)" error={extrasError ?? undefined} mb={6}>
             <Textarea
               value={extras}
               onChange={e => setExtras(e.target.value)}
               rows={3}
               placeholder={'{\n  "key": "value"\n}'}
-              {...inputStyle}
-              borderColor={extrasError ? 'rgba(239,68,68,0.5)' : inputStyle.borderColor}
+              {...inp}
+              borderColor={extrasError ? 'red.500' : inp.borderColor}
               resize="vertical"
             />
           </Field>
 
-          {/* Fire button */}
           <Button
-            w="full"
-            size="lg"
+            w="full" size="lg"
+            colorPalette={palette}
+            variant="outline"
             onClick={fire}
             loading={firing}
             disabled={!source || !title || !body || !!extrasError}
-            fontFamily="mono"
-            fontWeight="700"
-            letterSpacing="0.15em"
-            fontSize="sm"
-            textTransform="uppercase"
-            bg={`${pColor}22`}
-            color={pColor}
-            borderWidth="1px"
-            borderColor={`${pColor}55`}
-            _hover={{ bg: `${pColor}33`, borderColor: pColor, boxShadow: `0 0 16px ${pColor}33` }}
-            _active={{ bg: `${pColor}44` }}
-            style={{ transition: 'all 0.15s ease' }}
+            fontFamily="mono" fontWeight="700" letterSpacing="0.12em"
+            fontSize="sm" textTransform="uppercase"
           >
-            <Zap size={14} />
-            &nbsp;Fire
+            <Zap size={13} />
+            Fire
           </Button>
         </Box>
 
-        {/* ── Right: shot log ── */}
+        {/* ── shot log ── */}
         <Box
-          bg="rgba(0,0,0,0.3)"
+          bg="app.cardBg"
           borderWidth="1px"
-          borderColor="rgba(255,255,255,0.06)"
-          borderRadius="lg"
+          borderColor="app.cardBorder"
+          borderRadius="xl"
           p={4}
           overflow="hidden"
         >
           <Flex align="center" gap={2} mb={4}>
-            <Clock size={12} color="#6b7280" />
-            <Text fontSize="10px" letterSpacing="0.15em" color="app.textDim" textTransform="uppercase">
+            <Clock size={12} />
+            <Text fontSize="11px" fontFamily="mono" fontWeight="700"
+              letterSpacing="0.1em" textTransform="uppercase" color="app.textDim">
               Shot Log
             </Text>
             {shots.length > 0 && (
               <Box
-                ml="auto"
-                as="button"
-                fontSize="10px"
-                color="app.textDim"
-                _hover={{ color: 'app.textMuted' }}
+                ml="auto" as="button"
+                fontSize="11px" fontFamily="mono" color="app.textDim"
+                _hover={{ color: 'app.text' }}
                 style={{ cursor: 'pointer' }}
                 onClick={() => setShots([])}
               >
@@ -267,51 +220,50 @@ export function DebugView({ api }: Props) {
           </Flex>
 
           {shots.length === 0 ? (
-            <Flex direction="column" align="center" justify="center" h="200px" gap={2}>
-              <Zap size={24} color="rgba(245,158,11,0.2)" />
-              <Text fontSize="xs" color="app.textDim">
-                No shots fired yet
-              </Text>
+            <Flex direction="column" align="center" justify="center" h="180px" gap={2} color="app.textDim">
+              <Zap size={22} />
+              <Text fontSize="xs" fontFamily="mono">No shots yet</Text>
             </Flex>
           ) : (
-            <Flex direction="column" gap={2} overflowY="auto" maxH="520px">
+            <Flex direction="column" gap={2} overflowY="auto" maxH="540px">
               {shots.map(s => (
                 <Box
                   key={s.id}
-                  px={3} py={2}
-                  borderRadius="md"
-                  borderWidth="1px"
-                  borderColor={s.ok ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'}
-                  bg={s.ok ? 'rgba(34,197,94,0.04)' : 'rgba(239,68,68,0.04)'}
+                  px={3} py={2} borderRadius="lg" borderWidth="1px"
+                  borderColor={s.ok ? 'green.500/20' : 'red.500/20'}
+                  bg={s.ok ? 'green.500/5' : 'red.500/5'}
                 >
-                  <Flex align="center" gap={2} mb={1}>
+                  <Flex align="center" gap={2} mb="3px">
                     {s.ok
-                      ? <CheckCircle size={11} color="#22c55e" />
-                      : <XCircle    size={11} color="#ef4444" />
+                      ? <CheckCircle size={11} color="var(--chakra-colors-green-500)" />
+                      : <XCircle    size={11} color="var(--chakra-colors-red-500)"   />
                     }
-                    <Text fontSize="10px" color={s.ok ? '#22c55e' : '#ef4444'} fontWeight="600">
+                    <Text fontSize="10px" fontFamily="mono" fontWeight="700"
+                      color={s.ok ? 'green.500' : 'red.500'}>
                       {s.ok ? '204 OK' : 'ERROR'}
                     </Text>
-                    <Text fontSize="10px" color="app.textDim" ml="auto">
+                    <Text fontSize="10px" fontFamily="mono" color="app.textDim" ml="auto">
                       {s.ts}
                     </Text>
                   </Flex>
-                  <Text fontSize="11px" color="app.text" fontWeight="600" mb="1px" lineClamp={1}>
+                  <Text fontSize="12px" fontWeight="600" color="app.text" lineClamp={1}>
                     {s.title}
                   </Text>
-                  <Flex align="center" gap={2}>
-                    <Text fontSize="10px" color="app.textDim" lineClamp={1}>{s.source}</Text>
+                  <Flex align="center" gap={2} mt="2px">
+                    <Text fontSize="10px" fontFamily="mono" color="app.textDim" lineClamp={1}>
+                      {s.source}
+                    </Text>
                     <Box
-                      px={1} borderRadius="sm"
-                      bg={`${PRIORITIES[s.priority]?.color ?? '#6b7280'}22`}
-                      color={PRIORITIES[s.priority]?.color ?? '#6b7280'}
-                      fontSize="9px" fontWeight="700" letterSpacing="0.05em"
+                      px="5px" py="1px" borderRadius="sm"
+                      bg={`${PRIORITIES[s.priority]?.palette ?? 'gray'}.500/10`}
+                      color={`${PRIORITIES[s.priority]?.palette ?? 'gray'}.500`}
+                      fontSize="9px" fontFamily="mono" fontWeight="700"
                     >
-                      {PRIORITIES[s.priority]?.label}
+                      {PRIORITY_LABELS[s.priority]}
                     </Box>
                   </Flex>
                   {s.error && (
-                    <Text fontSize="10px" color="#ef4444" mt={1} lineClamp={2}>
+                    <Text fontSize="10px" fontFamily="mono" color="red.500" mt={1} lineClamp={2}>
                       {s.error}
                     </Text>
                   )}
@@ -325,39 +277,31 @@ export function DebugView({ api }: Props) {
   )
 }
 
-// ── helpers ────────────────────────────────────────────────────────────────
+// ── shared input style using semantic tokens ────────────────────────────────
 
-const inputStyle = {
-  bg: 'rgba(0,0,0,0.4)',
-  borderColor: 'rgba(255,255,255,0.08)',
-  color: 'app.text',
-  fontSize: 'xs',
+const inp = {
+  bg: 'app.inputBg',
+  borderColor: 'app.inputBorder',
+  color: 'app.inputColor',
+  fontSize: 'sm',
   fontFamily: 'mono',
   _placeholder: { color: 'app.placeholder' },
-  _focusVisible: { borderColor: 'rgba(245,158,11,0.5)', boxShadow: '0 0 0 1px rgba(245,158,11,0.3)' },
-  _hover: { borderColor: 'rgba(255,255,255,0.15)' },
+  _hover: { borderColor: 'app.cardBorderHover' },
+  _focusVisible: { borderColor: 'orange.400', boxShadow: '0 0 0 1px var(--chakra-colors-orange-400)' },
 } as const
 
 function Field({
-  label,
-  children,
-  error,
-  mb,
+  label, children, error, mb,
 }: {
-  label: string
-  children: React.ReactNode
-  error?: string
-  mb?: number | string
+  label: string; children: React.ReactNode; error?: string; mb?: number | string
 }) {
   return (
     <Box mb={mb}>
-      <Text fontSize="10px" letterSpacing="0.15em" color="app.textDim" mb={1}>
+      <Text fontSize="11px" fontFamily="mono" fontWeight="600" color="app.textDim" mb={1}>
         {label}
       </Text>
       {children}
-      {error && (
-        <Text fontSize="10px" color="red.400" mt={1}>{error}</Text>
-      )}
+      {error && <Text fontSize="10px" fontFamily="mono" color="red.500" mt={1}>{error}</Text>}
     </Box>
   )
 }
