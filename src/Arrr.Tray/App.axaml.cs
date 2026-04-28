@@ -27,6 +27,8 @@ public partial class App : Application
 
             var vm = new TrayViewModel(grpc, settingsService);
 
+            var versionItem = new NativeMenuItem("Arrr") { IsEnabled = false };
+
             var dndItem = new NativeMenuItem(vm.DndLabel);
             dndItem.Click += (_, _) => _ = vm.ToggleDndCommand.ExecuteAsync(null);
 
@@ -37,6 +39,8 @@ public partial class App : Application
             exitItem.Click += (_, _) => vm.ExitCommand.Execute(null);
 
             var menu = new NativeMenu();
+            menu.Items.Add(versionItem);
+            menu.Items.Add(new NativeMenuItemSeparator());
             menu.Items.Add(dndItem);
             menu.Items.Add(new NativeMenuItemSeparator());
             menu.Items.Add(settingsItem);
@@ -57,6 +61,11 @@ public partial class App : Application
                     dndItem.Header = vm.DndLabel;
                     trayIcon.Icon = LoadIcon(enabled ? "tray-icon-dnd.png" : "tray-icon.png");
                 });
+            };
+
+            vm.ServerVersionChanged += ver =>
+            {
+                Dispatcher.UIThread.Post(() => versionItem.Header = ver);
             };
 
             TrayIcon.SetIcons(this, new TrayIcons { trayIcon });

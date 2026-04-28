@@ -17,6 +17,7 @@ public partial class TrayViewModel : ObservableObject
     public string DndLabel => DndEnabled ? "Disable DND" : "Enable DND";
 
     public event Action<bool>? DndStateChanged;
+    public event Action<string>? ServerVersionChanged;
 
     public TrayViewModel(ArrrGrpcClient grpc, SettingsService settingsService)
     {
@@ -40,6 +41,12 @@ public partial class TrayViewModel : ObservableObject
         catch
         {
             // Service not yet reachable — will update via subscription
+        }
+
+        var version = await _grpc.GetVersionAsync();
+        if (version is not null)
+        {
+            ServerVersionChanged?.Invoke($"Arrr v{version}");
         }
 
         _grpc.StartSubscription();

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Arrr.Tray.Grpc;
 using Grpc.Core;
 using Grpc.Net.Client;
@@ -6,9 +7,12 @@ namespace Arrr.Tray.Services;
 
 public sealed class ArrrGrpcClient : IDisposable
 {
+    private static readonly HttpClient _http = new();
+
     private GrpcChannel? _channel;
     private NotificationService.NotificationServiceClient? _client;
     private CancellationTokenSource? _subscribeCts;
+    private string? _serverUrl;
 
     public bool IsConnected { get; private set; }
 
@@ -19,9 +23,29 @@ public sealed class ArrrGrpcClient : IDisposable
     {
         Dispose();
 
+        _serverUrl = serverUrl;
         _channel = GrpcChannel.ForAddress(serverUrl);
         _client = new NotificationService.NotificationServiceClient(_channel);
         IsConnected = true;
+    }
+
+    public async Task<string?> GetVersionAsync(CancellationToken ct = default)
+    {
+        if (_serverUrl is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var json = await _http.GetStringAsync($"{_serverUrl}/api/version", ct);
+            using var doc = JsonDocument.Parse(json);
+            return doc.RootElement.GetProperty("version").GetString();
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public async Task<bool> GetDndAsync(CancellationToken ct = default)
