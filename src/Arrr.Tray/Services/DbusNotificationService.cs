@@ -1,58 +1,69 @@
-using System.Diagnostics;
+using Tmds.DBus;
 
 namespace Arrr.Tray.Services;
 
-internal sealed class DbusNotificationService
+[DBusInterface("org.freedesktop.Notifications")]
+internal interface IFreedesktopNotifications : IDBusObject
 {
-    private readonly bool _available;
+    Task<uint> NotifyAsync(
+        string appName,
+        uint replacesId,
+        string appIcon,
+        string summary,
+        string body,
+        string[] actions,
+        IDictionary<string, object> hints,
+        int expireTimeout);
+}
 
-    public DbusNotificationService()
+internal sealed class DbusNotificationService : IAsyncDisposable
+{
+    private Connection? _connection;
+    private IFreedesktopNotifications? _proxy;
+    private bool _available;
+
+    public async Task InitializeAsync()
     {
-        // Check notify-send is reachable at startup; gracefully degrade if not
-        _available = IsNotifySendAvailable();
+        try
+        {
+            _connection = new Connection(Address.Session!);
+            await _connection.ConnectAsync();
+            _proxy = _connection.CreateProxy<IFreedesktopNotifications>(
+                "org.freedesktop.Notifications",
+                "/org/freedesktop/Notifications");
+            _available = true;
+        }
+        catch
+        {
+            _available = false;
+        }
     }
 
-    public void Show(string title, string body)
+    public async Task ShowAsync(string title, string body)
     {
-        if (!_available)
+        if (!_available || _proxy is null)
         {
             return;
         }
 
         try
         {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "notify-send",
-                ArgumentList = { "--app-name=Arrr", "--expire-time=5000", title, body },
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-            });
+            await _proxy.NotifyAsync(
+                "Arrr", 0, "dialog-information",
+                title, body,
+                [], new Dictionary<string, object>(), 5000);
         }
         catch
         {
-            // notify-send unavailable at runtime — silently ignore
+            // D-Bus unavailable at runtime — silently ignore
         }
     }
 
-    private static bool IsNotifySendAvailable()
+    public async ValueTask DisposeAsync()
     {
-        try
-        {
-            using var proc = Process.Start(new ProcessStartInfo
-            {
-                FileName = "which",
-                ArgumentList = { "notify-send" },
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-            });
-            proc?.WaitForExit(1000);
-            return proc?.ExitCode == 0;
-        }
-        catch
-        {
-            return false;
-        }
+        _connection?.Dispose();
+        _connection = null;
+        _proxy = null;
+        _available = false;
     }
 }

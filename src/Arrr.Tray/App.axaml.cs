@@ -62,12 +62,13 @@ public partial class App : Application
             TrayIcon.SetIcons(this, new TrayIcons { trayIcon });
 
             var dbus = new DbusNotificationService();
+            _ = dbus.InitializeAsync();
 
             grpc.NotificationReceived += notif =>
             {
                 if (!vm.DndEnabled)
                 {
-                    dbus.Show(notif.Title, notif.Body);
+                    _ = dbus.ShowAsync(notif.Title, notif.Body);
                 }
             };
 
