@@ -18,6 +18,8 @@ public sealed class ArrrGrpcClient : IDisposable
 
     public event Action<bool>? DndChanged;
     public event Action<Grpc.NotificationEvent>? NotificationReceived;
+    public event Action? SubscriptionConnected;
+    public event Action? SubscriptionDisconnected;
 
     public void Connect(string serverUrl)
     {
@@ -89,6 +91,7 @@ public sealed class ArrrGrpcClient : IDisposable
             try
             {
                 var call = _client!.Subscribe(new SubscribeRequest(), cancellationToken: ct);
+                SubscriptionConnected?.Invoke();
 
                 while (await call.ResponseStream.MoveNext(ct))
                 {
@@ -110,6 +113,7 @@ public sealed class ArrrGrpcClient : IDisposable
             }
             catch
             {
+                SubscriptionDisconnected?.Invoke();
                 await Task.Delay(TimeSpan.FromSeconds(5), ct).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
             }
         }

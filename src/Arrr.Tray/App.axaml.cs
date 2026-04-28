@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using Arrr.Tray.Services;
@@ -29,6 +30,12 @@ public partial class App : Application
 
             var versionItem = new NativeMenuItem("Arrr") { IsEnabled = false };
 
+            var statusItem = new NativeMenuItem("Disconnected")
+            {
+                IsEnabled = false,
+                Icon = LoadBitmap("button_red.png"),
+            };
+
             var dndItem = new NativeMenuItem(vm.DndLabel);
             dndItem.Click += (_, _) => _ = vm.ToggleDndCommand.ExecuteAsync(null);
 
@@ -40,6 +47,7 @@ public partial class App : Application
 
             var menu = new NativeMenu();
             menu.Items.Add(versionItem);
+            menu.Items.Add(statusItem);
             menu.Items.Add(new NativeMenuItemSeparator());
             menu.Items.Add(dndItem);
             menu.Items.Add(new NativeMenuItemSeparator());
@@ -68,6 +76,15 @@ public partial class App : Application
                 Dispatcher.UIThread.Post(() => versionItem.Header = ver);
             };
 
+            vm.ConnectionStateChanged += connected =>
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    statusItem.Header = connected ? "Connected" : "Disconnected";
+                    statusItem.Icon   = LoadBitmap(connected ? "button_green.png" : "button_red.png");
+                });
+            };
+
             TrayIcon.SetIcons(this, new TrayIcons { trayIcon });
 
             var dbus = new DbusNotificationService();
@@ -91,5 +108,12 @@ public partial class App : Application
     {
         var uri = new Uri($"avares://arrr-tray/Assets/{fileName}");
         return new WindowIcon(AssetLoader.Open(uri));
+    }
+
+    private static Bitmap LoadBitmap(string fileName)
+    {
+        var uri = new Uri($"avares://arrr-tray/Assets/{fileName}");
+        var source = new Bitmap(AssetLoader.Open(uri));
+        return source.CreateScaledBitmap(new Avalonia.PixelSize(20, 20), BitmapInterpolationMode.HighQuality);
     }
 }

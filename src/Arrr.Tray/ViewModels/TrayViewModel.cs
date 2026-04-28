@@ -18,6 +18,7 @@ public partial class TrayViewModel : ObservableObject
 
     public event Action<bool>? DndStateChanged;
     public event Action<string>? ServerVersionChanged;
+    public event Action<bool>? ConnectionStateChanged;
 
     public TrayViewModel(ArrrGrpcClient grpc, SettingsService settingsService)
     {
@@ -29,6 +30,9 @@ public partial class TrayViewModel : ObservableObject
             DndEnabled = enabled;
             DndStateChanged?.Invoke(enabled);
         };
+
+        grpc.SubscriptionConnected    += () => ConnectionStateChanged?.Invoke(true);
+        grpc.SubscriptionDisconnected += () => ConnectionStateChanged?.Invoke(false);
     }
 
     public async Task InitializeAsync()
@@ -47,6 +51,11 @@ public partial class TrayViewModel : ObservableObject
         if (version is not null)
         {
             ServerVersionChanged?.Invoke($"Arrr v{version}");
+            ConnectionStateChanged?.Invoke(true);
+        }
+        else
+        {
+            ConnectionStateChanged?.Invoke(false);
         }
 
         _grpc.StartSubscription();
