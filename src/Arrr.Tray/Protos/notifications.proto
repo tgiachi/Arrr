@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+option csharp_namespace = "Arrr.Tray.Grpc";
+
+package notifications;
+
+service NotificationService {
+  rpc Subscribe (SubscribeRequest) returns (stream ArrEvent);
+  rpc SetDnd    (SetDndRequest)   returns (DndResponse);
+  rpc GetDnd    (GetDndRequest)   returns (DndResponse);
+}
+
+message SubscribeRequest {
+  repeated string sources = 1;
+}
+
+message ArrEvent {
+  oneof payload {
+    NotificationEvent notification = 1;
+    DndEvent          dnd          = 2;
+  }
+}
+
+message NotificationEvent {
+  string id        = 1;
+  string source    = 2;
+  string title     = 3;
+  string body      = 4;
+  string timestamp = 5;
+  string icon_url  = 6;
+  int32  priority  = 7;
+  string url       = 8;
+  map<string, string> extras = 9;
+}
+
+message DndEvent {
+  bool enabled = 1;
+}
+
+message SetDndRequest {
+  bool enabled = 1;
+}
+
+message DndResponse {
+  bool enabled = 1;
+}
+
+message GetDndRequest {}

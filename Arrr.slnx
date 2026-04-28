@@ -1,33 +1,34 @@
 <Solution>
     <Folder Name="/src/">
-        <Project Path="src/Arrr.Core/Arrr.Core.csproj"/>
-        <Project Path="src/Arrr.Service/Arrr.Service.csproj"/>
+        <Project Path="src/Arrr.Core/Arrr.Core.csproj" />
+        <Project Path="src/Arrr.Service/Arrr.Service.csproj" />
+        <Project Path="src/Arrr.Tray/Arrr.Tray.csproj" />
     </Folder>
     <Folder Name="/tests/">
-        <Project Path="tests/Arrr.Tests/Arrr.Tests.csproj"/>
+        <Project Path="tests/Arrr.Tests/Arrr.Tests.csproj" />
     </Folder>
     <Folder Name="/plugins/">
-        <Project Path="plugins/Arrr.Sink.WebSocket/Arrr.Sink.WebSocket.csproj"/>
-        <Project Path="plugins/Arrr.Sink.SignalR/Arrr.Sink.SignalR.csproj"/>
-        <Project Path="plugins/Arrr.Sink.Ntfy/Arrr.Sink.Ntfy.csproj"/>
-        <Project Path="plugins/Arrr.Sink.Smtp/Arrr.Sink.Smtp.csproj"/>
-        <Project Path="plugins/Arrr.Plugin.CalDav/Arrr.Plugin.CalDav.csproj"/>
-        <Project Path="plugins/Arrr.Plugin.Healthcheck/Arrr.Plugin.Healthcheck.csproj"/>
-        <Project Path="plugins/Arrr.Sink.Webhook/Arrr.Sink.Webhook.csproj"/>
-        <Project Path="plugins/Arrr.Sink.Gotify/Arrr.Sink.Gotify.csproj"/>
-        <Project Path="plugins/Arrr.Sink.HomeAssistant/Arrr.Sink.HomeAssistant.csproj"/>
-        <Project Path="plugins/Arrr.Plugin.Mqtt/Arrr.Plugin.Mqtt.csproj"/>
-        <Project Path="plugins/Arrr.Plugin.Imap/Arrr.Plugin.Imap.csproj"/>
-        <Project Path="plugins/Arrr.Plugin.Rss/Arrr.Plugin.Rss.csproj"/>
-        <Project Path="plugins/Arrr.Sink.Telegram/Arrr.Sink.Telegram.csproj"/>
-        <Project Path="plugins/Arrr.Plugin.Telegram/Arrr.Plugin.Telegram.csproj"/>
-        <Project Path="plugins/Arrr.Plugin.WhatsApp/Arrr.Plugin.WhatsApp.csproj"/>
-        <Project Path="plugins/Arrr.Sink.Pushover/Arrr.Sink.Pushover.csproj"/>
-        <Project Path="plugins/Arrr.Plugin.Github/Arrr.Plugin.Github.csproj"/>
-        <Project Path="plugins/Arrr.Plugin.Systemd/Arrr.Plugin.Systemd.csproj"/>
-        <Project Path="plugins/Arrr.Sink.Bark/Arrr.Sink.Bark.csproj"/>
-        <Project Path="plugins/Arrr.Sink.WindowsNotify/Arrr.Sink.WindowsNotify.csproj"/>
-        <Project Path="plugins/Arrr.Sink.MacNotify/Arrr.Sink.MacNotify.csproj"/>
-        <Project Path="plugins/Arrr.Plugin.Todoist/Arrr.Plugin.Todoist.csproj"/>
+        <Project Path="plugins/Arrr.Sink.WebSocket/Arrr.Sink.WebSocket.csproj" />
+        <Project Path="plugins/Arrr.Sink.SignalR/Arrr.Sink.SignalR.csproj" />
+        <Project Path="plugins/Arrr.Sink.Ntfy/Arrr.Sink.Ntfy.csproj" />
+        <Project Path="plugins/Arrr.Sink.Smtp/Arrr.Sink.Smtp.csproj" />
+        <Project Path="plugins/Arrr.Plugin.CalDav/Arrr.Plugin.CalDav.csproj" />
+        <Project Path="plugins/Arrr.Plugin.Healthcheck/Arrr.Plugin.Healthcheck.csproj" />
+        <Project Path="plugins/Arrr.Sink.Webhook/Arrr.Sink.Webhook.csproj" />
+        <Project Path="plugins/Arrr.Sink.Gotify/Arrr.Sink.Gotify.csproj" />
+        <Project Path="plugins/Arrr.Sink.HomeAssistant/Arrr.Sink.HomeAssistant.csproj" />
+        <Project Path="plugins/Arrr.Plugin.Mqtt/Arrr.Plugin.Mqtt.csproj" />
+        <Project Path="plugins/Arrr.Plugin.Imap/Arrr.Plugin.Imap.csproj" />
+        <Project Path="plugins/Arrr.Plugin.Rss/Arrr.Plugin.Rss.csproj" />
+        <Project Path="plugins/Arrr.Sink.Telegram/Arrr.Sink.Telegram.csproj" />
+        <Project Path="plugins/Arrr.Plugin.Telegram/Arrr.Plugin.Telegram.csproj" />
+        <Project Path="plugins/Arrr.Plugin.WhatsApp/Arrr.Plugin.WhatsApp.csproj" />
+        <Project Path="plugins/Arrr.Sink.Pushover/Arrr.Sink.Pushover.csproj" />
+        <Project Path="plugins/Arrr.Plugin.Github/Arrr.Plugin.Github.csproj" />
+        <Project Path="plugins/Arrr.Plugin.Systemd/Arrr.Plugin.Systemd.csproj" />
+        <Project Path="plugins/Arrr.Sink.Bark/Arrr.Sink.Bark.csproj" />
+        <Project Path="plugins/Arrr.Sink.WindowsNotify/Arrr.Sink.WindowsNotify.csproj" />
+        <Project Path="plugins/Arrr.Sink.MacNotify/Arrr.Sink.MacNotify.csproj" />
+        <Project Path="plugins/Arrr.Plugin.Todoist/Arrr.Plugin.Todoist.csproj" />
     </Folder>
 </Solution>
