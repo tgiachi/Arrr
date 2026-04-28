@@ -84,37 +84,52 @@ public partial class TrayViewModel : ObservableObject
     {
         if (_settingsWindow is not null)
         {
-            Dispatcher.UIThread.Post(() =>
-            {
-                _settingsWindow.Activate();
-            });
+            _settingsWindow.Activate();
             return;
         }
 
-        // Defer past the menu-close event so the window gets a focus token
+        // Defer past menu-close so the window can receive a focus token
         Dispatcher.UIThread.Post(() =>
         {
-            var settings = _settingsService.Load();
-            var vm = new SettingsViewModel(settings, _settingsService, _grpc);
-            var window = new Views.SettingsWindow { DataContext = vm };
+            try
+            {
+                var settings = _settingsService.Load();
+                var vm = new SettingsViewModel(settings, _settingsService, _grpc);
+                var window = new Views.SettingsWindow { DataContext = vm };
 
-            window.Closed += (_, _) => _settingsWindow = null;
-            _settingsWindow = window;
+                window.Closed += (_, _) => _settingsWindow = null;
+                _settingsWindow = window;
 
-            window.Show();
-            window.Activate();
+                window.Show();
+                window.Activate();
+            }
+            catch
+            {
+                _settingsWindow = null;
+            }
         });
     }
 
     [RelayCommand]
     private void Exit()
     {
-        _grpc.Dispose();
+        try
+        {
+            _grpc.Dispose();
+        }
+        catch
+        {
+            // best-effort cleanup
+        }
 
         if (Avalonia.Application.Current?.ApplicationLifetime is
             Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime lifetime)
         {
             lifetime.Shutdown();
+        }
+        else
+        {
+            Environment.Exit(0);
         }
     }
 }
