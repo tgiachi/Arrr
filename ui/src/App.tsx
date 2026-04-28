@@ -79,6 +79,7 @@ export default function App() {
   const [configuringSink, setConfiguringSink] = useState<Sink | null>(null)
 
   const [serviceVersion, setServiceVersion] = useState<string | null>(null)
+  const [serviceDebug,   setServiceDebug]   = useState(false)
   const [dndEnabled, setDndEnabled] = useState(false)
   const [dndBusy, setDndBusy] = useState(false)
 
@@ -133,8 +134,8 @@ export default function App() {
     if (!settings.baseUrl && !settings.apiKey) return
     const a = new ArrrApi(settings.baseUrl || '', settings.apiKey || '')
     a.getVersion()
-      .then((v) => setServiceVersion(v.version))
-      .catch(() => setServiceVersion(null))
+      .then((v) => { setServiceVersion(v.version); setServiceDebug(v.isDebug) })
+      .catch(() => { setServiceVersion(null); setServiceDebug(false) })
   }, [settings.baseUrl, settings.apiKey])
 
   const withBusy = async (id: string, fn: () => Promise<void>) => {
@@ -389,7 +390,7 @@ export default function App() {
         <Flex px={4} gap={0} borderTopWidth="1px" borderColor="app.border" overflowX="auto"
           css={{ scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}
         >
-          {(Object.keys(TAB_LABELS) as Tab[]).filter(t => t !== 'debug' || import.meta.env.DEV).map((tab) => {
+          {(Object.keys(TAB_LABELS) as Tab[]).filter(t => t !== 'debug' || serviceDebug).map((tab) => {
             const active = activeTab === tab
             return (
               <Button
@@ -655,10 +656,10 @@ export default function App() {
           </Flex>
         )}
 
-        {import.meta.env.DEV && activeTab === 'debug' && settings.apiKey && (
+        {serviceDebug && activeTab === 'debug' && settings.apiKey && (
           <DebugView api={api()} />
         )}
-        {import.meta.env.DEV && activeTab === 'debug' && !settings.apiKey && (
+        {serviceDebug && activeTab === 'debug' && !settings.apiKey && (
           <Flex direction="column" align="center" justify="center" h="300px" gap={3} color="app.textDim">
             <Settings size={28} />
             <Text fontFamily="mono" fontSize="sm">Configure API key first</Text>

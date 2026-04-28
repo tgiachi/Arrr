@@ -120,7 +120,7 @@ export class ArrrApi {
     })).json()
   }
 
-  async getVersion(): Promise<{ version: string; runtimeVersion: string; os: string }> {
+  async getVersion(): Promise<{ version: string; runtimeVersion: string; os: string; isDebug: boolean }> {
     const r = await fetch(`${this.baseUrl}/api/version`)
     if (!r.ok) throw new Error(`${r.status}`)
     return r.json()
