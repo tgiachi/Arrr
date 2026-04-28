@@ -25,12 +25,13 @@ import { StreamView } from './components/StreamView'
 import { DaemonConfigView } from './components/DaemonConfigView'
 import { HistoryView } from './components/HistoryView'
 import { RoutingView } from './components/RoutingView'
+import { DebugView } from './components/DebugView'
 import { ThemeToggle } from './components/ThemeToggle'
 import type { Plugin, Sink, Settings as AppSettings } from './types'
 
 const STORAGE_KEY = 'arrr-settings'
 
-type Tab = 'configurazione' | 'stream' | 'install' | 'logs' | 'daemon' | 'history' | 'routing'
+type Tab = 'configurazione' | 'stream' | 'install' | 'logs' | 'daemon' | 'history' | 'routing' | 'debug'
 
 interface Toast {
   id: number
@@ -54,6 +55,7 @@ const TAB_LABELS: Record<Tab, string> = {
   daemon: 'Daemon',
   history: 'History',
   routing: 'Routing',
+  debug: '⚡ Debug',
 }
 
 export default function App() {
@@ -387,7 +389,7 @@ export default function App() {
         <Flex px={4} gap={0} borderTopWidth="1px" borderColor="app.border" overflowX="auto"
           css={{ scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}
         >
-          {(Object.keys(TAB_LABELS) as Tab[]).map((tab) => {
+          {(Object.keys(TAB_LABELS) as Tab[]).filter(t => t !== 'debug' || import.meta.env.DEV).map((tab) => {
             const active = activeTab === tab
             return (
               <Button
@@ -644,6 +646,19 @@ export default function App() {
           <RoutingView api={api()} onToast={toast} />
         )}
         {activeTab === 'routing' && !settings.apiKey && (
+          <Flex direction="column" align="center" justify="center" h="300px" gap={3} color="app.textDim">
+            <Settings size={28} />
+            <Text fontFamily="mono" fontSize="sm">Configure API key first</Text>
+            <Button size="sm" variant="outline" colorPalette="amber" onClick={handleSettingsClick}>
+              Open Settings
+            </Button>
+          </Flex>
+        )}
+
+        {import.meta.env.DEV && activeTab === 'debug' && settings.apiKey && (
+          <DebugView api={api()} />
+        )}
+        {import.meta.env.DEV && activeTab === 'debug' && !settings.apiKey && (
           <Flex direction="column" align="center" justify="center" h="300px" gap={3} color="app.textDim">
             <Settings size={28} />
             <Text fontFamily="mono" fontSize="sm">Configure API key first</Text>

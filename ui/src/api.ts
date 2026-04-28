@@ -157,6 +157,21 @@ export class ArrrApi {
     return (await this.req('/api/dnd')).json()
   }
 
+  async sendNotification(req: {
+    source: string
+    title: string
+    body: string
+    priority?: number
+    iconUrl?: string
+    url?: string
+    extras?: Record<string, string>
+  }): Promise<void> {
+    await this.req('/api/notify', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    })
+  }
+
   async setDnd(enabled: boolean): Promise<DndStatus> {
     return (await this.req('/api/dnd', { method: 'PUT', body: JSON.stringify({ enabled }) })).json()
   }
