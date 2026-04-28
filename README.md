@@ -157,6 +157,71 @@ dotnet run --project src/Arrr.Service -- --rootDirectory ~/.local/share/arrr
 
 ---
 
+## Starting the service
+
+Once installed (or built from source), the daemon is a single self-contained binary:
+
+```bash
+# Run in the foreground (useful to check the first-run output)
+arrr
+
+# Common flags
+arrr --logLevelType Debug        # verbose logging
+arrr --rootDirectory /custom/dir # use a non-default data directory
+arrr --logToFile false           # console only, no rolling log files
+```
+
+On first start Arrr generates a random API key and writes it to the log. Note it down and put it in the web UI settings or in `arrr.config` — it is required for every API call and for `arrr-tray` to connect.
+
+The service exposes a single port (default **5150**):
+- `http://localhost:5150` — web UI and REST API
+- `http://localhost:5150/stream` — SignalR hub (used by `arrr-tray` and the built-in stream view)
+
+Once running, open `http://localhost:5150` in your browser to install plugins, configure sinks, and browse notification history.
+
+---
+
+## arrr-tray (Linux)
+
+`arrr-tray` is a lightweight Linux system tray application that connects to a running Arrr service and delivers notifications to your desktop via **D-Bus** (`org.freedesktop.Notifications`) — the same mechanism used by your notification daemon (Dunst, Mako, SDDM, etc.).
+
+**What it does:**
+
+- Sits in the system tray and shows whether the service is connected or not
+- Forwards every notification received from the service to the desktop as a native popup
+- Uses the plugin's icon for the popup when available, falls back to a default icon
+- Sends a "Connected" desktop notification when it (re)connects to the service
+- Lets you toggle **Do Not Disturb** from the tray menu without opening a browser
+- Shows an **About** window with tray and service versions
+
+**What it does NOT do:**
+
+- It does not run the Arrr service itself — you need the daemon running separately
+- It does not store or search notification history — use the web UI for that
+
+**Install (Arch Linux):**
+
+```bash
+yay -S arrr-tray-bin   # or arrr-tray-git for latest HEAD
+```
+
+**Or build from source:**
+
+```bash
+dotnet build src/Arrr.Tray -c Release
+```
+
+**First-time setup:**
+
+1. Start `arrr-tray` — it appears in the system tray
+2. Right-click → **Settings**
+3. Set **Server URL** (e.g. `http://localhost:5150`) and **API Key**
+4. Click **Save** — the tray reconnects immediately
+
+> `arrr-tray` is currently Linux-only. It requires a D-Bus session bus and a compatible notification daemon.
+
+---
+
 ## Configuration
 
 On first run Arrr creates `$XDG_DATA_HOME/arrr/arrr.config` (defaults to `~/.local/share/arrr/arrr.config`).
