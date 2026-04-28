@@ -1,0 +1,28 @@
+name: arrr-tray
+version: ${VERSION}
+arch: amd64
+maintainer: tgiachi <tom@orivega.io>
+description: Arrr — system tray client for the Arrr notification aggregator
+homepage: https://github.com/tgiachi/Arrr
+license: MIT
+
+deb:
+  signature:
+    key_file: ${NFPM_SIGNING_KEY_FILE}
+    key_id: FE67774DF63A2BB6
+
+rpm:
+  signature:
+    key_file: ${NFPM_SIGNING_KEY_FILE}
+    key_id: FE67774DF63A2BB6
+
+contents:
+  - src: publish-tray/*
+    dst: /usr/local/lib/arrr-tray/
+
+  - src: /usr/local/lib/arrr-tray/arrr-tray
+    dst: /usr/local/bin/arrr-tray
+    type: symlink
+
+  - src: deploy/arrr-tray.desktop
+    dst: /etc/xdg/autostart/arrr-tray.desktop
