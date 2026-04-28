@@ -34,7 +34,7 @@ public partial class SettingsViewModel : ObservableObject
 
         try
         {
-            _grpc.Connect(ServerUrl);
+            _grpc.Connect(ServerUrl, ApiKey);
             _grpc.StartSubscription();
         }
         catch

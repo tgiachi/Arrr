@@ -13,6 +13,7 @@ public sealed class ArrrGrpcClient : IDisposable
     private NotificationService.NotificationServiceClient? _client;
     private CancellationTokenSource? _subscribeCts;
     private string? _serverUrl;
+    private string? _apiKey;
     private bool _streamWasUp;
 
     public bool IsConnected { get; private set; }
@@ -22,15 +23,18 @@ public sealed class ArrrGrpcClient : IDisposable
     public event Action? SubscriptionConnected;
     public event Action? SubscriptionDisconnected;
 
-    public void Connect(string serverUrl)
+    public void Connect(string serverUrl, string apiKey = "")
     {
         Dispose();
 
         _serverUrl = serverUrl;
+        _apiKey = apiKey;
         _channel = GrpcChannel.ForAddress(serverUrl);
         _client = new NotificationService.NotificationServiceClient(_channel);
         IsConnected = true;
     }
+
+    private Metadata ApiKeyHeaders() => new() { { "x-api-key", _apiKey ?? "" } };
 
     public async Task<string?> GetVersionAsync(CancellationToken ct = default)
     {
@@ -58,7 +62,7 @@ public sealed class ArrrGrpcClient : IDisposable
             return false;
         }
 
-        var response = await _client.GetDndAsync(new GetDndRequest(), cancellationToken: ct);
+        var response = await _client.GetDndAsync(new GetDndRequest(), headers: ApiKeyHeaders(), cancellationToken: ct);
 
         return response.Enabled;
     }
@@ -70,7 +74,7 @@ public sealed class ArrrGrpcClient : IDisposable
             return;
         }
 
-        await _client.SetDndAsync(new SetDndRequest { Enabled = enabled }, cancellationToken: ct);
+        await _client.SetDndAsync(new SetDndRequest { Enabled = enabled }, headers: ApiKeyHeaders(), cancellationToken: ct);
     }
 
     public void StartSubscription()
@@ -91,7 +95,9 @@ public sealed class ArrrGrpcClient : IDisposable
         {
             try
             {
-                var call = _client!.Subscribe(new SubscribeRequest(), cancellationToken: ct);
+                var call = _client!.Subscribe(
+                    new SubscribeRequest(),
+                    new CallOptions(headers: ApiKeyHeaders(), cancellationToken: ct));
                 _streamWasUp = true;
                 SubscriptionConnected?.Invoke();
 
@@ -135,6 +141,7 @@ public sealed class ArrrGrpcClient : IDisposable
         _channel?.Dispose();
         _channel = null;
         _client = null;
+        _apiKey = null;
         _streamWasUp = false;
         IsConnected = false;
     }

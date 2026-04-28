@@ -24,7 +24,7 @@ public partial class App : Application
             var settingsService = new SettingsService();
             var settings = settingsService.Load();
             var grpc = new ArrrGrpcClient();
-            grpc.Connect(settings.ServerUrl);
+            grpc.Connect(settings.ServerUrl, settings.ApiKey);
 
             var vm = new TrayViewModel(grpc, settingsService);
 
