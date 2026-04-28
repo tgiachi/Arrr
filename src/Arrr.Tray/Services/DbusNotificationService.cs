@@ -1,9 +1,10 @@
+using Serilog;
 using Tmds.DBus;
 
 namespace Arrr.Tray.Services;
 
 [DBusInterface("org.freedesktop.Notifications")]
-internal interface IFreedesktopNotifications : IDBusObject
+public interface IFreedesktopNotifications : IDBusObject
 {
     Task<uint> NotifyAsync(
         string appName,
@@ -26,16 +27,21 @@ internal sealed class DbusNotificationService : IAsyncDisposable
     {
         try
         {
+            Log.Debug("D-Bus: connecting to session bus (Address={Addr})", Address.Session);
             _connection = new Connection(Address.Session!);
             await _connection.ConnectAsync();
+            Log.Debug("D-Bus: connected");
+
             _proxy = _connection.CreateProxy<IFreedesktopNotifications>(
                 "org.freedesktop.Notifications",
                 "/org/freedesktop/Notifications");
             _available = true;
+            Log.Information("D-Bus notification service ready");
         }
-        catch
+        catch (Exception ex)
         {
             _available = false;
+            Log.Warning(ex, "D-Bus notification service unavailable");
         }
     }
 
@@ -43,19 +49,22 @@ internal sealed class DbusNotificationService : IAsyncDisposable
     {
         if (!_available || _proxy is null)
         {
+            Log.Warning("D-Bus ShowAsync called but service not available");
             return;
         }
 
         try
         {
+            Log.Debug("D-Bus: sending notification title={Title}", title);
             await _proxy.NotifyAsync(
                 "Arrr", 0, "dialog-information",
                 title, body,
                 [], new Dictionary<string, object>(), 5000);
+            Log.Debug("D-Bus: notification sent");
         }
-        catch
+        catch (Exception ex)
         {
-            // D-Bus unavailable at runtime — silently ignore
+            Log.Warning(ex, "D-Bus notification failed");
         }
     }
 
