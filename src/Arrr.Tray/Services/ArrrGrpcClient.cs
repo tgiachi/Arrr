@@ -23,13 +23,14 @@ public sealed class ArrrGrpcClient : IDisposable
     public event Action? SubscriptionConnected;
     public event Action? SubscriptionDisconnected;
 
-    public void Connect(string serverUrl, string apiKey = "")
+    public void Connect(string serverUrl, string apiKey = "", string? grpcUrl = null)
     {
         Dispose();
 
         _serverUrl = serverUrl;
         _apiKey = apiKey;
-        _channel = GrpcChannel.ForAddress(serverUrl);
+        var effectiveGrpcUrl = grpcUrl ?? serverUrl;
+        _channel = GrpcChannel.ForAddress(effectiveGrpcUrl);
         _client = new NotificationService.NotificationServiceClient(_channel);
         IsConnected = true;
     }

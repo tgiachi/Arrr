@@ -54,9 +54,27 @@ await ConsoleApp.RunAsync(
 
         var builder = WebApplication.CreateBuilder(args);
 
-        builder.WebHost.ConfigureKestrel(
-            opt => opt.ConfigureEndpointDefaults(lo => lo.Protocols = HttpProtocols.Http1AndHttp2)
-        );
+        // Read port early (before DI is built) so Kestrel can bind the right ports
+        var earlyConfigPath = Path.Combine(directoriesConfig.Root, "arrr.config");
+        var webPort = 5150;
+        if (File.Exists(earlyConfigPath))
+        {
+            try
+            {
+                var earlyConfig = JsonUtils.DeserializeFromFile<ArrrConfig>(earlyConfigPath, ArrrConfigJsonContext.Default);
+                webPort = earlyConfig.Web.Port;
+            }
+            catch { /* use default */ }
+        }
+
+        builder.WebHost.ConfigureKestrel(opt =>
+        {
+            // REST + WebSocket on the main port (HTTP/1.1)
+            opt.ListenAnyIP(webPort, lo => lo.Protocols = HttpProtocols.Http1);
+
+            // gRPC on port+1 — Http2 is required for h2c (cleartext HTTP/2 prior-knowledge)
+            opt.ListenAnyIP(webPort + 1, lo => lo.Protocols = HttpProtocols.Http2);
+        });
 
         builder.Services.AddSingleton(directoriesConfig);
         builder.Services.AddSingleton<IConfigService, ConfigService>();
@@ -143,7 +161,7 @@ await ConsoleApp.RunAsync(
                 _ = eventBus.PublishAsync(new ArrStartedEvent(DateTimeOffset.UtcNow), ct)
         );
 
-        app.Urls.Add($"http://0.0.0.0:{configService.Config.Web.Port}");
+        // URLs are already bound via ConfigureKestrel above — no need to add them here
 
         app.UseCors();
 

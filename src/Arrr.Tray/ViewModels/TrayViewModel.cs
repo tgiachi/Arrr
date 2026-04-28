@@ -2,6 +2,7 @@ using Arrr.Tray.Services;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Serilog;
 
 namespace Arrr.Tray.ViewModels;
 
@@ -37,27 +38,33 @@ public partial class TrayViewModel : ObservableObject
 
     public async Task InitializeAsync()
     {
+        Log.Debug("InitializeAsync — fetching DND state");
         try
         {
             DndEnabled = await _grpc.GetDndAsync();
             DndStateChanged?.Invoke(DndEnabled);
+            Log.Debug("DND state = {DndEnabled}", DndEnabled);
         }
-        catch
+        catch (Exception ex)
         {
-            // Service not yet reachable — will update via subscription
+            Log.Warning(ex, "GetDndAsync failed — will retry via subscription");
         }
 
+        Log.Debug("InitializeAsync — fetching version");
         var version = await _grpc.GetVersionAsync();
         if (version is not null)
         {
+            Log.Information("Service version: {Version}", version);
             ServerVersionChanged?.Invoke($"Arrr v{version}");
             ConnectionStateChanged?.Invoke(true);
         }
         else
         {
+            Log.Warning("GetVersionAsync returned null — service unreachable or wrong URL");
             ConnectionStateChanged?.Invoke(false);
         }
 
+        Log.Debug("Starting gRPC subscription");
         _grpc.StartSubscription();
     }
 
@@ -70,10 +77,11 @@ public partial class TrayViewModel : ObservableObject
             await _grpc.SetDndAsync(newState);
             DndEnabled = newState;
             DndStateChanged?.Invoke(newState);
+            Log.Debug("DND toggled → {State}", newState);
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore if service unreachable
+            Log.Warning(ex, "ToggleDnd failed");
         }
     }
 
@@ -82,29 +90,39 @@ public partial class TrayViewModel : ObservableObject
     [RelayCommand]
     private void OpenSettings()
     {
+        Log.Debug("OpenSettings invoked — existing window = {HasWindow}", _settingsWindow is not null);
+
         if (_settingsWindow is not null)
         {
             _settingsWindow.Activate();
             return;
         }
 
-        // Defer past menu-close so the window can receive a focus token
         Dispatcher.UIThread.Post(() =>
         {
+            Log.Debug("Creating SettingsWindow (inside UIThread.Post)");
             try
             {
                 var settings = _settingsService.Load();
                 var vm = new SettingsViewModel(settings, _settingsService, _grpc);
                 var window = new Views.SettingsWindow { DataContext = vm };
 
-                window.Closed += (_, _) => _settingsWindow = null;
+                window.Closed += (_, _) =>
+                {
+                    Log.Debug("SettingsWindow closed");
+                    _settingsWindow = null;
+                };
                 _settingsWindow = window;
 
+                Log.Debug("Calling window.Show()");
                 window.Show();
+                Log.Debug("Calling window.Activate()");
                 window.Activate();
+                Log.Debug("SettingsWindow shown");
             }
-            catch
+            catch (Exception ex)
             {
+                Log.Error(ex, "Failed to open SettingsWindow");
                 _settingsWindow = null;
             }
         });
@@ -113,22 +131,25 @@ public partial class TrayViewModel : ObservableObject
     [RelayCommand]
     private void Exit()
     {
+        Log.Information("Exit requested");
         try
         {
             _grpc.Dispose();
         }
-        catch
+        catch (Exception ex)
         {
-            // best-effort cleanup
+            Log.Warning(ex, "gRPC dispose error during exit");
         }
 
         if (Avalonia.Application.Current?.ApplicationLifetime is
             Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime lifetime)
         {
+            Log.Debug("Calling lifetime.Shutdown()");
             lifetime.Shutdown();
         }
         else
         {
+            Log.Warning("ApplicationLifetime not available — calling Environment.Exit(0)");
             Environment.Exit(0);
         }
     }

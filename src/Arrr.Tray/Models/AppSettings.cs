@@ -9,4 +9,7 @@ public class AppSettings
 
     [JsonPropertyName("apiKey")]
     public string ApiKey { get; set; } = "";
+
+    [JsonPropertyName("grpcUrl")]
+    public string GrpcUrl { get; set; } = "http://localhost:5151";
 }

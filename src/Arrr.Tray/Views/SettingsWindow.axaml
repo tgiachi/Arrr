@@ -4,7 +4,7 @@
         x:Class="Arrr.Tray.Views.SettingsWindow"
         x:DataType="vm:SettingsViewModel"
         Title="Arrr Tray — Settings"
-        Width="420" Height="210"
+        Width="420" Height="265"
         CanResize="False"
         WindowStartupLocation="CenterScreen">
 
@@ -18,6 +18,11 @@
     <StackPanel Spacing="4">
       <TextBlock Text="API Key" FontWeight="SemiBold"/>
       <TextBox Text="{Binding ApiKey}" PasswordChar="•" PlaceholderText="leave empty if not set"/>
+    </StackPanel>
+
+    <StackPanel Spacing="4">
+      <TextBlock Text="gRPC URL (port+1 for h2c)" FontWeight="SemiBold"/>
+      <TextBox Text="{Binding GrpcUrl}" PlaceholderText="http://localhost:5151"/>
     </StackPanel>
 
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">

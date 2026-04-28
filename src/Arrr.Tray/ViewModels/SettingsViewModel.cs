@@ -16,6 +16,9 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _apiKey;
 
+    [ObservableProperty]
+    private string _grpcUrl;
+
     public event Action? CloseRequested;
 
     public SettingsViewModel(AppSettings settings, SettingsService settingsService, ArrrGrpcClient grpc)
@@ -24,17 +27,18 @@ public partial class SettingsViewModel : ObservableObject
         _grpc = grpc;
         _serverUrl = settings.ServerUrl;
         _apiKey = settings.ApiKey;
+        _grpcUrl = settings.GrpcUrl;
     }
 
     [RelayCommand]
     private void Save()
     {
-        var settings = new AppSettings { ServerUrl = ServerUrl, ApiKey = ApiKey };
+        var settings = new AppSettings { ServerUrl = ServerUrl, ApiKey = ApiKey, GrpcUrl = GrpcUrl };
         _settingsService.Save(settings);
 
         try
         {
-            _grpc.Connect(ServerUrl, ApiKey);
+            _grpc.Connect(ServerUrl, ApiKey, GrpcUrl);
             _grpc.StartSubscription();
         }
         catch
