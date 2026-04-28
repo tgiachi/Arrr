@@ -8,7 +8,7 @@ namespace Arrr.Tray.ViewModels;
 
 public partial class TrayViewModel : ObservableObject
 {
-    private readonly ArrrGrpcClient _grpc;
+    private readonly ArrrServiceClient _client;
     private readonly SettingsService _settingsService;
 
     [ObservableProperty]
@@ -21,19 +21,19 @@ public partial class TrayViewModel : ObservableObject
     public event Action<string>? ServerVersionChanged;
     public event Action<bool>? ConnectionStateChanged;
 
-    public TrayViewModel(ArrrGrpcClient grpc, SettingsService settingsService)
+    public TrayViewModel(ArrrServiceClient client, SettingsService settingsService)
     {
-        _grpc = grpc;
+        _client = client;
         _settingsService = settingsService;
 
-        grpc.DndChanged += enabled =>
+        client.DndChanged += enabled =>
         {
             DndEnabled = enabled;
             DndStateChanged?.Invoke(enabled);
         };
 
-        grpc.SubscriptionConnected    += () => ConnectionStateChanged?.Invoke(true);
-        grpc.SubscriptionDisconnected += () => ConnectionStateChanged?.Invoke(false);
+        client.SubscriptionConnected    += () => ConnectionStateChanged?.Invoke(true);
+        client.SubscriptionDisconnected += () => ConnectionStateChanged?.Invoke(false);
     }
 
     public async Task InitializeAsync()
@@ -41,7 +41,7 @@ public partial class TrayViewModel : ObservableObject
         Log.Debug("InitializeAsync — fetching DND state");
         try
         {
-            DndEnabled = await _grpc.GetDndAsync();
+            DndEnabled = await _client.GetDndAsync();
             DndStateChanged?.Invoke(DndEnabled);
             Log.Debug("DND state = {DndEnabled}", DndEnabled);
         }
@@ -51,7 +51,7 @@ public partial class TrayViewModel : ObservableObject
         }
 
         Log.Debug("InitializeAsync — fetching version");
-        var version = await _grpc.GetVersionAsync();
+        var version = await _client.GetVersionAsync();
         if (version is not null)
         {
             _serviceVersion = version;
@@ -65,8 +65,8 @@ public partial class TrayViewModel : ObservableObject
             ConnectionStateChanged?.Invoke(false);
         }
 
-        Log.Debug("Starting gRPC subscription");
-        _grpc.StartSubscription();
+        Log.Debug("Starting SignalR subscription");
+        _client.StartSubscription();
     }
 
     [RelayCommand]
@@ -75,7 +75,7 @@ public partial class TrayViewModel : ObservableObject
         try
         {
             var newState = !DndEnabled;
-            await _grpc.SetDndAsync(newState);
+            await _client.SetDndAsync(newState);
             DndEnabled = newState;
             DndStateChanged?.Invoke(newState);
             Log.Debug("DND toggled → {State}", newState);
@@ -107,7 +107,7 @@ public partial class TrayViewModel : ObservableObject
             try
             {
                 var settings = _settingsService.Load();
-                var vm = new SettingsViewModel(settings, _settingsService, _grpc);
+                var vm = new SettingsViewModel(settings, _settingsService, _client);
                 var window = new Views.SettingsWindow { DataContext = vm };
 
                 window.Closed += (_, _) =>
@@ -174,11 +174,11 @@ public partial class TrayViewModel : ObservableObject
         Log.Information("Exit requested");
         try
         {
-            _grpc.Dispose();
+            _ = _client.DisposeAsync().AsTask();
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "gRPC dispose error during exit");
+            Log.Warning(ex, "Client dispose error during exit");
         }
 
         if (Avalonia.Application.Current?.ApplicationLifetime is

@@ -6,7 +6,19 @@
 
 > *Arrr!* — because every good notification deserves a pirate's welcome.
 
-Arrr is a Linux desktop notification aggregator daemon. It runs as a background service, collects notifications from multiple sources via a plugin system, and delivers them to your desktop through D-Bus and configurable sink plugins. A built-in web UI lets you browse notification history, manage plugins and sinks, and tweak settings — all from a browser.
+## Why does this exist?
+
+There are already plenty of tools that forward notifications: ntfy, Gotify, Pushover, Apprise, and a dozen others. **Arrr is not trying to replace or replicate any of them.**
+
+The problem I wanted to solve is simpler and more specific: I have notifications coming from many different places — RSS feeds, Telegram, WhatsApp, email, GitHub, calendar reminders, task due dates — and I had no single place where I could see all of them together. Every source lived in its own app, its own window, its own silo. I'd miss things, or I'd have to check six places just to know what happened.
+
+**Arrr's only job is aggregation.** One daemon that pulls from every source I care about, puts everything into a single stream, and lets me consume that stream however I want — as a desktop popup, an email digest, a push notification, or just a history log I can search later. The digest feature in particular was the tipping point: I don't want to be interrupted by every single RSS item, but I do want a morning summary of what came in overnight.
+
+That's it. No cloud account, no mobile app, no SaaS. A daemon that runs on my Linux machine, knows about all my sources, and keeps everything in one place.
+
+---
+
+Arrr runs as a background service, collects notifications from multiple sources via a plugin system, and delivers them to your desktop through D-Bus and configurable sink plugins. A built-in web UI lets you browse notification history, manage plugins and sinks, and tweak settings — all from a browser.
 
 ---
 

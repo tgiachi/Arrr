@@ -69,11 +69,7 @@ await ConsoleApp.RunAsync(
 
         builder.WebHost.ConfigureKestrel(opt =>
         {
-            // REST + WebSocket on the main port (HTTP/1.1)
             opt.ListenAnyIP(webPort, lo => lo.Protocols = HttpProtocols.Http1);
-
-            // gRPC on port+1 — Http2 is required for h2c (cleartext HTTP/2 prior-knowledge)
-            opt.ListenAnyIP(webPort + 1, lo => lo.Protocols = HttpProtocols.Http2);
         });
 
         builder.Services.AddSingleton(directoriesConfig);
@@ -116,9 +112,6 @@ await ConsoleApp.RunAsync(
                );
 
         builder.Services.AddHostedService<NotificationStreamService>();
-
-        builder.Services.AddGrpc();
-        builder.Services.AddSingleton<NotificationGrpcService>();
 
         builder.Services.AddOpenApi();
         builder.Logging.ClearProviders().AddSerilog();
@@ -170,7 +163,6 @@ await ConsoleApp.RunAsync(
         app.UseWebSockets();
 
         app.MapHub<NotificationStreamHub>("/stream");
-        app.MapGrpcService<NotificationGrpcService>();
 
         app.MapVersionApi();
         app.MapExternalApi();

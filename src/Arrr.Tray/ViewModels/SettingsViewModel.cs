@@ -8,7 +8,7 @@ namespace Arrr.Tray.ViewModels;
 public partial class SettingsViewModel : ObservableObject
 {
     private readonly SettingsService _settingsService;
-    private readonly ArrrGrpcClient _grpc;
+    private readonly ArrrServiceClient _client;
 
     [ObservableProperty]
     private string _serverUrl;
@@ -16,34 +16,30 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _apiKey;
 
-    [ObservableProperty]
-    private string _grpcUrl;
-
     public event Action? CloseRequested;
 
-    public SettingsViewModel(AppSettings settings, SettingsService settingsService, ArrrGrpcClient grpc)
+    public SettingsViewModel(AppSettings settings, SettingsService settingsService, ArrrServiceClient client)
     {
         _settingsService = settingsService;
-        _grpc = grpc;
+        _client = client;
         _serverUrl = settings.ServerUrl;
         _apiKey = settings.ApiKey;
-        _grpcUrl = settings.GrpcUrl;
     }
 
     [RelayCommand]
     private void Save()
     {
-        var settings = new AppSettings { ServerUrl = ServerUrl, ApiKey = ApiKey, GrpcUrl = GrpcUrl };
+        var settings = new AppSettings { ServerUrl = ServerUrl, ApiKey = ApiKey };
         _settingsService.Save(settings);
 
         try
         {
-            _grpc.Connect(ServerUrl, ApiKey, GrpcUrl);
-            _grpc.StartSubscription();
+            _client.Connect(ServerUrl, ApiKey);
+            _client.StartSubscription();
         }
         catch
         {
-            // Will retry via subscription loop
+            // Will retry via reconnect loop
         }
 
         CloseRequested?.Invoke();

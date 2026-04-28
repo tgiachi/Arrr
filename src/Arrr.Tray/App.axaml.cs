@@ -28,11 +28,11 @@ public partial class App : Application
             var settings = settingsService.Load();
             Log.Information("Settings loaded — url={Url} apiKeySet={ApiKeySet}", settings.ServerUrl, !string.IsNullOrEmpty(settings.ApiKey));
 
-            var grpc = new ArrrGrpcClient();
-            grpc.Connect(settings.ServerUrl, settings.ApiKey, settings.GrpcUrl);
-            Log.Information("gRPC client connected to {Url}", settings.ServerUrl);
+            var client = new ArrrServiceClient();
+            client.Connect(settings.ServerUrl, settings.ApiKey);
+            Log.Information("Service client connected to {Url}", settings.ServerUrl);
 
-            var vm = new TrayViewModel(grpc, settingsService);
+            var vm = new TrayViewModel(client, settingsService);
 
             var versionItem = new NativeMenuItem("Arrr");
 
@@ -117,19 +117,17 @@ public partial class App : Application
             var dbus = new DbusNotificationService();
             _ = dbus.InitializeAsync();
 
-            // Fetch all plugin icons once connected and cache them for D-Bus fallback
-            vm.ConnectionStateChanged += connected =>
-            {
-                if (connected)
-                    _ = Task.Run(async () =>
-                    {
-                        var bundle = await grpc.GetIconBundleAsync();
-                        dbus.SetIconCache(bundle);
-                        Log.Information("Icon bundle cached: {Count} icons", bundle.Count);
-                    });
-            };
+            // Fetch all plugin icons and send connected notification on each SignalR connect
+            client.SubscriptionConnected += () =>
+                _ = Task.Run(async () =>
+                {
+                    var bundle = await client.GetIconBundleAsync();
+                    dbus.SetIconCache(bundle);
+                    Log.Information("Icon bundle cached: {Count} icons", bundle.Count);
+                    await dbus.ShowAsync("Arrr", "Connected");
+                });
 
-            grpc.NotificationReceived += notif =>
+            client.NotificationReceived += notif =>
             {
                 Log.Debug("Notification received from {Source}: {Title}", notif.Source, notif.Title);
                 if (!vm.DndEnabled)

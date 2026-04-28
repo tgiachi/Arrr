@@ -4,7 +4,7 @@
         x:Class="Arrr.Tray.Views.AboutWindow"
         x:DataType="vm:AboutViewModel"
         Title="About Arrr Tray"
-        Width="320" Height="220"
+        Width="320" Height="275"
         CanResize="False"
         WindowStartupLocation="CenterScreen">
 
@@ -42,9 +42,35 @@
       </Grid>
     </Border>
 
-    <Button Content="Close"
-            HorizontalAlignment="Center"
-            Click="OnCloseClick"/>
+    <!-- author + repo -->
+    <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+            CornerRadius="6" Padding="12 8" Margin="0 0 0 16">
+      <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
+
+        <TextBlock Grid.Row="0" Grid.Column="0"
+                   Text="Author" FontSize="12" Opacity="0.6"
+                   Margin="0 0 16 4"/>
+        <TextBlock Grid.Row="0" Grid.Column="1"
+                   Text="{Binding Author}" FontSize="12" FontWeight="SemiBold"
+                   HorizontalAlignment="Right"/>
+
+        <TextBlock Grid.Row="1" Grid.Column="0"
+                   Text="Repository" FontSize="12" Opacity="0.6"/>
+        <Button Grid.Row="1" Grid.Column="1"
+                Content="{Binding RepoUrl}"
+                FontSize="11" Padding="0"
+                Background="Transparent" BorderThickness="0"
+                Foreground="{DynamicResource SystemAccentColor}"
+                HorizontalAlignment="Right"
+                Click="OnRepoClick"
+                Cursor="Hand"/>
+
+      </Grid>
+    </Border>
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+      <Button Content="Close" Click="OnCloseClick"/>
+    </StackPanel>
 
   </StackPanel>
 </Window>
