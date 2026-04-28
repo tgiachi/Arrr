@@ -1,5 +1,5 @@
-using System.Windows.Input;
 using Arrr.Tray.Services;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -77,13 +77,33 @@ public partial class TrayViewModel : ObservableObject
         }
     }
 
+    private Views.SettingsWindow? _settingsWindow;
+
     [RelayCommand]
     private void OpenSettings()
     {
-        var settings = _settingsService.Load();
-        var vm = new SettingsViewModel(settings, _settingsService, _grpc);
-        var window = new Views.SettingsWindow { DataContext = vm };
-        window.Show();
+        if (_settingsWindow is not null)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                _settingsWindow.Activate();
+            });
+            return;
+        }
+
+        // Defer past the menu-close event so the window gets a focus token
+        Dispatcher.UIThread.Post(() =>
+        {
+            var settings = _settingsService.Load();
+            var vm = new SettingsViewModel(settings, _settingsService, _grpc);
+            var window = new Views.SettingsWindow { DataContext = vm };
+
+            window.Closed += (_, _) => _settingsWindow = null;
+            _settingsWindow = window;
+
+            window.Show();
+            window.Activate();
+        });
     }
 
     [RelayCommand]
