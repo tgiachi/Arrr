@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Arrr.Tray.Grpc;
 using Grpc.Core;
 using Grpc.Net.Client;
@@ -6,9 +7,19 @@ using Serilog;
 
 namespace Arrr.Tray.Services;
 
+internal sealed class IconBundle
+{
+    [JsonPropertyName("plugins")]
+    public Dictionary<string, string>? Plugins { get; set; }
+
+    [JsonPropertyName("sinks")]
+    public Dictionary<string, string>? Sinks { get; set; }
+}
+
 public sealed class ArrrGrpcClient : IDisposable
 {
     private static readonly HttpClient _http = new();
+    private static readonly JsonSerializerOptions _jsonOpts = new() { PropertyNameCaseInsensitive = true };
 
     private GrpcChannel? _channel;
     private NotificationService.NotificationServiceClient? _client;
@@ -39,6 +50,43 @@ public sealed class ArrrGrpcClient : IDisposable
     }
 
     private Metadata ApiKeyHeaders() => new() { { "x-api-key", _apiKey ?? "" } };
+
+    public async Task<IReadOnlyDictionary<string, byte[]>> GetIconBundleAsync(CancellationToken ct = default)
+    {
+        if (_serverUrl is null)
+            return new Dictionary<string, byte[]>();
+
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, $"{_serverUrl}/api/icons");
+            request.Headers.Add("x-api-key", _apiKey ?? "");
+            var response = await _http.SendAsync(request, ct);
+
+            if (!response.IsSuccessStatusCode)
+                return new Dictionary<string, byte[]>();
+
+            var json = await response.Content.ReadAsStringAsync(ct);
+            var bundle = JsonSerializer.Deserialize<IconBundle>(json, _jsonOpts);
+
+            var result = new Dictionary<string, byte[]>();
+
+            if (bundle?.Plugins is not null)
+                foreach (var (id, b64) in bundle.Plugins)
+                    result[id] = Convert.FromBase64String(b64);
+
+            if (bundle?.Sinks is not null)
+                foreach (var (id, b64) in bundle.Sinks)
+                    result[id] = Convert.FromBase64String(b64);
+
+            Log.Debug("Icon bundle fetched: {Count} icons", result.Count);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to fetch icon bundle");
+            return new Dictionary<string, byte[]>();
+        }
+    }
 
     public async Task<string?> GetVersionAsync(CancellationToken ct = default)
     {

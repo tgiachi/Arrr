@@ -22,6 +22,12 @@ public interface IPluginManager
     IReadOnlyList<AvailablePluginResponse> GetAvailable();
 
     /// <summary>
+    /// Returns the raw PNG bytes of the icon embedded in the plugin's DLL,
+    /// or <c>null</c> if the plugin has no embedded <c>icon.png</c> resource.
+    /// </summary>
+    byte[]? GetPluginIcon(string pluginId);
+
+    /// <summary>
     /// Returns the pending QR code string for a running plugin that implements <see cref="IQrPlugin" />,
     /// or <c>null</c> if no pairing is currently in progress.
     /// </summary>

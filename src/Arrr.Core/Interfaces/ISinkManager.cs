@@ -9,6 +9,12 @@ public interface ISinkManager
     Task DisableAsync(string sinkId);
     Task EnableAsync(string sinkId, CancellationToken ct);
     IReadOnlyList<AvailableSinkResponse> GetAvailable();
+
+    /// <summary>
+    /// Returns the raw PNG bytes of the icon embedded in the sink's DLL,
+    /// or <c>null</c> if the sink has no embedded <c>icon.png</c> resource.
+    /// </summary>
+    byte[]? GetSinkIcon(string sinkId);
     Task<PluginConfigResponse?> GetSinkConfigAsync(string sinkId, CancellationToken ct = default);
     Task ReloadAsync(string sinkId, CancellationToken ct);
     Task SaveSinkConfigAsync(string sinkId, JsonElement config, CancellationToken ct = default);

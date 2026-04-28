@@ -181,6 +181,7 @@ await ConsoleApp.RunAsync(
         app.MapHistoryApi();
         app.MapRoutingLogApi();
         app.MapDndApi();
+        app.MapIconsApi();
 
         if (configService.Config.IsDebug)
         {

@@ -343,6 +343,20 @@ internal static class PluginsEndpoint
             }
         );
 
+        app.MapGet(
+            "/api/plugins/{pluginId}/icon",
+            (HttpContext ctx, string pluginId, IConfigService configService, IPluginManager manager) =>
+            {
+                if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                    return error!;
+
+                var bytes = manager.GetPluginIcon(pluginId);
+                return bytes is null
+                    ? Results.NotFound()
+                    : Results.Bytes(bytes, "image/png");
+            }
+        );
+
         return app;
     }
 }

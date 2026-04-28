@@ -55,6 +55,13 @@ public partial class App : Application
                 vm.OpenSettingsCommand.Execute(null);
             };
 
+            var aboutItem = new NativeMenuItem("About");
+            aboutItem.Click += (_, _) =>
+            {
+                Log.Debug("Menu click: About");
+                vm.OpenAboutCommand.Execute(null);
+            };
+
             var exitItem = new NativeMenuItem("Exit");
             exitItem.Click += (_, _) =>
             {
@@ -69,6 +76,7 @@ public partial class App : Application
             menu.Items.Add(dndItem);
             menu.Items.Add(new NativeMenuItemSeparator());
             menu.Items.Add(settingsItem);
+            menu.Items.Add(aboutItem);
             menu.Items.Add(new NativeMenuItemSeparator());
             menu.Items.Add(exitItem);
 
@@ -109,11 +117,23 @@ public partial class App : Application
             var dbus = new DbusNotificationService();
             _ = dbus.InitializeAsync();
 
+            // Fetch all plugin icons once connected and cache them for D-Bus fallback
+            vm.ConnectionStateChanged += connected =>
+            {
+                if (connected)
+                    _ = Task.Run(async () =>
+                    {
+                        var bundle = await grpc.GetIconBundleAsync();
+                        dbus.SetIconCache(bundle);
+                        Log.Information("Icon bundle cached: {Count} icons", bundle.Count);
+                    });
+            };
+
             grpc.NotificationReceived += notif =>
             {
                 Log.Debug("Notification received from {Source}: {Title}", notif.Source, notif.Title);
                 if (!vm.DndEnabled)
-                    _ = dbus.ShowAsync(notif.Title, notif.Body);
+                    _ = dbus.ShowAsync(notif.Title, notif.Body, string.IsNullOrEmpty(notif.IconUrl) ? null : notif.IconUrl, notif.Source);
             };
 
             _ = vm.InitializeAsync();

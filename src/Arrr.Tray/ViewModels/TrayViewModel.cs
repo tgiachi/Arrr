@@ -54,6 +54,7 @@ public partial class TrayViewModel : ObservableObject
         var version = await _grpc.GetVersionAsync();
         if (version is not null)
         {
+            _serviceVersion = version;
             Log.Information("Service version: {Version}", version);
             ServerVersionChanged?.Invoke($"Arrr v{version}");
             ConnectionStateChanged?.Invoke(true);
@@ -85,7 +86,9 @@ public partial class TrayViewModel : ObservableObject
         }
     }
 
+    private string _serviceVersion = "–";
     private Views.SettingsWindow? _settingsWindow;
+    private Views.AboutWindow? _aboutWindow;
 
     [RelayCommand]
     private void OpenSettings()
@@ -124,6 +127,43 @@ public partial class TrayViewModel : ObservableObject
             {
                 Log.Error(ex, "Failed to open SettingsWindow");
                 _settingsWindow = null;
+            }
+        });
+    }
+
+    [RelayCommand]
+    private void OpenAbout()
+    {
+        Log.Debug("OpenAbout invoked");
+
+        if (_aboutWindow is not null)
+        {
+            _aboutWindow.Activate();
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            try
+            {
+                var trayVer = typeof(TrayViewModel).Assembly.GetName().Version?.ToString(3) ?? "dev";
+                var vm = new AboutViewModel(trayVer, _serviceVersion);
+                var window = new Views.AboutWindow { DataContext = vm };
+
+                window.Closed += (_, _) =>
+                {
+                    Log.Debug("AboutWindow closed");
+                    _aboutWindow = null;
+                };
+                _aboutWindow = window;
+
+                window.Show();
+                window.Activate();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to open AboutWindow");
+                _aboutWindow = null;
             }
         });
     }

@@ -30,6 +30,7 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
 
     private readonly Dictionary<string, PluginHost> _hosts = new();
     private readonly Dictionary<string, string> _dllPaths = new();
+    private readonly Dictionary<string, byte[]> _iconCache = new();
     private FileSystemWatcher? _watcher;
 
     public PluginOrchestrator(
@@ -79,6 +80,41 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
             _registry.Unregister(pluginId);
             _logger.Information("Disabled plugin: {Id}", pluginId);
         }
+    }
+
+    public byte[]? GetPluginIcon(string pluginId)
+    {
+        if (_iconCache.TryGetValue(pluginId, out var cached))
+            return cached;
+
+        if (!_dllPaths.TryGetValue(pluginId, out var dll))
+            return null;
+
+        var ctx = new PluginLoadContext(dll);
+        try
+        {
+            var asm = ctx.LoadFromAssemblyPath(dll);
+            var bytes = ReadIconFromAssembly(asm);
+            if (bytes is not null)
+                _iconCache[pluginId] = bytes;
+            return bytes;
+        }
+        finally
+        {
+            ctx.Unload();
+        }
+    }
+
+    private static byte[]? ReadIconFromAssembly(System.Reflection.Assembly assembly)
+    {
+        var name = assembly.GetManifestResourceNames()
+            .FirstOrDefault(n => n.EndsWith("icon.png", StringComparison.OrdinalIgnoreCase));
+        if (name is null) return null;
+        using var stream = assembly.GetManifestResourceStream(name);
+        if (stream is null) return null;
+        using var ms = new MemoryStream();
+        stream.CopyTo(ms);
+        return ms.ToArray();
     }
 
     public override void Dispose()
@@ -545,6 +581,10 @@ internal class PluginOrchestrator : BackgroundService, IPluginManager
             }
 
             _dllPaths[plugin.Id] = dllPath;
+
+            var iconBytes = ReadIconFromAssembly(assembly);
+            if (iconBytes is not null)
+                _iconCache[plugin.Id] = iconBytes;
 
             var entry = _config.Plugins.FirstOrDefault(p => p.Id == plugin.Id);
 

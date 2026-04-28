@@ -40,4 +40,6 @@ internal class FakePluginManager : IPluginManager
 
     public Task<PluginTestResult?> TestPluginAsync(string pluginId, JsonElement config, CancellationToken ct = default)
         => Task.FromResult<PluginTestResult?>(null);
+
+    public byte[]? GetPluginIcon(string pluginId) => null;
 }

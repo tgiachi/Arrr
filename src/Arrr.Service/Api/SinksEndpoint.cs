@@ -154,6 +154,20 @@ internal static class SinksEndpoint
             }
         );
 
+        app.MapGet(
+            "/api/sinks/{sinkId}/icon",
+            (HttpContext ctx, string sinkId, IConfigService configService, ISinkManager manager) =>
+            {
+                if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                    return error!;
+
+                var bytes = manager.GetSinkIcon(sinkId);
+                return bytes is null
+                    ? Results.NotFound()
+                    : Results.Bytes(bytes, "image/png");
+            }
+        );
+
         return app;
     }
 }

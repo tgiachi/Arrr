@@ -16,12 +16,10 @@ interface ShotEntry {
 const PRIORITIES: { value: number; label: string; palette: string }[] = [
   { value: 0, label: 'Low',      palette: 'gray'   },
   { value: 1, label: 'Normal',   palette: 'blue'   },
-  { value: 2, label: 'orange',   palette: 'orange' },
+  { value: 2, label: 'High',     palette: 'orange' },
   { value: 3, label: 'Critical', palette: 'red'    },
 ]
 
-// fix label separately
-const PRIORITY_LABELS = ['Low', 'Normal', 'High', 'Critical']
 
 interface Props {
   api: ArrrApi
@@ -50,9 +48,12 @@ export function DebugView({ api }: Props) {
     setFiring(true)
     const id = ++counter.current
     const ts = new Date().toLocaleTimeString()
+    // Append counter suffix so repeated fires with identical content
+    // are not suppressed by the server-side deduplication window.
+    const sentBody = `${body} [#${id}]`
     try {
       await api.sendNotification({
-        source, title, body, priority,
+        source, title, body: sentBody, priority,
         iconUrl: iconUrl || undefined,
         url:     url     || undefined,
         extras:  parsedExtras(),
@@ -140,7 +141,7 @@ export function DebugView({ api }: Props) {
               Priority
             </Text>
             <Flex gap={2} flexWrap="wrap">
-              {PRIORITIES.map((p, i) => (
+              {PRIORITIES.map((p) => (
                 <Box
                   key={p.value}
                   as="button"
@@ -157,7 +158,7 @@ export function DebugView({ api }: Props) {
                   _hover={{ borderColor: `${p.palette}.500`, color: `${p.palette}.500` }}
                   style={{ transition: 'all 0.15s', cursor: 'pointer' }}
                 >
-                  {PRIORITY_LABELS[i]}
+                  {p.label}
                 </Box>
               ))}
             </Flex>
@@ -259,7 +260,7 @@ export function DebugView({ api }: Props) {
                       color={`${PRIORITIES[s.priority]?.palette ?? 'gray'}.500`}
                       fontSize="9px" fontFamily="mono" fontWeight="700"
                     >
-                      {PRIORITY_LABELS[s.priority]}
+                      {PRIORITIES[s.priority]?.label ?? s.priority}
                     </Box>
                   </Flex>
                   {s.error && (
