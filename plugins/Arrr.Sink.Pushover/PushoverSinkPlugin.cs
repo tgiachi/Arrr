@@ -1,3 +1,4 @@
+using Arrr.Core.Data.Api;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Utils;
@@ -6,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Arrr.Sink.Pushover;
 
-public class PushoverSinkPlugin : ISinkPlugin, IConfigurablePlugin
+public class PushoverSinkPlugin : ISinkPlugin, IConfigurablePlugin, ITestableSink
 {
     private readonly HttpMessageHandler? _handler;
 
@@ -90,6 +91,41 @@ public class PushoverSinkPlugin : ISinkPlugin, IConfigurablePlugin
                 "Pushover sink ready → user {UserKey}",
                 _config.UserKey[..Math.Min(4, _config.UserKey.Length)] + "****"
             );
+        }
+    }
+
+    public async Task<PluginTestResult> TestAsync(ISinkContext context, CancellationToken ct)
+    {
+        if (_http is null || string.IsNullOrEmpty(_config.ApiToken) || string.IsNullOrEmpty(_config.UserKey))
+        {
+            return new(false, "ApiToken or UserKey not configured.");
+        }
+
+        try
+        {
+            var fields = new Dictionary<string, string>
+            {
+                ["token"] = _config.ApiToken,
+                ["user"] = _config.UserKey
+            };
+
+            var response = await _http.PostAsync(
+                "https://api.pushover.net/1/users/validate.json",
+                new FormUrlEncodedContent(fields),
+                ct
+            );
+
+            return response.IsSuccessStatusCode
+                ? new(true, $"✓ User key validated ({(int)response.StatusCode})")
+                : new(false, $"✗ {(int)response.StatusCode} {response.ReasonPhrase}");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return new(false, ex.Message);
         }
     }
 

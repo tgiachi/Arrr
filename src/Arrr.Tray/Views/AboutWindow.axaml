@@ -1,0 +1,76 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Arrr.Tray.ViewModels"
+        x:Class="Arrr.Tray.Views.AboutWindow"
+        x:DataType="vm:AboutViewModel"
+        Title="About Arrr Tray"
+        Width="320" Height="275"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen">
+
+  <StackPanel Margin="24" Spacing="0">
+
+    <!-- app name -->
+    <TextBlock Text="Arrr Tray"
+               FontSize="20" FontWeight="Bold"
+               HorizontalAlignment="Center"
+               Margin="0 0 0 4"/>
+
+    <TextBlock Text="Linux desktop notification aggregator"
+               FontSize="12" Opacity="0.6"
+               HorizontalAlignment="Center"
+               Margin="0 0 0 20"/>
+
+    <!-- versions -->
+    <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+            CornerRadius="6" Padding="12 8" Margin="0 0 0 20">
+      <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" >
+
+        <TextBlock Grid.Row="0" Grid.Column="0"
+                   Text="Tray version" FontSize="12" Opacity="0.6"
+                   Margin="0 0 16 4"/>
+        <TextBlock Grid.Row="0" Grid.Column="1"
+                   Text="{Binding TrayVersion}" FontSize="12" FontWeight="SemiBold"
+                   HorizontalAlignment="Right"/>
+
+        <TextBlock Grid.Row="1" Grid.Column="0"
+                   Text="Service version" FontSize="12" Opacity="0.6"/>
+        <TextBlock Grid.Row="1" Grid.Column="1"
+                   Text="{Binding ServiceVersion}" FontSize="12" FontWeight="SemiBold"
+                   HorizontalAlignment="Right"/>
+
+      </Grid>
+    </Border>
+
+    <!-- author + repo -->
+    <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+            CornerRadius="6" Padding="12 8" Margin="0 0 0 16">
+      <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
+
+        <TextBlock Grid.Row="0" Grid.Column="0"
+                   Text="Author" FontSize="12" Opacity="0.6"
+                   Margin="0 0 16 4"/>
+        <TextBlock Grid.Row="0" Grid.Column="1"
+                   Text="{Binding Author}" FontSize="12" FontWeight="SemiBold"
+                   HorizontalAlignment="Right"/>
+
+        <TextBlock Grid.Row="1" Grid.Column="0"
+                   Text="Repository" FontSize="12" Opacity="0.6"/>
+        <Button Grid.Row="1" Grid.Column="1"
+                Content="{Binding RepoUrl}"
+                FontSize="11" Padding="0"
+                Background="Transparent" BorderThickness="0"
+                Foreground="{DynamicResource SystemAccentColor}"
+                HorizontalAlignment="Right"
+                Click="OnRepoClick"
+                Cursor="Hand"/>
+
+      </Grid>
+    </Border>
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+      <Button Content="Close" Click="OnCloseClick"/>
+    </StackPanel>
+
+  </StackPanel>
+</Window>

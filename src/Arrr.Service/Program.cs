@@ -14,6 +14,7 @@ using Arrr.Service.Interfaces;
 using Arrr.Service.Internal;
 using Arrr.Service.Services;
 using ConsoleAppFramework;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -52,6 +53,24 @@ await ConsoleApp.RunAsync(
         Log.Logger.Information("Root directory: {RootDirectory}", rootDirectory);
 
         var builder = WebApplication.CreateBuilder(args);
+
+        // Read port early (before DI is built) so Kestrel can bind the right ports
+        var earlyConfigPath = Path.Combine(directoriesConfig.Root, "arrr.config");
+        var webPort = 5150;
+        if (File.Exists(earlyConfigPath))
+        {
+            try
+            {
+                var earlyConfig = JsonUtils.DeserializeFromFile<ArrrConfig>(earlyConfigPath, ArrrConfigJsonContext.Default);
+                webPort = earlyConfig.Web.Port;
+            }
+            catch { /* use default */ }
+        }
+
+        builder.WebHost.ConfigureKestrel(opt =>
+        {
+            opt.ListenAnyIP(webPort, lo => lo.Protocols = HttpProtocols.Http1);
+        });
 
         builder.Services.AddSingleton(directoriesConfig);
         builder.Services.AddSingleton<IConfigService, ConfigService>();
@@ -135,7 +154,7 @@ await ConsoleApp.RunAsync(
                 _ = eventBus.PublishAsync(new ArrStartedEvent(DateTimeOffset.UtcNow), ct)
         );
 
-        app.Urls.Add($"http://0.0.0.0:{configService.Config.Web.Port}");
+        // URLs are already bound via ConfigureKestrel above — no need to add them here
 
         app.UseCors();
 
@@ -154,6 +173,7 @@ await ConsoleApp.RunAsync(
         app.MapHistoryApi();
         app.MapRoutingLogApi();
         app.MapDndApi();
+        app.MapIconsApi();
 
         if (configService.Config.IsDebug)
         {

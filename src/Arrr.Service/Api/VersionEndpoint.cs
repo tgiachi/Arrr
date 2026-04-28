@@ -15,8 +15,12 @@ internal static class VersionEndpoint
                 var version = VersionUtils.Get(typeof(VersionEndpoint));
                 var runtime = RuntimeInformation.FrameworkDescription;
                 var os = RuntimeInformation.OSDescription;
-
-                return Results.Ok(new VersionResponse(version, runtime, os));
+#if DEBUG
+                const bool isDebug = true;
+#else
+                const bool isDebug = false;
+#endif
+                return Results.Ok(new VersionResponse(version, runtime, os, isDebug));
             }
         );
 

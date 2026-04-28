@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using Arrr.Core.Data.Api;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Utils;
@@ -8,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace HomeAssistantSink;
 
-public class HomeAssistantSinkPlugin : ISinkPlugin, IConfigurablePlugin
+public class HomeAssistantSinkPlugin : ISinkPlugin, IConfigurablePlugin, ITestableSink
 {
     private readonly HttpMessageHandler? _handler;
 
@@ -88,6 +89,35 @@ public class HomeAssistantSinkPlugin : ISinkPlugin, IConfigurablePlugin
                 _config.BaseUrl,
                 _config.NotifyService
             );
+        }
+    }
+
+    public async Task<PluginTestResult> TestAsync(ISinkContext context, CancellationToken ct)
+    {
+        if (_http is null || string.IsNullOrEmpty(_config.AccessToken))
+        {
+            return new(false, "AccessToken not configured.");
+        }
+
+        try
+        {
+            var url = $"{_config.BaseUrl.TrimEnd('/')}/api/";
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Authorization = new("Bearer", _config.AccessToken);
+
+            var response = await _http.SendAsync(request, ct);
+
+            return response.IsSuccessStatusCode
+                ? new(true, $"✓ OK ({(int)response.StatusCode})")
+                : new(false, $"✗ {(int)response.StatusCode} {response.ReasonPhrase}");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return new(false, ex.Message);
         }
     }
 

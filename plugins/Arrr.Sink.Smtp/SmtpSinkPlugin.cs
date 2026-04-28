@@ -1,8 +1,11 @@
 using System.Collections.Concurrent;
 using System.Text;
+using Arrr.Core.Data.Api;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Utils;
+using MailKit.Net.Smtp;
+using MailKit.Security;
 using Microsoft.Extensions.Logging;
 using MimeKit;
 using SmtpSink.Data;
@@ -11,7 +14,7 @@ using SmtpSink.Types;
 
 namespace SmtpSink;
 
-public class SmtpSinkPlugin : ISinkPlugin, IConfigurablePlugin
+public class SmtpSinkPlugin : ISinkPlugin, IConfigurablePlugin, ITestableSink
 {
     private readonly ConcurrentQueue<Notification> _digestQueue = new();
     private readonly IMailSender? _injectedSender;
@@ -83,6 +86,41 @@ public class SmtpSinkPlugin : ISinkPlugin, IConfigurablePlugin
         }
 
         context.Logger.LogInformation("SMTP sink ready — {Mode} mode to {To}", _config.Mode, _config.To);
+    }
+
+    public async Task<PluginTestResult> TestAsync(ISinkContext context, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(_config.Host))
+        {
+            return new(false, "Host not configured.");
+        }
+
+        using var client = new SmtpClient();
+        var socketOptions = _config.UseSsl
+                                ? SecureSocketOptions.StartTls
+                                : SecureSocketOptions.None;
+
+        try
+        {
+            await client.ConnectAsync(_config.Host, _config.Port, socketOptions, ct);
+
+            if (!string.IsNullOrEmpty(_config.Username))
+            {
+                await client.AuthenticateAsync(_config.Username, _config.Password, ct);
+            }
+
+            await client.DisconnectAsync(true, ct);
+
+            return new(true, $"✓ Connected to {_config.Host}:{_config.Port}");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return new(false, $"✗ {ex.Message}");
+        }
     }
 
     public async Task StopAsync()

@@ -71,6 +71,13 @@ export class ArrrApi {
     })
   }
 
+  async testConfig(pluginId: string, config: Record<string, unknown>): Promise<{ success: boolean; message: string }> {
+    return (await this.req(`/api/plugins/${encodeURIComponent(pluginId)}/test`, {
+      method: 'POST',
+      body: JSON.stringify(config),
+    })).json()
+  }
+
   async sendCallback(pluginId: string, body: string) {
     await this.req(`/api/plugins/${encodeURIComponent(pluginId)}/callback`, {
       method: 'POST',
@@ -106,7 +113,14 @@ export class ArrrApi {
     })
   }
 
-  async getVersion(): Promise<{ version: string; runtimeVersion: string; os: string }> {
+  async testSinkConfig(sinkId: string, config: Record<string, unknown>): Promise<{ success: boolean; message: string }> {
+    return (await this.req(`/api/sinks/${encodeURIComponent(sinkId)}/test`, {
+      method: 'POST',
+      body: JSON.stringify(config),
+    })).json()
+  }
+
+  async getVersion(): Promise<{ version: string; runtimeVersion: string; os: string; isDebug: boolean }> {
     const r = await fetch(`${this.baseUrl}/api/version`)
     if (!r.ok) throw new Error(`${r.status}`)
     return r.json()
@@ -141,6 +155,21 @@ export class ArrrApi {
 
   async getDnd(): Promise<DndStatus> {
     return (await this.req('/api/dnd')).json()
+  }
+
+  async sendNotification(req: {
+    source: string
+    title: string
+    body: string
+    priority?: number
+    iconUrl?: string
+    url?: string
+    extras?: Record<string, string>
+  }): Promise<void> {
+    await this.req('/api/notify', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    })
   }
 
   async setDnd(enabled: boolean): Promise<DndStatus> {

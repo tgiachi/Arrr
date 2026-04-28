@@ -1,0 +1,347 @@
+using System.Text.Json;
+using Arrr.Core.Data.Api;
+using Arrr.Core.Data.Notifications;
+using Arrr.Core.Interfaces;
+using Arrr.Core.Types;
+using Arrr.Core.Utils;
+using Arrr.Plugin.Gitlab.Data;
+using Microsoft.Extensions.Logging;
+
+namespace Arrr.Plugin.Gitlab;
+
+public class GitlabSourcePlugin : IPollingPlugin, IConfigurablePlugin, ITestablePlugin, IDisposable
+{
+    private static readonly HashSet<string> TerminalStatuses = ["success", "failed", "canceled"];
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+    };
+
+    private readonly HashSet<string> _seenTodoIds = [];
+    private readonly HashSet<string> _seenPipelineKeys = [];
+    private readonly HttpClient _http;
+
+    private GitlabConfig _config = new();
+    private IPluginContext? _context;
+    private bool _firstPoll = true;
+
+    public string Id => "com.arrr.plugin.gitlab";
+    public string Name => "GitLab";
+    public string Version => VersionUtils.Get(typeof(GitlabSourcePlugin));
+    public string Author => "tom (tom@orivega.io)";
+    public string Description => "Polls GitLab to-dos and CI pipeline statuses across one or more GitLab instances.";
+    public string[] Categories => ["development", "git", "ci"];
+    public string Icon => "🦊";
+    public Type ConfigType => typeof(GitlabConfig);
+    public TimeSpan Interval => TimeSpan.FromMinutes(_config.PollIntervalMinutes);
+
+    public GitlabSourcePlugin()
+    {
+        _http = new();
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd("Arrr/1.0");
+    }
+
+    internal GitlabSourcePlugin(HttpMessageHandler handler)
+    {
+        _http = new(handler);
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd("Arrr/1.0");
+    }
+
+    public async Task PollAsync(IPluginContext context, CancellationToken ct)
+    {
+        foreach (var server in _config.Servers)
+        {
+            if (string.IsNullOrEmpty(server.PersonalAccessToken))
+            {
+                continue;
+            }
+
+            await PollTodosAsync(context, server, ct);
+            await PollPipelinesAsync(context, server, ct);
+        }
+
+        if (_firstPoll)
+        {
+            _firstPoll = false;
+        }
+    }
+
+    private async Task PollTodosAsync(IPluginContext context, GitlabServerConfig server, CancellationToken ct)
+    {
+        List<GitlabTodo>? todos;
+
+        try
+        {
+            var baseUrl = server.GitlabUrl.TrimEnd('/');
+            var request = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/v4/todos?state=pending");
+            request.Headers.Add("PRIVATE-TOKEN", server.PersonalAccessToken);
+
+            var response = await _http.SendAsync(request, ct);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _context?.Logger.LogWarning("GitLab todos API returned {Status} for {Url}", response.StatusCode, server.GitlabUrl);
+
+                return;
+            }
+
+            var json = await response.Content.ReadAsStringAsync(ct);
+            todos = JsonSerializer.Deserialize<List<GitlabTodo>>(json, JsonOptions);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _context?.Logger.LogError(ex, "GitLab to-do fetch failed for {Url}", server.GitlabUrl);
+
+            return;
+        }
+
+        if (todos is null)
+        {
+            return;
+        }
+
+        foreach (var todo in todos)
+        {
+            var id = $"{server.GitlabUrl}:{todo.Id}";
+
+            if (_firstPoll)
+            {
+                _seenTodoIds.Add(id);
+
+                continue;
+            }
+
+            if (_seenTodoIds.Add(id))
+            {
+                var emoji = todo.TargetType switch
+                {
+                    "MergeRequest" => "🔀",
+                    "Issue"        => "🐛",
+                    "Epic"         => "🗂️",
+                    "Commit"       => "📝",
+                    _              => "🔔"
+                };
+
+                await context.EventBus.PublishAsync(
+                    new Notification(
+                        Guid.NewGuid(),
+                        Id,
+                        $"{emoji} {todo.Project.PathWithNamespace}",
+                        $"{todo.Target.Title}\nAction: {todo.ActionName.Replace('_', ' ')}",
+                        DateTimeOffset.UtcNow,
+                        null,
+                        Url: todo.Target.WebUrl,
+                        Extras: new Dictionary<string, string>
+                        {
+                            ["gitlab.server"]      = server.GitlabUrl,
+                            ["gitlab.project"]     = todo.Project.PathWithNamespace,
+                            ["gitlab.target_type"] = todo.TargetType,
+                            ["gitlab.action"]      = todo.ActionName
+                        }
+                    ),
+                    ct
+                );
+            }
+        }
+    }
+
+    private async Task PollPipelinesAsync(IPluginContext context, GitlabServerConfig server, CancellationToken ct)
+    {
+        if (server.PipelineProjects.Count == 0)
+        {
+            return;
+        }
+
+        var baseUrl = server.GitlabUrl.TrimEnd('/');
+
+        foreach (var project in server.PipelineProjects)
+        {
+            var encoded = Uri.EscapeDataString(project);
+            List<GitlabPipeline>? pipelines;
+
+            try
+            {
+                var request = new HttpRequestMessage(
+                    HttpMethod.Get,
+                    $"{baseUrl}/api/v4/projects/{encoded}/pipelines?per_page=10&order_by=updated_at&sort=desc"
+                );
+                request.Headers.Add("PRIVATE-TOKEN", server.PersonalAccessToken);
+
+                var response = await _http.SendAsync(request, ct);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _context?.Logger.LogWarning(
+                        "GitLab pipeline API returned {Status} for {Project} on {Url}",
+                        response.StatusCode,
+                        project,
+                        server.GitlabUrl
+                    );
+
+                    continue;
+                }
+
+                var json = await response.Content.ReadAsStringAsync(ct);
+                pipelines = JsonSerializer.Deserialize<List<GitlabPipeline>>(json, JsonOptions);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _context?.Logger.LogError(ex, "GitLab pipeline fetch failed for {Project} on {Url}", project, server.GitlabUrl);
+
+                continue;
+            }
+
+            if (pipelines is null)
+            {
+                continue;
+            }
+
+            foreach (var pipeline in pipelines)
+            {
+                var key = $"{server.GitlabUrl}:{project}:{pipeline.Id}:{pipeline.Status}";
+
+                if (_firstPoll)
+                {
+                    _seenPipelineKeys.Add(key);
+
+                    continue;
+                }
+
+                if (!TerminalStatuses.Contains(pipeline.Status))
+                {
+                    continue;
+                }
+
+                if (_seenPipelineKeys.Add(key))
+                {
+                    var emoji = pipeline.Status switch
+                    {
+                        "success"  => "✅",
+                        "failed"   => "❌",
+                        "canceled" => "⚠️",
+                        _          => "🔔"
+                    };
+
+                    var priority = pipeline.Status == "failed"
+                        ? NotificationPriority.High
+                        : NotificationPriority.Normal;
+
+                    await context.EventBus.PublishAsync(
+                        new Notification(
+                            Guid.NewGuid(),
+                            Id,
+                            $"{emoji} {project} [{pipeline.Ref}]",
+                            $"Pipeline #{pipeline.Id} {pipeline.Status}",
+                            DateTimeOffset.UtcNow,
+                            null,
+                            priority,
+                            Url: pipeline.WebUrl,
+                            Extras: new Dictionary<string, string>
+                            {
+                                ["gitlab.server"]      = server.GitlabUrl,
+                                ["gitlab.project"]     = project,
+                                ["gitlab.pipeline_id"] = pipeline.Id.ToString(),
+                                ["gitlab.ref"]         = pipeline.Ref,
+                                ["gitlab.status"]      = pipeline.Status
+                            }
+                        ),
+                        ct
+                    );
+                }
+            }
+        }
+    }
+
+    public async Task StartAsync(IPluginContext context, CancellationToken ct)
+    {
+        _context = context;
+        _config = await context.LoadConfigAsync<GitlabConfig>(ct);
+
+        if (_config.Servers.Count == 0)
+        {
+            context.Logger.LogWarning("GitLab plugin: no servers configured");
+
+            return;
+        }
+
+        foreach (var server in _config.Servers)
+        {
+            if (string.IsNullOrEmpty(server.PersonalAccessToken))
+            {
+                context.Logger.LogWarning("GitLab plugin: PersonalAccessToken not configured for {Url}", server.GitlabUrl);
+            }
+            else
+            {
+                context.Logger.LogInformation(
+                    "GitLab plugin ready ({Url}), polling every {Interval} min — monitoring {Count} project(s) for pipelines",
+                    server.GitlabUrl,
+                    _config.PollIntervalMinutes,
+                    server.PipelineProjects.Count
+                );
+            }
+        }
+    }
+
+    public async Task<PluginTestResult> TestAsync(IPluginContext context, CancellationToken ct)
+    {
+        if (_config.Servers.Count == 0)
+        {
+            return new(false, "No servers configured.");
+        }
+
+        var lines = new List<string>();
+        var allOk = true;
+
+        foreach (var server in _config.Servers)
+        {
+            if (string.IsNullOrEmpty(server.PersonalAccessToken))
+            {
+                lines.Add($"{server.GitlabUrl}: ⚠ no token");
+                allOk = false;
+                continue;
+            }
+
+            try
+            {
+                var baseUrl = server.GitlabUrl.TrimEnd('/');
+                var request = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/v4/user");
+                request.Headers.Add("PRIVATE-TOKEN", server.PersonalAccessToken);
+
+                var response = await _http.SendAsync(request, ct);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    lines.Add($"{server.GitlabUrl}: ✓ OK ({(int)response.StatusCode})");
+                }
+                else
+                {
+                    lines.Add($"{server.GitlabUrl}: ✗ {(int)response.StatusCode} {response.ReasonPhrase}");
+                    allOk = false;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                lines.Add($"{server.GitlabUrl}: ✗ {ex.Message}");
+                allOk = false;
+            }
+        }
+
+        return new(allOk, string.Join("\n", lines));
+    }
+
+    public void Dispose()
+        => _http.Dispose();
+}

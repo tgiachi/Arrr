@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Arrr.Core.Data.Api;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Utils;
@@ -7,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Arrr.Plugin.Github;
 
-public class GithubSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposable
+public class GithubSourcePlugin : IPollingPlugin, IConfigurablePlugin, ITestablePlugin, IDisposable
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -41,6 +42,34 @@ public class GithubSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDisposab
     {
         _http = new(handler);
         _http.DefaultRequestHeaders.UserAgent.ParseAdd("Arrr/1.0");
+    }
+
+    public async Task<PluginTestResult> TestAsync(IPluginContext context, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(_config.PersonalAccessToken))
+        {
+            return new(false, "PersonalAccessToken not configured.");
+        }
+
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/user");
+            request.Headers.Authorization = new("Bearer", _config.PersonalAccessToken);
+
+            var response = await _http.SendAsync(request, ct);
+
+            return response.IsSuccessStatusCode
+                ? new(true, $"✓ OK ({(int)response.StatusCode})")
+                : new(false, $"✗ {(int)response.StatusCode} {response.ReasonPhrase}");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return new(false, ex.Message);
+        }
     }
 
     public void Dispose()

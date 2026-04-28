@@ -1,3 +1,4 @@
+using Arrr.Core.Data.Api;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Utils;
@@ -9,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace ImapPlugin;
 
-public class ImapPlugin : IPollingPlugin, IConfigurablePlugin
+public class ImapPlugin : IPollingPlugin, IConfigurablePlugin, ITestablePlugin
 {
     private readonly HashSet<string> _seenIds = [];
 
@@ -109,5 +110,32 @@ public class ImapPlugin : IPollingPlugin, IConfigurablePlugin
             _config.Port,
             _config.Folder
         );
+    }
+
+    public async Task<PluginTestResult> TestAsync(IPluginContext context, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(_config.Host))
+        {
+            return new(false, "Host not configured.");
+        }
+
+        using var client = new ImapClient();
+
+        try
+        {
+            await client.ConnectAsync(_config.Host, _config.Port, _config.UseSsl, ct);
+            await client.AuthenticateAsync(_config.Username, _config.Password, ct);
+            await client.DisconnectAsync(true, ct);
+
+            return new(true, $"✓ Connected to {_config.Host}:{_config.Port} as {_config.Username}");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return new(false, $"✗ {ex.Message}");
+        }
     }
 }

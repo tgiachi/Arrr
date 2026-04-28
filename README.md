@@ -6,7 +6,31 @@
 
 > *Arrr!* — because every good notification deserves a pirate's welcome.
 
-Arrr is a Linux desktop notification aggregator daemon. It runs as a background service, collects notifications from multiple sources via a plugin system, and delivers them to your desktop through D-Bus and configurable sink plugins. A built-in web UI lets you browse notification history, manage plugins and sinks, and tweak settings — all from a browser.
+## Why does this exist?
+
+There are already plenty of tools that forward notifications: ntfy, Gotify, Pushover, Apprise, and a dozen others. **Arrr is not trying to replace or replicate any of them.**
+
+The problem I wanted to solve is simpler and more specific: I have notifications coming from many different places — RSS feeds, Telegram, WhatsApp, email, GitHub, calendar reminders, task due dates — and I had no single place where I could see all of them together. Every source lived in its own app, its own window, its own silo. I'd miss things, or I'd have to check six places just to know what happened.
+
+**Arrr's only job is aggregation.** One daemon that pulls from every source I care about, puts everything into a single stream, and lets me consume that stream however I want — as a desktop popup, an email digest, a push notification, or just a history log I can search later. The digest feature in particular was the tipping point: I don't want to be interrupted by every single RSS item, but I do want a morning summary of what came in overnight.
+
+That's it. No cloud account, no mobile app, no SaaS. A daemon that runs on my Linux machine, knows about all my sources, and keeps everything in one place.
+
+---
+
+Arrr runs as a background service, collects notifications from multiple sources via a plugin system, and delivers them to your desktop through D-Bus and configurable sink plugins. A built-in web UI lets you browse notification history, manage plugins and sinks, and tweak settings — all from a browser.
+
+## Screenshots
+
+<p align="center">
+  <img src="assets/screenshot_1.png" alt="Web UI — plugin and sink overview" width="100%"/>
+  <br/><em>Web UI — plugin and sink management</em>
+</p>
+
+<p align="center">
+  <img src="assets/screenshot_2.png" alt="Web UI — plugin detail view" width="100%"/>
+  <br/><em>Web UI — plugin cards with status and controls</em>
+</p>
 
 ---
 
@@ -18,8 +42,13 @@ Arrr is a Linux desktop notification aggregator daemon. It runs as a background 
 - **Notification history** — optional SQLite-backed history with full-text search, source filter, and pagination (encrypted at rest)
 - **D-Bus delivery** — notifications appear as native desktop popups via `org.freedesktop.Notifications`
 - **REST API** — HTTP endpoints to send notifications from any language and manage plugins/sinks
+- **gRPC streaming** — server-streaming endpoint so remote clients (e.g. a PC) can subscribe to live notifications over the network
+- **Routing rules** — filter or redirect notifications by source, title, body, priority, extras, and time-of-day; first-match-wins, disabled by default
+- **Do Not Disturb** — pause all sink delivery with a single toggle (REST or gRPC), without stopping sources
+- **Digest** — schedule batched notification summaries (hourly, daily, …) delivered via any sink
 - **Deduplication** — configurable time window to suppress duplicate notifications
 - **NuGet installer** — install community plugins directly from NuGet.org via the API or web UI
+- **Docker image** — `tgiachi/arrr` on Docker Hub; first-start API key generation, `/data` volume for persistence
 - **systemd user service** — runs as a user unit, logs to the journal
 - **Self-contained binary** — no .NET runtime required on the target machine
 
@@ -28,26 +57,32 @@ Arrr is a Linux desktop notification aggregator daemon. It runs as a background 
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────┐
-│                     Arrr.Service                     │
-│                                                      │
-│  Source Plugins ──┐                                  │
+┌──────────────────────────────────────────────────────────────┐
+│                        Arrr.Service                          │
+│                                                              │
+│  Source Plugins ──┐                                          │
 │  REST /api/notify ┼──▶  EventBus ──▶  SinkOrchestrator ──▶ D-Bus popup
-│                   │                        │         │ ──▶ Ntfy / SMTP / Pushover
-│                   │                        │         │ ──▶ Webhook / WebSocket
-│                   │              HistoryService       │ ──▶ SignalR hub
-│                                                      │ ──▶ … (sink plugins)
-└──────────────────────────────────────────────────────┘
+│                   │         │              │                 │ ──▶ Ntfy / SMTP / Pushover
+│                   │         │         RoutingRules           │ ──▶ Webhook / WebSocket
+│                   │         │         DnD guard              │ ──▶ SignalR hub
+│                   │         │              │                 │ ──▶ … (sink plugins)
+│                   │         │         HistoryService         │
+│                   │         │                                │
+│                   │         └──▶  NotificationGrpcService   │
+│                   │                    │                     │
+│                                  gRPC stream :5150           │
+└──────────────────────────────────────────────────────────────┘
                           │
                     Web UI :5150
 ```
 
 1. The daemon starts and loads plugins from the configured `plugins/` directory.
-2. Each plugin receives an `IPluginContext` (event bus, logger, per-plugin config) and runs on its own task.
+2. Each plugin receives an `IPluginContext` (event bus, logger, shared HTTP client, per-plugin config) and runs on its own task.
 3. Plugins publish `Notification` events onto the internal event bus.
-4. `SinkOrchestrator` fans every notification out to all enabled sinks in parallel.
-5. If `historyEnabled: true`, every notification is also persisted to an encrypted SQLite database.
-6. External processes can inject notifications via `POST /api/notify`.
+4. `SinkOrchestrator` evaluates routing rules and the DND flag, then fans matching notifications out to enabled sinks.
+5. If `historyEnabled: true`, every notification is persisted to an encrypted SQLite database.
+6. `NotificationGrpcService` streams events (notifications and DND changes) to all connected gRPC clients.
+7. External processes can inject notifications via `POST /api/notify`.
 
 ---
 
@@ -55,10 +90,17 @@ Arrr is a Linux desktop notification aggregator daemon. It runs as a background 
 
 ### Install from AUR (Arch Linux)
 
+| Package | AUR | Description |
+|---------|-----|-------------|
+| `arrr-bin` | [![AUR](https://img.shields.io/aur/version/arrr-bin)](https://aur.archlinux.org/packages/arrr-bin) | Pre-built binary (fast install) |
+| `arrr-git` | [![AUR](https://img.shields.io/aur/version/arrr-git)](https://aur.archlinux.org/packages/arrr-git) | Built from latest git HEAD |
+
 ```bash
+# Pre-built binary (fast):
 yay -S arrr-bin
-# or
-paru -S arrr-bin
+
+# Build from source (latest git HEAD):
+yay -S arrr-git
 ```
 
 ### Install from package
@@ -79,6 +121,29 @@ sudo rpm -i arrr-<version>-1.x86_64.rpm
 ```bash
 sudo pacman -U arrr-<version>-1-x86_64.pkg.tar.zst
 ```
+
+### Docker
+
+```bash
+docker run -d \
+  --name arrr \
+  -p 5150:5150 \
+  -v arrr-data:/data \
+  tgiachi/arrr:latest
+```
+
+On first start Arrr prints a randomly generated API key to the log. Pass `ARRR_API_KEY` to use a fixed key:
+
+```bash
+docker run -d \
+  --name arrr \
+  -p 5150:5150 \
+  -v arrr-data:/data \
+  -e ARRR_API_KEY=my-secret-key \
+  tgiachi/arrr:latest
+```
+
+> D-Bus and Unix socket sinks are disabled in the Docker image. Use Ntfy, SMTP, Webhook, or gRPC clients to receive notifications from a containerised instance.
 
 ### Enable the systemd user service
 
@@ -104,112 +169,80 @@ dotnet run --project src/Arrr.Service -- --rootDirectory ~/.local/share/arrr
 
 ---
 
-## Configuration
+## Starting the service
 
-On first run Arrr creates `$XDG_DATA_HOME/arrr/arrr.config` (defaults to `~/.local/share/arrr/arrr.config`).
+Once installed (or built from source), the daemon is a single self-contained binary:
 
-```json
-{
-  "apiKey": "",
-  "isDebug": false,
-  "historyEnabled": false,
-  "web": {
-    "port": 5150
-  },
-  "deduplication": {
-    "enabled": false,
-    "windowSeconds": 300
-  },
-  "plugins": [],
-  "sinks": []
-}
+```bash
+# Run in the foreground (useful to check the first-run output)
+arrr
+
+# Common flags
+arrr --logLevelType Debug        # verbose logging
+arrr --rootDirectory /custom/dir # use a non-default data directory
+arrr --logToFile false           # console only, no rolling log files
 ```
 
-| Field | Default | Description |
-|-------|---------|-------------|
-| `apiKey` | `""` | API key for REST endpoints; leave empty to disable auth |
-| `isDebug` | `false` | Enables OpenAPI (`/openapi/v1.json`) and Scalar UI (`/scalar/v1`) |
-| `historyEnabled` | `false` | Persist all notifications to an encrypted SQLite database |
-| `web.port` | `5150` | HTTP port for the REST API and web UI |
-| `deduplication.enabled` | `false` | Suppress duplicate notifications within the time window |
-| `deduplication.windowSeconds` | `300` | Window (seconds) for duplicate suppression |
-| `plugins` | `[]` | List of enabled source plugins |
-| `sinks` | `[]` | List of enabled sink plugins |
+On first start Arrr generates a random API key and writes it to the log. Note it down and put it in the web UI settings or in `arrr.config` — it is required for every API call and for `arrr-tray` to connect.
 
-All settings can be changed from the web UI → **Config** tab without editing the JSON file directly.
+The service exposes a single port (default **5150**):
+- `http://localhost:5150` — web UI and REST API
+- `http://localhost:5150/stream` — SignalR hub (used by `arrr-tray` and the built-in stream view)
+
+Once running, open `http://localhost:5150` in your browser to install plugins, configure sinks, and browse notification history.
 
 ---
 
-## REST API
+## arrr-tray (Linux)
 
-All endpoints require the `X-Api-Key` header when `apiKey` is set.
+`arrr-tray` is a lightweight Linux system tray application that connects to a running Arrr service and delivers notifications to your desktop via **D-Bus** (`org.freedesktop.Notifications`) — the same mechanism used by your notification daemon (Dunst, Mako, SDDM, etc.).
 
-### Send a notification
+**What it does:**
 
-```http
-POST /api/notify
-X-Api-Key: <your-key>
-Content-Type: application/json
+- Sits in the system tray and shows whether the service is connected or not
+- Forwards every notification received from the service to the desktop as a native popup
+- Uses the plugin's icon for the popup when available, falls back to a default icon
+- Sends a "Connected" desktop notification when it (re)connects to the service
+- Lets you toggle **Do Not Disturb** from the tray menu without opening a browser
+- Shows an **About** window with tray and service versions
 
-{
-  "source": "my-script",
-  "title": "Hello!",
-  "body": "This is a notification from a shell script.",
-  "iconUrl": null
-}
+**What it does NOT do:**
+
+- It does not run the Arrr service itself — you need the daemon running separately
+- It does not store or search notification history — use the web UI for that
+
+**Install (Arch Linux):**
+
+```bash
+yay -S arrr-tray-bin   # or arrr-tray-git for latest HEAD
 ```
 
-### Notification history
+**Or build from source:**
 
-```http
-GET /api/history?page=1&limit=50&search=deploy&source=rss
-X-Api-Key: <your-key>
+```bash
+dotnet build src/Arrr.Tray -c Release
 ```
 
-Requires `historyEnabled: true`. Supports full-text search across title and body, source filter, and pagination.
+**First-time setup:**
 
-### Plugins
+1. Start `arrr-tray` — it appears in the system tray
+2. Right-click → **Settings**
+3. Set **Server URL** (e.g. `http://localhost:5150`) and **API Key**
+4. Click **Save** — the tray reconnects immediately
 
-```http
-GET  /api/plugins                          # list loaded plugins
-GET  /api/plugins/available                # all plugins in plugins/
-POST /api/plugins/{id}/enable
-POST /api/plugins/{id}/disable
-POST /api/plugins/{id}/reload
-POST /api/plugins/reload/all
-POST /api/plugins/install                  # install from NuGet
-POST /api/plugins/{id}/uninstall
-GET  /api/plugins/{id}/config              # get plugin config JSON
-PUT  /api/plugins/{id}/config              # save plugin config JSON
-```
+> `arrr-tray` is currently Linux-only. It requires a D-Bus session bus and a compatible notification daemon.
 
-**Install from NuGet:**
-```http
-POST /api/plugins/install
-Content-Type: application/json
+---
 
-{ "packageId": "Arrr.Plugin.Rss", "version": "1.0.0" }
-```
+## Documentation
 
-Omit `version` to install the latest.
-
-### Sinks
-
-```http
-GET  /api/sinks                            # list available sinks
-POST /api/sinks/{id}/enable
-POST /api/sinks/{id}/disable
-POST /api/sinks/{id}/reload
-GET  /api/sinks/{id}/config
-PUT  /api/sinks/{id}/config
-```
-
-### Config backup / restore
-
-```http
-GET  /api/config/backup                    # export all plugin configs as JSON
-POST /api/config/restore                   # import previously exported JSON
-```
+| Doc | Description |
+|-----|-------------|
+| [Configuration](docs/configuration.md) | Config file reference, data directory layout |
+| [REST API](docs/rest-api.md) | All HTTP endpoints with examples |
+| [SignalR streaming](docs/signalr.md) | Live event streaming for clients |
+| [Routing Rules](docs/routing.md) | Filter and redirect notifications by source, time, priority |
+| [Writing a Plugin](docs/writing-a-plugin.md) | Build your own source or sink plugin |
 
 ---
 
@@ -226,6 +259,7 @@ POST /api/config/restore                   # import previously exported JSON
 | **Healthcheck** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.Healthcheck)](https://www.nuget.org/packages/Arrr.Plugin.Healthcheck) | Polls HTTP endpoints and notifies on up/down state changes |
 | **MQTT** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.Mqtt)](https://www.nuget.org/packages/Arrr.Plugin.Mqtt) | Subscribes to MQTT topics and emits a notification per message |
 | **systemd Journal** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.Systemd)](https://www.nuget.org/packages/Arrr.Plugin.Systemd) | Tails `journalctl` and publishes log events as notifications |
+| **Todoist** | [![NuGet](https://img.shields.io/nuget/v/Arrr.Plugin.Todoist)](https://www.nuget.org/packages/Arrr.Plugin.Todoist) | Polls Todoist tasks and fires alerts for due dates and reminders |
 
 ---
 
@@ -248,65 +282,7 @@ POST /api/config/restore                   # import previously exported JSON
 
 ---
 
-## Writing a Plugin
-
-Implement `ISourcePlugin` from `Arrr.Core`, drop the compiled `.dll` into the `plugins/` directory and restart the daemon (or use the API to hot-reload).
-
-```csharp
-using Arrr.Core.Data.Notifications;
-using Arrr.Core.Interfaces;
-
-public class MyPlugin : ISourcePlugin
-{
-    public string Id          => "com.example.myplugin";
-    public string Name        => "My Plugin";
-    public string Version     => "1.0.0";
-    public string Author      => "Your Name";
-    public string Description => "Fetches something and sends notifications";
-    public string[] Categories => ["example"];
-    public string Icon        => "";
-
-    public async Task StartAsync(IPluginContext context, CancellationToken ct)
-    {
-        while (!ct.IsCancellationRequested)
-        {
-            await context.EventBus.PublishAsync(
-                new Notification(Guid.NewGuid(), Id, "Hello", "World", DateTimeOffset.UtcNow, null),
-                ct
-            );
-            await Task.Delay(TimeSpan.FromMinutes(5), ct);
-        }
-    }
-}
-```
-
-**Optional interfaces** a plugin can add:
-
-| Interface | Purpose |
-|-----------|---------|
-| `IPollingPlugin` | Declare a poll interval; the host calls `PollAsync` on schedule |
-| `IConfigurablePlugin<T>` | Persist typed config via `context.LoadConfigAsync<T>()` |
-| `ICallbackPlugin` | Receive HTTP callbacks at `POST /api/plugins/{id}/callback` |
-| `IQrPlugin` | Surface a QR code in the web UI for first-time pairing flows |
-
-Plugins in **any language** can also inject notifications over HTTP — no .NET required:
-
-```bash
-curl -X POST http://localhost:5150/api/notify \
-  -H "X-Api-Key: your-key" \
-  -H "Content-Type: application/json" \
-  -d '{"source":"bash","title":"Deploy done","body":"v1.2.3 is live","iconUrl":null}'
-```
-
-### Plugin Template
-
-```bash
-dotnet new install Arrr.Templates
-dotnet new arrr-plugin -n MyPlugin \
-    --PluginId com.example.myplugin \
-    --Author "Your Name" \
-    --Interval "00:05:00"
-```
+Want to build your own plugin? See [docs/writing-a-plugin.md](docs/writing-a-plugin.md).
 
 ---
 

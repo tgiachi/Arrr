@@ -32,6 +32,7 @@ internal class SinkOrchestrator : BackgroundService, ISinkManager
     private readonly ISinkPlugin[] _builtIns;
     private readonly Dictionary<string, ISinkPlugin> _running = [];
     private readonly List<(ISinkPlugin Sink, bool Enabled)> _testEntries = [];
+    private readonly Dictionary<string, byte[]> _iconCache = [];
     private readonly IRoutingHistoryService? _routingHistory;
     private readonly IDndService? _dndService;
 
@@ -114,7 +115,8 @@ internal class SinkOrchestrator : BackgroundService, ISinkManager
                                        e.Enabled,
                                        _running.ContainsKey(e.Sink.Id),
                                        false,
-                                       e.Sink is IConfigurablePlugin
+                                       e.Sink is IConfigurablePlugin,
+                                       e.Sink is ITestableSink
                                    )
                                )
                                .ToList();
@@ -137,7 +139,8 @@ internal class SinkOrchestrator : BackgroundService, ISinkManager
                     entry is null || entry.Enabled,
                     _running.ContainsKey(sink.Id),
                     true,
-                    sink is IConfigurablePlugin
+                    sink is IConfigurablePlugin,
+                    sink is ITestableSink
                 )
             );
         }
@@ -184,7 +187,8 @@ internal class SinkOrchestrator : BackgroundService, ISinkManager
                         entry?.Enabled ?? false,
                         _running.ContainsKey(sink.Id),
                         false,
-                        sink is IConfigurablePlugin
+                        sink is IConfigurablePlugin,
+                        sink is ITestableSink
                     )
                 );
                 loadCtx.Unload();
@@ -266,6 +270,70 @@ internal class SinkOrchestrator : BackgroundService, ISinkManager
 
         await using var stream = File.Create(configPath);
         await JsonSerializer.SerializeAsync(stream, config, configType, JsonOpts, ct);
+    }
+
+    public async Task<PluginTestResult?> TestSinkAsync(
+        string sinkId,
+        JsonElement config,
+        CancellationToken ct = default)
+    {
+        var pluginsPath = _directoriesConfig![DirectoryType.Plugins];
+
+        foreach (var dll in Directory.EnumerateFiles(pluginsPath, "*.dll"))
+        {
+            try
+            {
+                var loadCtx = new PluginLoadContext(dll);
+                var asm = loadCtx.LoadFromAssemblyPath(dll);
+                var sinkType = asm.GetTypes()
+                                  .FirstOrDefault(t => !t.IsAbstract && t.IsAssignableTo(typeof(ISinkPlugin)));
+
+                if (sinkType is null || Activator.CreateInstance(sinkType) is not ISinkPlugin sink)
+                {
+                    loadCtx.Unload();
+
+                    continue;
+                }
+
+                if (sink.Id != sinkId)
+                {
+                    loadCtx.Unload();
+
+                    continue;
+                }
+
+                if (sink is not ITestableSink testable)
+                {
+                    loadCtx.Unload();
+
+                    return null;
+                }
+
+                try
+                {
+                    var testCtx = new TestSinkContext(config);
+                    await sink.StartAsync(testCtx, ct);
+                    return await testable.TestAsync(testCtx, ct);
+                }
+                finally
+                {
+                    await sink.StopAsync();
+                    loadCtx.Unload();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "TestSinkAsync failed for {SinkId}", sinkId);
+
+                return new PluginTestResult(false, ex.Message);
+            }
+        }
+
+        throw new KeyNotFoundException($"Sink '{sinkId}' not found.");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -375,6 +443,10 @@ internal class SinkOrchestrator : BackgroundService, ISinkManager
                     continue;
                 }
 
+                var iconBytes = ReadIconFromAssembly(asm);
+                if (iconBytes is not null)
+                    _iconCache[sink.Id] = iconBytes;
+
                 var entry = config.Sinks.FirstOrDefault(s => s.Id == sink.Id);
 
                 if (entry is null || !entry.Enabled)
@@ -475,6 +547,54 @@ internal class SinkOrchestrator : BackgroundService, ISinkManager
                 }
             }
         );
+
+    public byte[]? GetSinkIcon(string sinkId)
+    {
+        if (_iconCache.TryGetValue(sinkId, out var cached))
+            return cached;
+
+        var pluginsPath = _directoriesConfig?[DirectoryType.Plugins];
+        if (pluginsPath is null) return null;
+
+        foreach (var dll in Directory.EnumerateFiles(pluginsPath, "*.dll"))
+        {
+            try
+            {
+                var ctx = new PluginLoadContext(dll);
+                try
+                {
+                    var asm = ctx.LoadFromAssemblyPath(dll);
+                    var t = asm.GetTypes().FirstOrDefault(t => !t.IsAbstract && t.IsAssignableTo(typeof(ISinkPlugin)));
+                    if (t is null || Activator.CreateInstance(t) is not ISinkPlugin sink || sink.Id != sinkId)
+                        continue;
+
+                    var bytes = ReadIconFromAssembly(asm);
+                    if (bytes is not null)
+                        _iconCache[sinkId] = bytes;
+                    return bytes;
+                }
+                finally
+                {
+                    ctx.Unload();
+                }
+            }
+            catch { /* skip bad DLL */ }
+        }
+
+        return null;
+    }
+
+    private static byte[]? ReadIconFromAssembly(System.Reflection.Assembly assembly)
+    {
+        var name = assembly.GetManifestResourceNames()
+            .FirstOrDefault(n => n.EndsWith("icon.png", StringComparison.OrdinalIgnoreCase));
+        if (name is null) return null;
+        using var stream = assembly.GetManifestResourceStream(name);
+        if (stream is null) return null;
+        using var ms = new MemoryStream();
+        stream.CopyTo(ms);
+        return ms.ToArray();
+    }
 }
 
 internal sealed class SinkContext : ISinkContext

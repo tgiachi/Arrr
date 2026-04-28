@@ -37,4 +37,7 @@
         <None Include="bridge/osx-arm64/whatsapp-bridge" Pack="true" PackagePath="tools/osx-arm64/" Condition="Exists('bridge/osx-arm64/whatsapp-bridge')"/>
     </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="icon.png" LogicalName="icon.png" />
+  </ItemGroup>
 </Project>

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Arrr.Core.Data.Api;
 using Arrr.Core.Interfaces;
 
 namespace Arrr.Service.Api;
@@ -115,6 +116,55 @@ internal static class SinksEndpoint
                 {
                     return Results.BadRequest(new { sinkId, error = ex.Message });
                 }
+            }
+        );
+
+        app.MapPost(
+            "/api/sinks/{sinkId}/test",
+            async (
+                HttpContext ctx,
+                string sinkId,
+                JsonElement body,
+                IConfigService configService,
+                ISinkManager manager,
+                CancellationToken ct
+            ) =>
+            {
+                if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
+                    return error!;
+                }
+
+                try
+                {
+                    var result = await manager.TestSinkAsync(sinkId, body, ct);
+
+                    return result is null
+                        ? Results.BadRequest(new { sinkId, error = "Sink does not support config testing." })
+                        : Results.Ok(result);
+                }
+                catch (KeyNotFoundException)
+                {
+                    return Results.NotFound(new { sinkId, error = "Sink not found." });
+                }
+                catch (Exception ex)
+                {
+                    return Results.Ok(new PluginTestResult(false, ex.Message));
+                }
+            }
+        );
+
+        app.MapGet(
+            "/api/sinks/{sinkId}/icon",
+            (HttpContext ctx, string sinkId, IConfigService configService, ISinkManager manager) =>
+            {
+                if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                    return error!;
+
+                var bytes = manager.GetSinkIcon(sinkId);
+                return bytes is null
+                    ? Results.NotFound()
+                    : Results.Bytes(bytes, "image/png");
             }
         );
 

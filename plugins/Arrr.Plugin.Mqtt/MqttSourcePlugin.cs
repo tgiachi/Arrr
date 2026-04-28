@@ -1,4 +1,5 @@
 using System.Text;
+using Arrr.Core.Data.Api;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Utils;
@@ -8,7 +9,7 @@ using MqttSource.Data;
 
 namespace MqttSource;
 
-public class MqttSourcePlugin : ISourcePlugin, IConfigurablePlugin, IDisposable
+public class MqttSourcePlugin : ISourcePlugin, IConfigurablePlugin, ITestablePlugin, IDisposable
 {
     private readonly IMqttClient? _injectedClient;
 
@@ -30,6 +31,46 @@ public class MqttSourcePlugin : ISourcePlugin, IConfigurablePlugin, IDisposable
     internal MqttSourcePlugin(IMqttClient client)
     {
         _injectedClient = client;
+    }
+
+    public async Task<PluginTestResult> TestAsync(IPluginContext context, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(_config.BrokerHost))
+        {
+            return new(false, "BrokerHost not configured.");
+        }
+
+        using var testClient = new MqttClientFactory().CreateMqttClient();
+
+        var optionsBuilder = new MqttClientOptionsBuilder()
+                             .WithTcpServer(_config.BrokerHost, _config.BrokerPort)
+                             .WithClientId($"arrr-test-{Guid.NewGuid():N}");
+
+        if (!string.IsNullOrEmpty(_config.Username))
+        {
+            optionsBuilder = optionsBuilder.WithCredentials(_config.Username, _config.Password);
+        }
+
+        if (_config.UseTls)
+        {
+            optionsBuilder = optionsBuilder.WithTlsOptions(o => o.UseTls());
+        }
+
+        try
+        {
+            await testClient.ConnectAsync(optionsBuilder.Build(), ct);
+            await testClient.DisconnectAsync(cancellationToken: ct);
+
+            return new(true, $"✓ Connected to {_config.BrokerHost}:{_config.BrokerPort}");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return new(false, $"✗ {ex.Message}");
+        }
     }
 
     public void Dispose()

@@ -28,4 +28,9 @@ internal class FakeSinkManager : ISinkManager
 
     public Task SaveSinkConfigAsync(string sinkId, JsonElement config, CancellationToken ct = default)
         => Task.CompletedTask;
+
+    public Task<PluginTestResult?> TestSinkAsync(string sinkId, JsonElement config, CancellationToken ct = default)
+        => Task.FromResult<PluginTestResult?>(null);
+
+    public byte[]? GetSinkIcon(string sinkId) => null;
 }

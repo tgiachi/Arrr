@@ -3,6 +3,7 @@ using Arrr.Core.Data.Api;
 using Arrr.Core.Interfaces;
 using Arrr.Service.Internal;
 
+
 namespace Arrr.Service.Api;
 
 internal static class PluginsEndpoint
@@ -241,6 +242,41 @@ internal static class PluginsEndpoint
         );
 
         app.MapPost(
+            "/api/plugins/{pluginId}/test",
+            async (
+                HttpContext ctx,
+                string pluginId,
+                JsonElement body,
+                IConfigService configService,
+                IPluginManager manager,
+                CancellationToken ct
+            ) =>
+            {
+                if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                {
+                    return error!;
+                }
+
+                try
+                {
+                    var result = await manager.TestPluginAsync(pluginId, body, ct);
+
+                    return result is null
+                        ? Results.BadRequest(new { pluginId, error = "Plugin does not support config testing." })
+                        : Results.Ok(result);
+                }
+                catch (KeyNotFoundException)
+                {
+                    return Results.NotFound(new { pluginId, error = "Plugin not found." });
+                }
+                catch (Exception ex)
+                {
+                    return Results.Ok(new PluginTestResult(false, ex.Message));
+                }
+            }
+        );
+
+        app.MapPost(
             "/api/plugins/{pluginId}/callback",
             async (
                 HttpContext ctx,
@@ -304,6 +340,20 @@ internal static class PluginsEndpoint
                 {
                     return Results.BadRequest(new { pluginId, error = ex.Message });
                 }
+            }
+        );
+
+        app.MapGet(
+            "/api/plugins/{pluginId}/icon",
+            (HttpContext ctx, string pluginId, IConfigService configService, IPluginManager manager) =>
+            {
+                if (!ApiAuth.TryAuthenticate(ctx, configService, out var error))
+                    return error!;
+
+                var bytes = manager.GetPluginIcon(pluginId);
+                return bytes is null
+                    ? Results.NotFound()
+                    : Results.Bytes(bytes, "image/png");
             }
         );
 

@@ -1,6 +1,7 @@
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
 using Arrr.Service.Hubs;
+using Arrr.Service.Internal;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Arrr.Service.Services;
@@ -21,6 +22,11 @@ internal class NotificationStreamService : IHostedService
         _bus.Subscribe<Notification>(
             async (notification, token) =>
                 await _hub.Clients.All.SendAsync("ReceiveNotification", notification, token)
+        );
+
+        _bus.Subscribe<DndChangedEvent>(
+            async (evt, token) =>
+                await _hub.Clients.All.SendAsync("DndChanged", evt.Enabled, token)
         );
 
         return Task.CompletedTask;

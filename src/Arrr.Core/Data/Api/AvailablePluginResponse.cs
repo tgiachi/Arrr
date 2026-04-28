@@ -11,5 +11,6 @@ public record AvailablePluginResponse(
     bool Enabled,
     bool Running,
     bool HasCallback,
-    bool HasQr
+    bool HasQr,
+    bool HasTest
 );

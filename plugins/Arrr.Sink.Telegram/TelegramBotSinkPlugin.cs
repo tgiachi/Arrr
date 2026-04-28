@@ -1,3 +1,4 @@
+using Arrr.Core.Data.Api;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Utils;
@@ -8,7 +9,7 @@ using TelegramBotSink.Data;
 
 namespace TelegramBotSink;
 
-public class TelegramBotSinkPlugin : ISinkPlugin, IConfigurablePlugin
+public class TelegramBotSinkPlugin : ISinkPlugin, IConfigurablePlugin, ITestableSink
 {
     private TelegramBotClient? _bot;
     private TelegramBotSinkConfig _config = new();
@@ -62,6 +63,29 @@ public class TelegramBotSinkPlugin : ISinkPlugin, IConfigurablePlugin
         else
         {
             context.Logger.LogWarning("Telegram Bot sink: BotToken not configured, messages will be skipped");
+        }
+    }
+
+    public async Task<PluginTestResult> TestAsync(ISinkContext context, CancellationToken ct)
+    {
+        if (_bot is null)
+        {
+            return new(false, "BotToken not configured.");
+        }
+
+        try
+        {
+            var me = await _bot.GetMe(ct);
+
+            return new(true, $"✓ Bot @{me.Username} ({me.Id})");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return new(false, $"✗ {ex.Message}");
         }
     }
 

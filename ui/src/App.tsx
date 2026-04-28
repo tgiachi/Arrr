@@ -25,12 +25,13 @@ import { StreamView } from './components/StreamView'
 import { DaemonConfigView } from './components/DaemonConfigView'
 import { HistoryView } from './components/HistoryView'
 import { RoutingView } from './components/RoutingView'
+import { DebugView } from './components/DebugView'
 import { ThemeToggle } from './components/ThemeToggle'
 import type { Plugin, Sink, Settings as AppSettings } from './types'
 
 const STORAGE_KEY = 'arrr-settings'
 
-type Tab = 'configurazione' | 'stream' | 'install' | 'logs' | 'daemon' | 'history' | 'routing'
+type Tab = 'configurazione' | 'stream' | 'install' | 'logs' | 'daemon' | 'history' | 'routing' | 'debug'
 
 interface Toast {
   id: number
@@ -54,6 +55,7 @@ const TAB_LABELS: Record<Tab, string> = {
   daemon: 'Daemon',
   history: 'History',
   routing: 'Routing',
+  debug: '⚡ Debug',
 }
 
 export default function App() {
@@ -77,6 +79,7 @@ export default function App() {
   const [configuringSink, setConfiguringSink] = useState<Sink | null>(null)
 
   const [serviceVersion, setServiceVersion] = useState<string | null>(null)
+  const [serviceDebug,   setServiceDebug]   = useState(false)
   const [dndEnabled, setDndEnabled] = useState(false)
   const [dndBusy, setDndBusy] = useState(false)
 
@@ -131,8 +134,8 @@ export default function App() {
     if (!settings.baseUrl && !settings.apiKey) return
     const a = new ArrrApi(settings.baseUrl || '', settings.apiKey || '')
     a.getVersion()
-      .then((v) => setServiceVersion(v.version))
-      .catch(() => setServiceVersion(null))
+      .then((v) => { setServiceVersion(v.version); setServiceDebug(v.isDebug) })
+      .catch(() => { setServiceVersion(null); setServiceDebug(false) })
   }, [settings.baseUrl, settings.apiKey])
 
   const withBusy = async (id: string, fn: () => Promise<void>) => {
@@ -387,7 +390,7 @@ export default function App() {
         <Flex px={4} gap={0} borderTopWidth="1px" borderColor="app.border" overflowX="auto"
           css={{ scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}
         >
-          {(Object.keys(TAB_LABELS) as Tab[]).map((tab) => {
+          {(Object.keys(TAB_LABELS) as Tab[]).filter(t => t !== 'debug' || serviceDebug).map((tab) => {
             const active = activeTab === tab
             return (
               <Button
@@ -653,6 +656,19 @@ export default function App() {
           </Flex>
         )}
 
+        {serviceDebug && activeTab === 'debug' && settings.apiKey && (
+          <DebugView api={api()} />
+        )}
+        {serviceDebug && activeTab === 'debug' && !settings.apiKey && (
+          <Flex direction="column" align="center" justify="center" h="300px" gap={3} color="app.textDim">
+            <Settings size={28} />
+            <Text fontFamily="mono" fontSize="sm">Configure API key first</Text>
+            <Button size="sm" variant="outline" colorPalette="amber" onClick={handleSettingsClick}>
+              Open Settings
+            </Button>
+          </Flex>
+        )}
+
         {activeTab === 'daemon' && !settings.apiKey && (
           <Flex direction="column" align="center" justify="center" h="300px" gap={3} color="app.textDim">
             <Settings size={28} />
@@ -718,6 +734,9 @@ export default function App() {
           name={configuringPlugin.name}
           getConfig={() => api().getConfig(configuringPlugin.id)}
           saveConfig={(c) => api().saveConfig(configuringPlugin.id, c)}
+          testConfig={configuringPlugin.hasTest
+            ? (c) => api().testConfig(configuringPlugin.id, c)
+            : undefined}
           onClose={() => setConfiguringPlugin(null)}
           onToast={toast}
         />
@@ -728,6 +747,9 @@ export default function App() {
           name={configuringSink.name}
           getConfig={() => api().getSinkConfig(configuringSink.id)}
           saveConfig={(c) => api().saveSinkConfig(configuringSink.id, c)}
+          testConfig={configuringSink.hasTest
+            ? (c) => api().testSinkConfig(configuringSink.id, c)
+            : undefined}
           onClose={() => setConfiguringSink(null)}
           onToast={toast}
         />

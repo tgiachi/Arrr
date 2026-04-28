@@ -10,5 +10,6 @@ public record AvailableSinkResponse(
     bool Enabled,
     bool Running,
     bool IsBuiltIn,
-    bool HasConfig
+    bool HasConfig,
+    bool HasTest
 );
