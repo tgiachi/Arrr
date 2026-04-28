@@ -14,7 +14,7 @@ public partial class TrayViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(DndLabel))]
     private bool _dndEnabled;
 
-    public string DndLabel => _dndEnabled ? "Disable DND" : "Enable DND";
+    public string DndLabel => DndEnabled ? "Disable DND" : "Enable DND";
 
     public event Action<bool>? DndStateChanged;
 
