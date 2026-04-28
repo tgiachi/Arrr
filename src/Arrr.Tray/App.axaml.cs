@@ -28,11 +28,10 @@ public partial class App : Application
 
             var vm = new TrayViewModel(grpc, settingsService);
 
-            var versionItem = new NativeMenuItem("Arrr") { IsEnabled = false };
+            var versionItem = new NativeMenuItem("Arrr");
 
             var statusItem = new NativeMenuItem("Disconnected")
             {
-                IsEnabled = false,
                 Icon = LoadBitmap("button_red.png"),
             };
 
