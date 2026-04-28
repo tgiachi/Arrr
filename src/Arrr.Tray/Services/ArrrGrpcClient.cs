@@ -2,6 +2,7 @@ using System.Text.Json;
 using Arrr.Tray.Grpc;
 using Grpc.Core;
 using Grpc.Net.Client;
+using Serilog;
 
 namespace Arrr.Tray.Services;
 
@@ -13,6 +14,7 @@ public sealed class ArrrGrpcClient : IDisposable
     private NotificationService.NotificationServiceClient? _client;
     private CancellationTokenSource? _subscribeCts;
     private string? _serverUrl;
+    private string? _grpcUrl;
     private string? _apiKey;
     private bool _streamWasUp;
 
@@ -29,7 +31,8 @@ public sealed class ArrrGrpcClient : IDisposable
 
         _serverUrl = serverUrl;
         _apiKey = apiKey;
-        var effectiveGrpcUrl = grpcUrl ?? serverUrl;
+        _grpcUrl = grpcUrl ?? serverUrl;
+        var effectiveGrpcUrl = _grpcUrl;
         _channel = GrpcChannel.ForAddress(effectiveGrpcUrl);
         _client = new NotificationService.NotificationServiceClient(_channel);
         IsConnected = true;
@@ -99,11 +102,20 @@ public sealed class ArrrGrpcClient : IDisposable
                 var call = _client!.Subscribe(
                     new SubscribeRequest(),
                     new CallOptions(headers: ApiKeyHeaders(), cancellationToken: ct));
-                _streamWasUp = true;
-                SubscriptionConnected?.Invoke();
 
+                // Signal connected only after the first successful read so that
+                // connection-refused failures don't produce a spurious Connected event.
+                var firstRead = true;
                 while (await call.ResponseStream.MoveNext(ct))
                 {
+                    if (firstRead)
+                    {
+                        firstRead = false;
+                        _streamWasUp = true;
+                        SubscriptionConnected?.Invoke();
+                        Log.Information("gRPC subscription connected to {Url}", _grpcUrl);
+                    }
+
                     var ev = call.ResponseStream.Current;
 
                     if (ev.PayloadCase == ArrEvent.PayloadOneofCase.Dnd)
@@ -120,9 +132,10 @@ public sealed class ArrrGrpcClient : IDisposable
             {
                 return;
             }
-            catch
+            catch (Exception ex)
             {
-                // Only signal disconnected if the stream was previously up
+                Log.Warning(ex, "gRPC subscription error — streamWasUp={WasUp}", _streamWasUp);
+
                 if (_streamWasUp)
                 {
                     _streamWasUp = false;
@@ -143,6 +156,7 @@ public sealed class ArrrGrpcClient : IDisposable
         _channel = null;
         _client = null;
         _apiKey = null;
+        _grpcUrl = null;
         _streamWasUp = false;
         IsConnected = false;
     }
