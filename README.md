@@ -78,6 +78,11 @@ Arrr runs as a background service, collects notifications from multiple sources 
 
 ### Install from AUR (Arch Linux)
 
+| Package | AUR | Description |
+|---------|-----|-------------|
+| `arrr-bin` | [![AUR](https://img.shields.io/aur/version/arrr-bin)](https://aur.archlinux.org/packages/arrr-bin) | Pre-built binary (fast install) |
+| `arrr-git` | [![AUR](https://img.shields.io/aur/version/arrr-git)](https://aur.archlinux.org/packages/arrr-git) | Built from latest git HEAD |
+
 ```bash
 # Pre-built binary (fast):
 yay -S arrr-bin
