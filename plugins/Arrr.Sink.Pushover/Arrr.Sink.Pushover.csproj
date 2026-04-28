@@ -8,7 +8,7 @@
         <RootNamespace>Arrr.Sink.Pushover</RootNamespace>
 
         <PackageId>Arrr.Sink.Pushover</PackageId>
-        <Version>1.6.0</Version>
+        <Version>1.7.0</Version>
         <Authors>Tom</Authors>
         <Company>orivega.io</Company>
         <Description>Pushover sink for Arrr — delivers notifications to iOS and Android via Pushover.</Description>

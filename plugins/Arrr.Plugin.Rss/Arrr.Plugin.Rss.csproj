@@ -8,7 +8,7 @@
         <RootNamespace>Arrr.Plugin.Rss</RootNamespace>
 
         <PackageId>Arrr.Plugin.Rss</PackageId>
-        <Version>1.6.0</Version>
+        <Version>1.7.0</Version>
         <Authors>Tom</Authors>
         <Company>orivega.io</Company>
         <Description>RSS/Atom feed plugin for Arrr — polls feeds and publishes desktop notifications for new items.</Description>

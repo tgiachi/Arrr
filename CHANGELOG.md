@@ -1,3 +1,35 @@
+## [1.7.0](https://github.com/tgiachi/Arrr/compare/v1.6.0...v1.7.0) (2026-04-27)
+
+### Features
+
+* **aur:** add arrr-git AUR package (build from source) ([e48ce8c](https://github.com/tgiachi/Arrr/commit/e48ce8c470128a1f3459212360e48ecde5a44ac1))
+* **core:** expose shared HttpClient on IPluginContext ([0b623e0](https://github.com/tgiachi/Arrr/commit/0b623e046e44050dbdf6b7777d6878645fafa582))
+* **digest:** expose digest config in daemon API and add schedule editor UI ([8d26516](https://github.com/tgiachi/Arrr/commit/8d265163e0715160ae2b9e53696fe0771848417f))
+* **digest:** move digest scheduling to service, extend CalDav with IDigestProvider ([da54079](https://github.com/tgiachi/Arrr/commit/da540793d5fc10a2c2639de8430635e819760ee9))
+* **dnd:** add Do Not Disturb toggle — backend endpoint + UI ([9e819ae](https://github.com/tgiachi/Arrr/commit/9e819ae9c2b96bee8fa4f739732447b05ccaa373))
+* **routing-ui:** add up/down reorder buttons for rules ([18edad1](https://github.com/tgiachi/Arrr/commit/18edad103d4c21f58129ad6b11399980716a88ae))
+* **routing-ui:** replace up/down buttons with drag-and-drop reorder ([5415714](https://github.com/tgiachi/Arrr/commit/5415714785b06464524c3ce2841d918afbab09c3))
+* **routing:** add notification routing rules engine + UI ([2bd90a3](https://github.com/tgiachi/Arrr/commit/2bd90a3f76188b5af8d78ebfe919a398dc71751d))
+* **todoist:** due date alerts + reminders logic (TDD) ([6a22912](https://github.com/tgiachi/Arrr/commit/6a2291223a0ccf0a9064813468e31b3b87337f16))
+* **todoist:** implement IDigestProvider for morning/evening digest integration ([987dff9](https://github.com/tgiachi/Arrr/commit/987dff95f1c6ecfd19ebdcd88333f021d9cc2063))
+* **todoist:** plugin shell + empty-token guard (TDD) ([c6c340a](https://github.com/tgiachi/Arrr/commit/c6c340aaf7efeefdeba536ab435492280ea3537d))
+* **todoist:** scaffold project, DTOs, and config ([d5c9069](https://github.com/tgiachi/Arrr/commit/d5c90691562fbaabe3a8a2d261862cdd7cc0d28c))
+
+### Bug Fixes
+
+* add EnableWindowsTargeting to WindowsNotify so CI can restore on Linux ([43dd0a8](https://github.com/tgiachi/Arrr/commit/43dd0a84ee0990529ac0458a4d5c093b1f4fd3bb))
+* build only Linux-compatible projects in CI ([2ebcaf4](https://github.com/tgiachi/Arrr/commit/2ebcaf4577302322ca48f366fed399ee797f7c2f))
+* build only Linux-compatible projects in CI (exclude WindowsNotify) ([2b8acf3](https://github.com/tgiachi/Arrr/commit/2b8acf3b0083a798d7defae561e7a7c99b19e52e))
+* CI hotfixes — WindowsNotify usings, WhatsApp bridge path, AUR SSH key encoding ([eb730b4](https://github.com/tgiachi/Arrr/commit/eb730b486a7d7913b8b908b70ba751578ab61278))
+* **ci:** use Get-ChildItem to push nupkg on Windows runner ([83113db](https://github.com/tgiachi/Arrr/commit/83113dbb5a7910f0409db47971cdedcb8aa0ef8b))
+* EnableWindowsTargeting for Linux CI restore ([147b546](https://github.com/tgiachi/Arrr/commit/147b54660abe06a9f96e53a39f6057828f9b51a4))
+* restore usings in WindowsNotify, fix WhatsApp bridge path, base64-encode AUR key ([6d75a18](https://github.com/tgiachi/Arrr/commit/6d75a18cc9263481dca45fd6b7d9eadcdca7f4a3))
+* **routing-ui:** use placeholder for allow-sinks instead of * as text value ([c98023a](https://github.com/tgiachi/Arrr/commit/c98023af855bb451458f55f7d1c953ab45980fc6))
+* **routing:** only record block/restrict events in history ring buffer ([8aebd47](https://github.com/tgiachi/Arrr/commit/8aebd473795d77950e9ad11dac4f6988fef04eae))
+* **ui:** ux review — fix reconciliation bug, emoji icons, accessibility and consistency ([1051305](https://github.com/tgiachi/Arrr/commit/10513055b1dfbfdc73327cac840773e04ef6f88b))
+* **ui:** visual polish — ambient gradient, card elevation, contrast, motion ([ecc0ac6](https://github.com/tgiachi/Arrr/commit/ecc0ac685f5c93dde3d591d3b9e9b9cc61fd6ea8)), closes [#374151](https://github.com/tgiachi/Arrr/issues/374151) [#52627a](https://github.com/tgiachi/Arrr/issues/52627a) [#374151](https://github.com/tgiachi/Arrr/issues/374151) [#3d4f66](https://github.com/tgiachi/Arrr/issues/3d4f66)
+* **windows-notify:** add missing Microsoft.Toolkit.Uwp.Notifications using ([451f1ea](https://github.com/tgiachi/Arrr/commit/451f1ea4900d813db75a91f7af3a6cca8316b59e))
+
 ## [1.6.0](https://github.com/tgiachi/Arrr/compare/v1.5.1...v1.6.0) (2026-04-26)
 
 ### Features
