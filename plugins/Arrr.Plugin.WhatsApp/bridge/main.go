@@ -4,16 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
 	_ "modernc.org/sqlite"
 	"go.mau.fi/whatsmeow"
+	"go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/store/sqlstore"
+	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 	waLog "go.mau.fi/whatsmeow/util/log"
+	"google.golang.org/protobuf/proto"
 )
 
 // Event is the NDJSON envelope written to stdout.
@@ -47,8 +52,25 @@ func (l stderrLog) Sub(module string) waLog.Logger { return stderrLog{prefix: "[
 
 func main() {
 	sessionPath := "whatsapp.db"
-	if len(os.Args) > 1 {
-		sessionPath = os.Args[1]
+	httpPort := 8765
+
+	for i := 1; i < len(os.Args); i++ {
+		switch os.Args[i] {
+		case "--session":
+			if i+1 < len(os.Args) {
+				i++
+				sessionPath = os.Args[i]
+			}
+		case "--http-port":
+			if i+1 < len(os.Args) {
+				i++
+				if p, err := strconv.Atoi(os.Args[i]); err == nil {
+					httpPort = p
+				}
+			}
+		default:
+			sessionPath = os.Args[i]
+		}
 	}
 
 	log := stderrLog{prefix: "[WA]"}
@@ -96,10 +118,63 @@ func main() {
 	}
 	emit(Event{Type: "ready", JID: jid, Name: client.Store.PushName})
 
+	go startHTTP(client, httpPort)
+
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 	<-sig
 	client.Disconnect()
+}
+
+type sendRequest struct {
+	To   string `json:"to"`
+	Body string `json:"body"`
+}
+
+func startHTTP(client *whatsmeow.Client, port int) {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/send", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var req sendRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "bad request: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if req.To == "" || req.Body == "" {
+			http.Error(w, "to and body are required", http.StatusBadRequest)
+			return
+		}
+		jid, err := types.ParseJID(req.To)
+		if err != nil {
+			http.Error(w, "invalid JID: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		_, err = client.SendMessage(r.Context(), jid, &waE2E.Message{
+			Conversation: proto.String(req.Body),
+		})
+		if err != nil {
+			http.Error(w, "send failed: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+	})
+
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]bool{"connected": client.IsConnected()})
+	})
+
+	addr := fmt.Sprintf("127.0.0.1:%d", port)
+	fmt.Fprintf(os.Stderr, "[WA] HTTP server listening on %s\n", addr)
+	srv := &http.Server{Addr: addr, Handler: mux, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second}
+	if err := srv.ListenAndServe(); err != nil {
+		fmt.Fprintf(os.Stderr, "[WA] HTTP server error: %v\n", err)
+	}
 }
 
 func handleMsg(raw interface{}) {
