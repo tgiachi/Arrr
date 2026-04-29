@@ -1,3 +1,18 @@
+## [1.10.0](https://github.com/tgiachi/Arrr/compare/v1.9.0...v1.10.0) (2026-04-29)
+
+### Features
+
+* **dbus:** clickable notifications via ActionInvoked signal ([17f9334](https://github.com/tgiachi/Arrr/commit/17f9334b90b4e37ce96ff34c73463c8239f10c9f))
+* **imap:** support multiple accounts ([7ea7cf0](https://github.com/tgiachi/Arrr/commit/7ea7cf0af3261680078532ca1158db47243e6833))
+
+### Bug Fixes
+
+* **aur-tray:** disable strip for .NET single-file self-contained binary ([ac9a117](https://github.com/tgiachi/Arrr/commit/ac9a1170d80eb1806acd383ea0c4963c47851d28))
+* **aur-tray:** install .desktop to usr/share/applications for launcher visibility ([125ed0a](https://github.com/tgiachi/Arrr/commit/125ed0ada2979101ebd83c0ddef3782abf92baa5))
+* **installer:** resolve System.* deps by probing runtime before skipping ([077605b](https://github.com/tgiachi/Arrr/commit/077605b17b296a9207af6b382c95aad7a7bf9b03))
+* **whatsapp:** add busy_timeout(5000) pragma to avoid SQLITE_BUSY on sync ([7980bdf](https://github.com/tgiachi/Arrr/commit/7980bdf5f86f2f8a55ca5f6b684e1d9c26a99c05))
+* **whatsapp:** use _pragma=foreign_keys(1) DSN for modernc.org/sqlite ([762c5ef](https://github.com/tgiachi/Arrr/commit/762c5ef216609b82e297f2262e615e4085d1392c))
+
 ## [1.9.0](https://github.com/tgiachi/Arrr/compare/v1.8.0...v1.9.0) (2026-04-29)
 
 ### Features
