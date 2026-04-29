@@ -161,7 +161,7 @@ public class CalDavDigestProviderTests
         string sectionTitle = "Calendar")
         => new(_eventBus, _ => new CalDavSourceConfig
         {
-            CalendarUrl = calendarUrl,
+            Calendars = [new CalDavCalendarConfig { CalendarUrl = calendarUrl }],
             DigestSectionTitle = sectionTitle,
             AlertMinutes = [15],
             PollIntervalMinutes = 15,

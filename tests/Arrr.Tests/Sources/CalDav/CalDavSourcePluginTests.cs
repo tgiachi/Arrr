@@ -26,7 +26,7 @@ public class CalDavSourcePluginTests
             _eventBus,
             _ => new CalDavSourceConfig
             {
-                CalendarUrl = "http://fake/cal.ics",
+                Calendars = [new CalDavCalendarConfig { CalendarUrl = "http://fake/cal.ics" }],
                 AlertMinutes = [15],
                 LookaheadHours = 1,
                 PollIntervalMinutes = 15
@@ -51,7 +51,7 @@ public class CalDavSourcePluginTests
             _eventBus,
             _ => new CalDavSourceConfig
             {
-                CalendarUrl = "http://fake/cal.ics",
+                Calendars = [new CalDavCalendarConfig { CalendarUrl = "http://fake/cal.ics" }],
                 AlertMinutes = [15],
                 LookaheadHours = 1
             }
@@ -83,7 +83,7 @@ public class CalDavSourcePluginTests
             _eventBus,
             _ => new CalDavSourceConfig
             {
-                CalendarUrl = "http://fake/cal.ics",
+                Calendars = [new CalDavCalendarConfig { CalendarUrl = "http://fake/cal.ics" }],
                 AlertMinutes = [15],
                 LookaheadHours = 1
             }
@@ -118,7 +118,7 @@ public class CalDavSourcePluginTests
             _eventBus,
             _ => new CalDavSourceConfig
             {
-                CalendarUrl = "http://fake/cal.ics",
+                Calendars = [new CalDavCalendarConfig { CalendarUrl = "http://fake/cal.ics" }],
                 AlertMinutes = [10, 30],
                 LookaheadHours = 2
             }
