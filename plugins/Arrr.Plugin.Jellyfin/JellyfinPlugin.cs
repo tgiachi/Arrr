@@ -8,11 +8,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Arrr.Plugin.Jellyfin;
 
-public class JellyfinPlugin : ISourcePlugin, ICallbackPlugin, IConfigurablePlugin, ITestablePlugin, IDisposable
+public class JellyfinPlugin : IPollingPlugin, IConfigurablePlugin, ITestablePlugin, IDisposable
 {
-    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
-
     private readonly HttpClient _httpClient;
+    private readonly HashSet<string> _seenItemIds = [];
+    private readonly HashSet<string> _activeSessionIds = [];
+    private bool _firstPoll = true;
 
     private JellyfinPluginConfig _config = new();
     private IPluginContext? _context;
@@ -21,10 +22,11 @@ public class JellyfinPlugin : ISourcePlugin, ICallbackPlugin, IConfigurablePlugi
     public string Name => "Jellyfin";
     public string Version => VersionUtils.Get(typeof(JellyfinPlugin));
     public string Author => "tom (tom@orivega.io)";
-    public string Description => "Receives Jellyfin webhook events (new media, playback) and publishes them as notifications.";
+    public string Description => "Polls Jellyfin for newly added media and active playback sessions.";
     public string[] Categories => ["media", "entertainment"];
     public string Icon => "🎬";
     public Type ConfigType => typeof(JellyfinPluginConfig);
+    public TimeSpan Interval => TimeSpan.FromMinutes(_config.PollIntervalMinutes > 0 ? _config.PollIntervalMinutes : 5);
 
     public JellyfinPlugin()
     {
@@ -40,52 +42,27 @@ public class JellyfinPlugin : ISourcePlugin, ICallbackPlugin, IConfigurablePlugi
     {
         _context = context;
         _config = await context.LoadConfigAsync<JellyfinPluginConfig>(ct);
-        context.Logger.LogInformation("Jellyfin plugin loaded — webhook URL: {Url}/api/plugins/{Id}/callback", context.CallbackUrl, Id);
+        context.Logger.LogInformation("Jellyfin plugin loaded — {Url}", _config.ServerUrl);
     }
 
-    public async Task HandleCallbackAsync(string body, CancellationToken ct)
+    public async Task PollAsync(IPluginContext context, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(body))
+        if (string.IsNullOrEmpty(_config.ServerUrl) || string.IsNullOrEmpty(_config.ApiKey))
         {
             return;
         }
 
-        JsonDocument doc;
-
-        try
+        if (_config.NotifyOnItemAdded || _firstPoll)
         {
-            doc = JsonDocument.Parse(body);
-        }
-        catch (JsonException ex)
-        {
-            _context?.Logger.LogWarning(ex, "Jellyfin: invalid JSON payload");
-            return;
+            await PollLatestItemsAsync(context, ct);
         }
 
-        using (doc)
+        if (_config.NotifyOnPlaybackStart || _config.NotifyOnPlaybackStop)
         {
-            var root = doc.RootElement;
-            var notificationType = GetString(root, "NotificationType") ?? GetString(root, "Event") ?? "";
-
-            switch (notificationType)
-            {
-                case "ItemAdded":
-                    await HandleItemAddedAsync(root, ct);
-                    break;
-
-                case "PlaybackStart":
-                    await HandlePlaybackAsync(root, "▶️", "started watching", ct);
-                    break;
-
-                case "PlaybackStop":
-                    await HandlePlaybackAsync(root, "⏹", "stopped watching", ct);
-                    break;
-
-                default:
-                    _context?.Logger.LogDebug("Jellyfin: unhandled notification type '{Type}'", notificationType);
-                    break;
-            }
+            await PollSessionsAsync(context, ct);
         }
+
+        _firstPoll = false;
     }
 
     public async Task<PluginTestResult> TestAsync(IPluginContext context, CancellationToken ct)
@@ -95,22 +72,26 @@ public class JellyfinPlugin : ISourcePlugin, ICallbackPlugin, IConfigurablePlugi
             return new(false, "No server URL configured.");
         }
 
+        if (string.IsNullOrEmpty(_config.ApiKey))
+        {
+            return new(false, "No API key configured.");
+        }
+
         try
         {
-            var url = _config.ServerUrl.TrimEnd('/') + "/System/Info/Public";
-            var response = await _httpClient.GetAsync(url, ct);
+            var json = await GetAsync("/System/Info", ct);
 
-            if (!response.IsSuccessStatusCode)
+            if (json is null)
             {
-                return new(false, $"✗ {(int)response.StatusCode} {response.ReasonPhrase}");
+                return new(false, "Failed to reach Jellyfin server.");
             }
 
-            var json = await response.Content.ReadAsStringAsync(ct);
             using var doc = JsonDocument.Parse(json);
-            var serverName = doc.RootElement.TryGetProperty("ServerName", out var name) ? name.GetString() : "Jellyfin";
-            var version = doc.RootElement.TryGetProperty("Version", out var ver) ? ver.GetString() : "?";
+            var root = doc.RootElement;
+            var serverName = GetString(root, "ServerName") ?? "Jellyfin";
+            var version = GetString(root, "Version") ?? "?";
 
-            return new(true, $"✓ {serverName} v{version} — webhook: {context.CallbackUrl}/api/plugins/{Id}/callback");
+            return new(true, $"✓ {serverName} v{version}");
         }
         catch (OperationCanceledException)
         {
@@ -125,106 +106,136 @@ public class JellyfinPlugin : ISourcePlugin, ICallbackPlugin, IConfigurablePlugi
     public void Dispose()
         => _httpClient.Dispose();
 
-    private async Task HandleItemAddedAsync(JsonElement root, CancellationToken ct)
+    private async Task PollLatestItemsAsync(IPluginContext context, CancellationToken ct)
     {
-        if (!_config.NotifyOnItemAdded)
+        var types = BuildItemTypeFilter();
+
+        if (string.IsNullOrEmpty(types))
         {
             return;
         }
 
-        var itemType = GetString(root, "ItemType") ?? "";
+        var json = await GetAsync(
+            $"/Items/Latest?Limit=20&Fields=Name,ProductionYear,SeriesName,ParentIndexNumber,IndexNumber&IncludeItemTypes={types}",
+            ct
+        );
 
-        if (!ShouldIncludeItemType(itemType))
+        if (json is null)
         {
             return;
         }
 
-        var name = GetString(root, "Name") ?? "Unknown";
-        var year = GetString(root, "Year");
-        var serverName = GetString(root, "ServerName") ?? "Jellyfin";
+        using var doc = JsonDocument.Parse(json);
+
+        foreach (var item in doc.RootElement.EnumerateArray())
+        {
+            var id = GetString(item, "Id");
+
+            if (id is null)
+            {
+                continue;
+            }
+
+            if (!_seenItemIds.Add(id))
+            {
+                continue;
+            }
+
+            if (_firstPoll)
+            {
+                continue;
+            }
+
+            await PublishItemAddedAsync(item, context, ct);
+        }
+    }
+
+    private async Task PollSessionsAsync(IPluginContext context, CancellationToken ct)
+    {
+        var json = await GetAsync("/Sessions?ActiveWithinSeconds=60", ct);
+
+        if (json is null)
+        {
+            return;
+        }
+
+        using var doc = JsonDocument.Parse(json);
+        var currentIds = new HashSet<string>();
+
+        foreach (var session in doc.RootElement.EnumerateArray())
+        {
+            var sessionId = GetString(session, "Id");
+
+            if (sessionId is null)
+            {
+                continue;
+            }
+
+            // only sessions that are actually playing something
+            if (!session.TryGetProperty("NowPlayingItem", out _))
+            {
+                continue;
+            }
+
+            currentIds.Add(sessionId);
+
+            if (!_activeSessionIds.Contains(sessionId) && !_firstPoll && _config.NotifyOnPlaybackStart)
+            {
+                await PublishPlaybackAsync(session, "▶️", "started watching", context, ct);
+            }
+        }
+
+        if (!_firstPoll && _config.NotifyOnPlaybackStop)
+        {
+            foreach (var gone in _activeSessionIds.Except(currentIds))
+            {
+                _context?.Logger.LogDebug("Jellyfin: session {Id} ended", gone);
+            }
+        }
+
+        _activeSessionIds.Clear();
+
+        foreach (var id in currentIds)
+        {
+            _activeSessionIds.Add(id);
+        }
+    }
+
+    private async Task PublishItemAddedAsync(JsonElement item, IPluginContext context, CancellationToken ct)
+    {
+        var itemType = GetString(item, "Type") ?? "";
+        var name = GetString(item, "Name") ?? "Unknown";
+        var year = GetString(item, "ProductionYear");
 
         string title;
         string body;
 
         if (itemType == "Episode")
         {
-            var series = GetString(root, "SeriesName") ?? name;
-            var season = GetString(root, "SeasonNumber");
-            var episode = GetString(root, "EpisodeNumber");
-            var epLabel = season is not null && episode is not null ? $"S{int.Parse(season):D2}E{int.Parse(episode):D2}" : "";
+            var series = GetString(item, "SeriesName") ?? name;
+            var season = item.TryGetProperty("ParentIndexNumber", out var s) && s.ValueKind == JsonValueKind.Number
+                ? s.GetInt32() : (int?)null;
+            var episode = item.TryGetProperty("IndexNumber", out var e) && e.ValueKind == JsonValueKind.Number
+                ? e.GetInt32() : (int?)null;
+
             title = $"🎬 New episode — {series}";
-            body = string.IsNullOrEmpty(epLabel) ? $"{name}\n{serverName}" : $"{epLabel} · {name}\n{serverName}";
+            body = season is not null && episode is not null
+                ? $"S{season:D2}E{episode:D2} · {name}"
+                : name;
         }
-        else if (itemType == "Audio" || itemType == "MusicAlbum")
+        else if (itemType is "Audio" or "MusicAlbum")
         {
-            var artist = GetString(root, "Artists") ?? GetString(root, "AlbumArtist") ?? "";
-            title = $"🎵 New music — {serverName}";
+            var artist = GetString(item, "AlbumArtist") ?? "";
+            title = "🎵 New music";
             body = string.IsNullOrEmpty(artist) ? name : $"{artist} — {name}";
         }
         else
         {
-            title = $"🎬 New on {serverName}";
+            title = "🎬 New movie";
             body = year is not null ? $"{name} ({year})" : name;
         }
 
-        await PublishAsync(title, body, ct);
-    }
-
-    private async Task HandlePlaybackAsync(JsonElement root, string emoji, string verb, CancellationToken ct)
-    {
-        if (verb == "started watching" && !_config.NotifyOnPlaybackStart)
-        {
-            return;
-        }
-
-        if (verb == "stopped watching" && !_config.NotifyOnPlaybackStop)
-        {
-            return;
-        }
-
-        var user = GetString(root, "NotificationUsername") ?? GetString(root, "UserName") ?? "Someone";
-        var name = GetString(root, "Name") ?? "something";
-        var itemType = GetString(root, "ItemType") ?? "";
-
-        string displayName;
-
-        if (itemType == "Episode")
-        {
-            var series = GetString(root, "SeriesName") ?? name;
-            var season = GetString(root, "SeasonNumber");
-            var episode = GetString(root, "EpisodeNumber");
-            displayName = season is not null && episode is not null
-                ? $"{series} S{int.Parse(season):D2}E{int.Parse(episode):D2}"
-                : $"{series} · {name}";
-        }
-        else
-        {
-            displayName = name;
-        }
-
-        await PublishAsync(
-            $"{emoji} {user} {verb}",
-            displayName,
-            ct
-        );
-    }
-
-    private bool ShouldIncludeItemType(string itemType) => itemType switch
-    {
-        "Movie" => _config.IncludeMovies,
-        "Episode" => _config.IncludeEpisodes,
-        "Audio" or "MusicAlbum" => _config.IncludeMusic,
-        _ => false
-    };
-
-    private async Task PublishAsync(string title, string body, CancellationToken ct)
-    {
-        if (_context is null)
-        {
-            return;
-        }
-
-        await _context.EventBus.PublishAsync(
+        await context.EventBus.PublishAsync(
             new Notification(
                 Guid.NewGuid(),
                 Id,
@@ -234,11 +245,94 @@ public class JellyfinPlugin : ISourcePlugin, ICallbackPlugin, IConfigurablePlugi
                 null,
                 Extras: new Dictionary<string, string>
                 {
-                    ["jellyfin.server"] = _config.ServerUrl
+                    ["jellyfin.item_id"] = GetString(item, "Id") ?? "",
+                    ["jellyfin.item_type"] = itemType
                 }
             ),
             ct
         );
+    }
+
+    private async Task PublishPlaybackAsync(
+        JsonElement session,
+        string emoji,
+        string verb,
+        IPluginContext context,
+        CancellationToken ct)
+    {
+        var user = GetString(session, "UserName") ?? "Someone";
+
+        if (!session.TryGetProperty("NowPlayingItem", out var nowPlaying))
+        {
+            return;
+        }
+
+        var name = GetString(nowPlaying, "Name") ?? "something";
+        var itemType = GetString(nowPlaying, "Type") ?? "";
+
+        string displayName;
+
+        if (itemType == "Episode")
+        {
+            var series = GetString(nowPlaying, "SeriesName") ?? name;
+            var season = nowPlaying.TryGetProperty("ParentIndexNumber", out var s) && s.ValueKind == JsonValueKind.Number
+                ? s.GetInt32() : (int?)null;
+            var episode = nowPlaying.TryGetProperty("IndexNumber", out var e) && e.ValueKind == JsonValueKind.Number
+                ? e.GetInt32() : (int?)null;
+
+            displayName = season is not null && episode is not null
+                ? $"{series} S{season:D2}E{episode:D2}"
+                : $"{series} · {name}";
+        }
+        else
+        {
+            displayName = name;
+        }
+
+        await context.EventBus.PublishAsync(
+            new Notification(
+                Guid.NewGuid(),
+                Id,
+                $"{emoji} {user} {verb}",
+                displayName,
+                DateTimeOffset.UtcNow,
+                null
+            ),
+            ct
+        );
+    }
+
+    private string BuildItemTypeFilter()
+    {
+        var types = new List<string>();
+        if (_config.IncludeMovies) types.Add("Movie");
+        if (_config.IncludeEpisodes) types.Add("Episode");
+        if (_config.IncludeMusic) types.Add("Audio");
+        return string.Join(",", types);
+    }
+
+    private async Task<string?> GetAsync(string path, CancellationToken ct)
+    {
+        try
+        {
+            var url = _config.ServerUrl.TrimEnd('/') + path;
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("Authorization",
+                $"MediaBrowser Client=\"Arrr\", Device=\"Arrr\", DeviceId=\"arrr\", Version=\"1.0\", Token=\"{_config.ApiKey}\"");
+
+            var response = await _httpClient.SendAsync(request, ct);
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsStringAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _context?.Logger.LogError(ex, "Jellyfin: request failed for {Path}", path);
+            return null;
+        }
     }
 
     private static string? GetString(JsonElement element, string property)

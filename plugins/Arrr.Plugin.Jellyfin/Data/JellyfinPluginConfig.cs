@@ -5,11 +5,14 @@ namespace Arrr.Plugin.Jellyfin.Data;
 
 public class JellyfinPluginConfig
 {
-    [Description("Jellyfin server URL (e.g. http://jellyfin:8096)")]
+    [Description("Jellyfin server URL (e.g. https://jellyfin.example.com)")]
     public string ServerUrl { get; set; } = "";
 
-    [Sensitive, Description("Jellyfin API key — used to verify connectivity in the test")]
+    [Sensitive, Description("Jellyfin API key")]
     public string ApiKey { get; set; } = "";
+
+    [Description("How often to poll Jellyfin, in minutes")]
+    public int PollIntervalMinutes { get; set; } = 5;
 
     [Description("Send a notification when a new movie or episode is added to the library")]
     public bool NotifyOnItemAdded { get; set; } = true;
