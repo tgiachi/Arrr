@@ -5,7 +5,9 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using Arrr.Tray.Models;
 using Arrr.Tray.Services;
+using Arrr.Tray.Types;
 using Arrr.Tray.ViewModels;
 using Serilog;
 
@@ -26,7 +28,8 @@ public partial class App : Application
         {
             var settingsService = new SettingsService();
             var settings = settingsService.Load();
-            Log.Information("Settings loaded — url={Url} apiKeySet={ApiKeySet}", settings.ServerUrl, !string.IsNullOrEmpty(settings.ApiKey));
+            Log.Information("Settings loaded — url={Url} apiKeySet={ApiKeySet} provider={Provider}",
+                settings.ServerUrl, !string.IsNullOrEmpty(settings.ApiKey), settings.NotificationProvider);
 
             var client = new ArrrServiceClient();
             client.Connect(settings.ServerUrl, settings.ApiKey);
@@ -114,24 +117,35 @@ public partial class App : Application
             TrayIcon.SetIcons(this, new TrayIcons { trayIcon });
             Log.Debug("TrayIcon registered");
 
-            var dbus = new DbusNotificationService();
-            _ = dbus.InitializeAsync();
+            INotificationProvider provider = CreateProvider(settings);
+            _ = provider.InitializeAsync();
 
-            // Fetch all plugin icons and send connected notification on each SignalR connect
+            vm.NotificationProviderChanged += async newType =>
+            {
+                Log.Information("Switching notification provider → {Provider}", newType);
+                await provider.DisposeAsync();
+                provider = CreateProvider(new AppSettings { NotificationProvider = newType });
+                await provider.InitializeAsync();
+            };
+
             client.SubscriptionConnected += () =>
                 _ = Task.Run(async () =>
                 {
-                    var bundle = await client.GetIconBundleAsync();
-                    dbus.SetIconCache(bundle);
-                    Log.Information("Icon bundle cached: {Count} icons", bundle.Count);
-                    await dbus.ShowAsync("Arrr", "Connected");
+                    if (provider is DbusNotificationService dbus)
+                    {
+                        var bundle = await client.GetIconBundleAsync();
+                        dbus.SetIconCache(bundle);
+                        Log.Information("Icon bundle cached: {Count} icons", bundle.Count);
+                    }
+
+                    await provider.ShowAsync("Arrr", "Connected");
                 });
 
             client.NotificationReceived += notif =>
             {
                 Log.Debug("Notification received from {Source}: {Title}", notif.Source, notif.Title);
                 if (!vm.DndEnabled)
-                    _ = dbus.ShowAsync(notif.Title, notif.Body, string.IsNullOrEmpty(notif.IconUrl) ? null : notif.IconUrl, notif.Source, notif.Url);
+                    _ = provider.ShowAsync(notif.Title, notif.Body, string.IsNullOrEmpty(notif.IconUrl) ? null : notif.IconUrl, notif.Source, notif.Url);
             };
 
             _ = vm.InitializeAsync();
@@ -139,6 +153,13 @@ public partial class App : Application
 
         base.OnFrameworkInitializationCompleted();
     }
+
+    private static INotificationProvider CreateProvider(AppSettings settings)
+        => settings.NotificationProvider switch
+        {
+            NotificationProviderType.Avalonia => new AvaloniaNotificationService(),
+            _                                 => new DbusNotificationService()
+        };
 
     private static WindowIcon LoadIcon(string fileName)
     {

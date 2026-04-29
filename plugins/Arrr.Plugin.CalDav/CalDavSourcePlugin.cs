@@ -26,11 +26,11 @@ public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDigestPr
     public string Name => "CalDAV";
     public string Version => VersionUtils.Get(typeof(CalDavSourcePlugin));
     public string Author => "tom (tom@orivega.io)";
-    public string Description => "Polls CalDAV/ICS calendars and publishes upcoming event notifications.";
+    public string Description => "Polls one or more CalDAV/ICS calendars and publishes upcoming event notifications.";
     public string[] Categories => ["calendar"];
     public string Icon => "📅";
     public Type ConfigType => typeof(CalDavSourceConfig);
-    public TimeSpan Interval => TimeSpan.FromMinutes(_config.PollIntervalMinutes);
+    public TimeSpan Interval => TimeSpan.FromMinutes(_config.PollIntervalMinutes > 0 ? _config.PollIntervalMinutes : 15);
 
     public CalDavSourcePlugin()
     {
@@ -48,91 +48,101 @@ public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDigestPr
 
     public async Task<PluginTestResult> TestAsync(IPluginContext context, CancellationToken ct)
     {
-        if (string.IsNullOrEmpty(_config.CalendarUrl))
+        if (_config.Calendars.Count == 0)
         {
-            return new(false, "CalendarUrl not configured.");
+            return new(false, "No calendars configured.");
         }
 
-        try
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Get, _config.CalendarUrl);
+        var lines = new List<string>();
+        var allOk = true;
 
-            if (!string.IsNullOrEmpty(_config.Username) && !string.IsNullOrEmpty(_config.Password))
+        foreach (var cal in _config.Calendars)
+        {
+            if (string.IsNullOrEmpty(cal.CalendarUrl))
             {
-                var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_config.Username}:{_config.Password}"));
-                request.Headers.Authorization = new("Basic", credentials);
+                lines.Add($"{LabelOf(cal)}: ⚠ no URL");
+                allOk = false;
+                continue;
             }
 
-            var response = await _httpClient.SendAsync(request, ct);
+            try
+            {
+                using var request = BuildRequest(cal);
+                var response = await _httpClient.SendAsync(request, ct);
 
-            return response.IsSuccessStatusCode
-                ? new(true, $"✓ OK ({(int)response.StatusCode})")
-                : new(false, $"✗ {(int)response.StatusCode} {response.ReasonPhrase}");
+                if (response.IsSuccessStatusCode)
+                {
+                    lines.Add($"{LabelOf(cal)}: ✓ OK ({(int)response.StatusCode})");
+                }
+                else
+                {
+                    lines.Add($"{LabelOf(cal)}: ✗ {(int)response.StatusCode} {response.ReasonPhrase}");
+                    allOk = false;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                lines.Add($"{LabelOf(cal)}: ✗ {ex.Message}");
+                allOk = false;
+            }
         }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            return new(false, ex.Message);
-        }
+
+        return new(allOk, string.Join("\n", lines));
     }
-
-    public void Dispose()
-        => _httpClient.Dispose();
 
     public async Task<DigestSection> GetDigestSectionAsync(DateOnly forDate, CancellationToken ct)
     {
         var section = new DigestSection { Title = DigestSectionTitle };
-
-        if (string.IsNullOrEmpty(_config.CalendarUrl))
-        {
-            return section;
-        }
-
-        var icsContent = await FetchIcsAsync(ct);
-
-        if (icsContent is null)
-        {
-            return section;
-        }
-
-        Calendar calendar;
-
-        try
-        {
-            calendar = Calendar.Load(icsContent);
-        }
-        catch (Exception ex)
-        {
-            _context?.Logger.LogError(ex, "CalDAV: failed to parse ICS for digest");
-
-            return section;
-        }
-
         var targetDate = forDate.ToDateTime(TimeOnly.MinValue).Date;
 
-        var events = calendar.Events
-                             .Where(e => GetEventLocalDate(e) == targetDate)
-                             .OrderBy(e => e.IsAllDay ? DateTime.MinValue : e.DtStart.AsUtc.ToLocalTime())
-                             .ToList();
-
-        foreach (var evt in events)
+        foreach (var cal in _config.Calendars.Where(c => !string.IsNullOrEmpty(c.CalendarUrl)))
         {
-            string text;
+            var icsContent = await FetchIcsAsync(cal, ct);
 
-            if (evt.IsAllDay)
+            if (icsContent is null)
             {
-                text = $"{evt.Summary} (all day)";
-            }
-            else
-            {
-                var localTime = evt.DtStart.AsUtc.ToLocalTime();
-                text = $"{localTime:HH:mm} - {evt.Summary}";
+                continue;
             }
 
-            section.Items.Add(new() { Text = text });
+            Calendar calendar;
+
+            try
+            {
+                calendar = Calendar.Load(icsContent);
+            }
+            catch (Exception ex)
+            {
+                _context?.Logger.LogError(ex, "CalDAV: failed to parse ICS for digest ({Cal})", LabelOf(cal));
+                continue;
+            }
+
+            var events = calendar.Events
+                                 .Where(e => GetEventLocalDate(e) == targetDate)
+                                 .OrderBy(e => e.IsAllDay ? DateTime.MinValue : e.DtStart.AsUtc.ToLocalTime())
+                                 .ToList();
+
+            var label = LabelOf(cal);
+
+            foreach (var evt in events)
+            {
+                string text;
+
+                if (evt.IsAllDay)
+                {
+                    text = $"[{label}] {evt.Summary} (all day)";
+                }
+                else
+                {
+                    var localTime = evt.DtStart.AsUtc.ToLocalTime();
+                    text = $"[{label}] {localTime:HH:mm} - {evt.Summary}";
+                }
+
+                section.Items.Add(new() { Text = text });
+            }
         }
 
         return section;
@@ -140,13 +150,44 @@ public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDigestPr
 
     public async Task PollAsync(IPluginContext context, CancellationToken ct)
     {
-        if (string.IsNullOrEmpty(_config.CalendarUrl))
+        if (_config.Calendars.Count == 0)
         {
             return;
         }
 
         var now = _timeProvider.GetUtcNow();
-        var icsContent = await FetchIcsAsync(ct);
+
+        foreach (var cal in _config.Calendars.Where(c => !string.IsNullOrEmpty(c.CalendarUrl)))
+        {
+            await PollCalendarAsync(cal, context, now, ct);
+        }
+
+        if (_firstPoll)
+        {
+            _firstPoll = false;
+        }
+
+        _lastPollTime = now;
+    }
+
+    public async Task StartAsync(IPluginContext context, CancellationToken ct)
+    {
+        _context = context;
+        _config = await context.LoadConfigAsync<CalDavSourceConfig>(ct);
+        context.Logger.LogInformation("CalDAV plugin loaded with {Count} calendar(s)", _config.Calendars.Count);
+    }
+
+    public void Dispose()
+        => _httpClient.Dispose();
+
+    private async Task PollCalendarAsync(
+        CalDavCalendarConfig cal,
+        IPluginContext context,
+        DateTimeOffset now,
+        CancellationToken ct
+    )
+    {
+        var icsContent = await FetchIcsAsync(cal, ct);
 
         if (icsContent is null)
         {
@@ -161,12 +202,12 @@ public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDigestPr
         }
         catch (Exception ex)
         {
-            _context?.Logger.LogError(ex, "CalDAV: failed to parse ICS content");
-
+            _context?.Logger.LogError(ex, "CalDAV: failed to parse ICS content ({Cal})", LabelOf(cal));
             return;
         }
 
         var lookahead = now + TimeSpan.FromHours(_config.LookaheadHours);
+        var calLabel = LabelOf(cal);
 
         foreach (var evt in calendar.Events)
         {
@@ -180,7 +221,7 @@ public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDigestPr
             foreach (var alertMin in _config.AlertMinutes)
             {
                 var triggerTime = start - TimeSpan.FromMinutes(alertMin);
-                var key = $"{evt.Uid}_{alertMin}";
+                var key = $"{calLabel}_{evt.Uid}_{alertMin}";
 
                 if (_firstPoll)
                 {
@@ -199,11 +240,12 @@ public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDigestPr
                             Guid.NewGuid(),
                             Id,
                             $"📅 {evt.Summary}",
-                            BuildBody(evt.Summary, evt.Description, alertMin),
+                            BuildBody(evt.Summary, evt.Description, alertMin, calLabel),
                             now,
                             null,
                             Extras: new Dictionary<string, string>
                             {
+                                ["caldav.calendar"] = calLabel,
                                 ["caldav.event_uid"] = evt.Uid ?? "",
                                 ["caldav.event_start"] = start.ToString("O"),
                                 ["caldav.alert_minutes"] = alertMin.ToString()
@@ -214,44 +256,34 @@ public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDigestPr
                 }
             }
         }
-
-        if (_firstPoll)
-        {
-            _firstPoll = false;
-        }
-
-        _lastPollTime = now;
     }
 
-    public async Task StartAsync(IPluginContext context, CancellationToken ct)
-    {
-        _context = context;
-        _config = await context.LoadConfigAsync<CalDavSourceConfig>(ct);
-        context.Logger.LogInformation("CalDAV plugin loaded, calendar: {Url}", _config.CalendarUrl);
-    }
-
-    private static string BuildBody(string summary, string? description, int alertMinutes)
+    private static string BuildBody(string summary, string? description, int alertMinutes, string calLabel)
     {
         var desc = string.IsNullOrWhiteSpace(description) ? "" : $"\n{description}";
-
-        return $"In {alertMinutes} minutes: {summary}{desc}";
+        return $"[{calLabel}] In {alertMinutes} minutes: {summary}{desc}";
     }
 
-    private async Task<string?> FetchIcsAsync(CancellationToken ct)
+    private HttpRequestMessage BuildRequest(CalDavCalendarConfig cal)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, _config.CalendarUrl);
+        var request = new HttpRequestMessage(HttpMethod.Get, cal.CalendarUrl);
 
-        if (!string.IsNullOrEmpty(_config.Username) && !string.IsNullOrEmpty(_config.Password))
+        if (!string.IsNullOrEmpty(cal.Username) && !string.IsNullOrEmpty(cal.Password))
         {
-            var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_config.Username}:{_config.Password}"));
+            var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{cal.Username}:{cal.Password}"));
             request.Headers.Authorization = new("Basic", credentials);
         }
 
+        return request;
+    }
+
+    private async Task<string?> FetchIcsAsync(CalDavCalendarConfig cal, CancellationToken ct)
+    {
         try
         {
+            using var request = BuildRequest(cal);
             var response = await _httpClient.SendAsync(request, ct);
             response.EnsureSuccessStatusCode();
-
             return await response.Content.ReadAsStringAsync(ct);
         }
         catch (OperationCanceledException)
@@ -260,11 +292,13 @@ public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDigestPr
         }
         catch (Exception ex)
         {
-            _context?.Logger.LogError(ex, "CalDAV fetch failed for {Url}", _config.CalendarUrl);
-
+            _context?.Logger.LogError(ex, "CalDAV fetch failed for {Cal}", LabelOf(cal));
             return null;
         }
     }
+
+    private static string LabelOf(CalDavCalendarConfig cal)
+        => string.IsNullOrEmpty(cal.Name) ? cal.CalendarUrl : cal.Name;
 
     private static DateTime GetEventLocalDate(CalendarEvent evt)
         => evt.IsAllDay

@@ -23,7 +23,7 @@ public interface IFreedesktopNotifications : IDBusObject
         Action<Exception>? onError = null);
 }
 
-internal sealed class DbusNotificationService : IAsyncDisposable
+internal sealed class DbusNotificationService : INotificationProvider, IAsyncDisposable
 {
     private static readonly HttpClient _http = new();
 
