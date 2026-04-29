@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Runtime.InteropServices;
 using Arrr.Core.Directories;
 using Arrr.Core.Interfaces;
@@ -290,9 +291,28 @@ internal class NuGetPluginInstaller : IPluginInstaller
     }
 
     private static bool IsHostProvided(string id)
-        => id.StartsWith("Microsoft.", StringComparison.OrdinalIgnoreCase) ||
-           id.StartsWith("System.", StringComparison.OrdinalIgnoreCase) ||
-           id.StartsWith("runtime.", StringComparison.OrdinalIgnoreCase) ||
-           id.Equals("Arrr.Core", StringComparison.OrdinalIgnoreCase) ||
-           id.Equals("NETStandard.Library", StringComparison.OrdinalIgnoreCase);
+    {
+        if (id.Equals("Arrr.Core", StringComparison.OrdinalIgnoreCase) ||
+            id.Equals("NETStandard.Library", StringComparison.OrdinalIgnoreCase) ||
+            id.StartsWith("runtime.", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (id.StartsWith("Microsoft.", StringComparison.OrdinalIgnoreCase) ||
+            id.StartsWith("System.", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                Assembly.Load(new AssemblyName(id));
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        return false;
+    }
 }
