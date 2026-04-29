@@ -93,7 +93,8 @@ await ConsoleApp.RunAsync(
             _ => new NotificationHistoryService(Path.Combine(directoriesConfig.Root, "history.db"))
         );
         builder.Services.AddSingleton(TimeProvider.System);
-        builder.Services.AddHostedService<DigestService>();
+        builder.Services.AddSingleton<DigestService>();
+        builder.Services.AddHostedService(sp => sp.GetRequiredService<DigestService>());
         builder.Services.AddHostedService<EventBusHostedService>();
 
         builder.Services.AddCors(
@@ -174,6 +175,7 @@ await ConsoleApp.RunAsync(
         app.MapRoutingLogApi();
         app.MapDndApi();
         app.MapIconsApi();
+        app.MapDigestApi();
 
         if (configService.Config.IsDebug)
         {
