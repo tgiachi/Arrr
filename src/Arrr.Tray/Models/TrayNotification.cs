@@ -15,4 +15,7 @@ public sealed class TrayNotification
 
     [JsonPropertyName("iconUrl")]
     public string? IconUrl { get; set; }
+
+    [JsonPropertyName("url")]
+    public string? Url { get; set; }
 }

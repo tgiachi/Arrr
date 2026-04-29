@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using Arrr.Core.Data.Notifications;
 using Arrr.Core.Interfaces;
 using Arrr.Core.Types;
@@ -8,9 +10,12 @@ namespace Arrr.Service.Sinks;
 
 internal class DbusNotifySink : ISinkPlugin
 {
+    private readonly ConcurrentDictionary<uint, string> _pendingUrls = new();
+
     private Connection? _connection;
     private INotifications? _proxy;
     private ISinkContext? _context;
+    private IDisposable? _actionSub;
 
     public string Id => "com.arrr.sink.dbus";
     public string Name => "D-Bus Notifications";
@@ -29,16 +34,25 @@ internal class DbusNotifySink : ISinkPlugin
 
         try
         {
-            await _proxy.NotifyAsync(
+            var actions = notification.Url is not null
+                ? new[] { "default", "Open" }
+                : Array.Empty<string>();
+
+            var id = await _proxy.NotifyAsync(
                 notification.Source,
                 0,
                 notification.IconUrl ?? "",
                 notification.Title,
                 notification.Body,
-                [],
+                actions,
                 new Dictionary<string, object> { ["urgency"] = notification.ToDbusUrgency() },
                 -1
             );
+
+            if (notification.Url is not null)
+            {
+                _pendingUrls[id] = notification.Url;
+            }
         }
         catch (Exception ex)
         {
@@ -58,6 +72,32 @@ internal class DbusNotifySink : ISinkPlugin
                 "org.freedesktop.Notifications",
                 "/org/freedesktop/Notifications"
             );
+
+            _actionSub = await _proxy.WatchActionInvokedAsync(
+                e =>
+                {
+                    if (e.ActionKey != "default")
+                    {
+                        return;
+                    }
+
+                    if (!_pendingUrls.TryRemove(e.Id, out var url))
+                    {
+                        return;
+                    }
+
+                    try
+                    {
+                        Process.Start(new ProcessStartInfo("xdg-open", url) { UseShellExecute = false });
+                    }
+                    catch (Exception ex)
+                    {
+                        context.Logger.LogWarning(ex, "xdg-open failed for {Url}", url);
+                    }
+                },
+                ex => context.Logger.LogWarning(ex, "ActionInvoked signal error")
+            );
+
             context.Logger.LogInformation("D-Bus sink connected");
         }
         catch (Exception ex)
@@ -70,6 +110,8 @@ internal class DbusNotifySink : ISinkPlugin
 
     public Task StopAsync()
     {
+        _actionSub?.Dispose();
+        _actionSub = null;
         _connection?.Dispose();
         _connection = null;
         _proxy = null;

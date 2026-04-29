@@ -15,4 +15,9 @@ public interface INotifications : IDBusObject
         IDictionary<string, object> hints,
         int expireTimeout
     );
+
+    Task<IDisposable> WatchActionInvokedAsync(
+        Action<(uint Id, string ActionKey)> handler,
+        Action<Exception>? onError = null
+    );
 }
