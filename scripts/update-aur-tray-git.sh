@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Push the arrr-git AUR package to AUR.
+# Push the arrr-tray-git AUR package to AUR.
 # The PKGBUILD is static (pkgver() is generated at install time).
-# Usage: update-aur-git.sh
+# Usage: update-aur-tray-git.sh
 # Requires: AUR_SSH_KEY env var (private key PEM, base64-encoded), git
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-AUR_REPO="ssh://aur@aur.archlinux.org/arrr-git.git"
+AUR_REPO="ssh://aur@aur.archlinux.org/arrr-tray-git.git"
 WORK_DIR=$(mktemp -d)
 trap 'rm -rf "$WORK_DIR"' EXIT
 
@@ -38,22 +38,23 @@ GIT_SSH_COMMAND="ssh -i $AUR_KEY_FILE -o StrictHostKeyChecking=no" \
     git clone "$AUR_REPO" "$WORK_DIR/aur"
 
 echo "==> Copying packaging files"
-cp "$ROOT_DIR/packaging/aur-git/PKGBUILD"          "$WORK_DIR/aur/"
-cp "$ROOT_DIR/packaging/aur-git/.SRCINFO"          "$WORK_DIR/aur/"
-cp "$ROOT_DIR/packaging/aur-git/arrr-git.install"  "$WORK_DIR/aur/"
+cp "$ROOT_DIR/packaging/aur-tray-git/PKGBUILD"                 "$WORK_DIR/aur/"
+cp "$ROOT_DIR/packaging/aur-tray-git/.SRCINFO"                 "$WORK_DIR/aur/"
+cp "$ROOT_DIR/packaging/aur-tray-git/arrr-tray-git.install"    "$WORK_DIR/aur/"
+cp "$ROOT_DIR/packaging/aur-tray-git/arrr-tray.desktop"        "$WORK_DIR/aur/"
 
 echo "==> Committing and pushing to AUR"
 cd "$WORK_DIR/aur"
 git config user.name  "tgiachi"
 git config user.email "tom@orivega.io"
 GIT_SSH_COMMAND="ssh -i $AUR_KEY_FILE -o StrictHostKeyChecking=no" \
-    git add PKGBUILD .SRCINFO arrr-git.install
+    git add PKGBUILD .SRCINFO arrr-tray-git.install arrr-tray.desktop
 if git diff --cached --quiet; then
     echo "==> No changes to push, AUR is already up to date"
 else
     GIT_SSH_COMMAND="ssh -i $AUR_KEY_FILE -o StrictHostKeyChecking=no" \
-        git commit -m "chore: update arrr-git PKGBUILD"
+        git commit -m "chore: update arrr-tray-git PKGBUILD"
     GIT_SSH_COMMAND="ssh -i $AUR_KEY_FILE -o StrictHostKeyChecking=no" \
         git push origin HEAD:master
-    echo "==> AUR arrr-git pushed"
+    echo "==> AUR arrr-tray-git pushed"
 fi

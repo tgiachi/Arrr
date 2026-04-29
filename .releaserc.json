@@ -48,10 +48,14 @@
         "successComment": false,
         "releasedLabels": false,
         "assets": [
-          { "path": "dist/*.deb",         "label": "Debian package (amd64)" },
-          { "path": "dist/*.rpm",         "label": "RPM package (x86_64)" },
-          { "path": "dist/*.pkg.tar.zst", "label": "Arch Linux package (x86_64)" },
-          { "path": "dist/*.pkg.tar.zst.sig", "label": "Arch Linux package signature" }
+          { "path": "dist/arrr_*.deb",                "label": "arrr — Debian package (amd64)" },
+          { "path": "dist/arrr-[0-9]*.rpm",           "label": "arrr — RPM package (x86_64)" },
+          { "path": "dist/arrr-[0-9]*.pkg.tar.zst",   "label": "arrr — Arch Linux package (x86_64)" },
+          { "path": "dist/arrr-[0-9]*.pkg.tar.zst.sig", "label": "arrr — Arch Linux package signature" },
+          { "path": "dist/arrr-tray_*.deb",                "label": "arrr-tray — Debian package (amd64)" },
+          { "path": "dist/arrr-tray-*.rpm",                "label": "arrr-tray — RPM package (x86_64)" },
+          { "path": "dist/arrr-tray-*.pkg.tar.zst",        "label": "arrr-tray — Arch Linux package (x86_64)" },
+          { "path": "dist/arrr-tray-*.pkg.tar.zst.sig",    "label": "arrr-tray — Arch Linux package signature" }
         ]
       }
     ]

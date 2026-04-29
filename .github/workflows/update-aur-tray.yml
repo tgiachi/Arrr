@@ -1,0 +1,23 @@
+name: Update AUR arrr-tray-bin package
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g. 1.8.0)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  update-aur-tray:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Push arrr-tray-bin to AUR
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: bash scripts/update-aur-tray.sh "${{ inputs.version }}"

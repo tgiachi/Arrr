@@ -12,6 +12,16 @@ dotnet publish "$ROOT_DIR/src/Arrr.Service/Arrr.Service.csproj" \
     -c Release \
     -o "$ROOT_DIR/publish"
 
+echo "==> Building Arrr.Tray v$VERSION (linux-x64)"
+
+dotnet publish "$ROOT_DIR/src/Arrr.Tray/Arrr.Tray.csproj" \
+    -c Release \
+    -r linux-x64 \
+    --self-contained true \
+    -p:PublishSingleFile=true \
+    -p:IncludeNativeLibrariesForSelfExtract=true \
+    -o "$ROOT_DIR/publish-tray"
+
 echo "==> Packaging"
 
 mkdir -p "$ROOT_DIR/dist"
@@ -41,13 +51,24 @@ nfpm package --packager deb       --target "dist/arrr_${VERSION}_amd64.deb"
 nfpm package --packager rpm       --target "dist/arrr-${VERSION}-1.x86_64.rpm"
 nfpm package --packager archlinux --target "dist/arrr-${VERSION}-1-x86_64.pkg.tar.zst"
 
-echo "==> Signing Arch package"
+nfpm package -f "$ROOT_DIR/nfpm-tray.yaml" --packager deb       --target "dist/arrr-tray_${VERSION}_amd64.deb"
+nfpm package -f "$ROOT_DIR/nfpm-tray.yaml" --packager rpm       --target "dist/arrr-tray-${VERSION}-1.x86_64.rpm"
+nfpm package -f "$ROOT_DIR/nfpm-tray.yaml" --packager archlinux --target "dist/arrr-tray-${VERSION}-1-x86_64.pkg.tar.zst"
+
+echo "==> Signing Arch packages"
 gpg --batch --yes \
     --pinentry-mode loopback \
     --passphrase "$GPG_PASSPHRASE" \
     --detach-sign \
     --local-user FE67774DF63A2BB6 \
     "dist/arrr-${VERSION}-1-x86_64.pkg.tar.zst"
+
+gpg --batch --yes \
+    --pinentry-mode loopback \
+    --passphrase "$GPG_PASSPHRASE" \
+    --detach-sign \
+    --local-user FE67774DF63A2BB6 \
+    "dist/arrr-tray-${VERSION}-1-x86_64.pkg.tar.zst"
 
 echo ""
 echo "==> Done:"

@@ -1,0 +1,25 @@
+pkgbase = arrr-tray-bin
+	pkgdesc = System tray client for the Arrr Linux notification aggregator
+	pkgver = 1.8.0
+	pkgrel = 1
+	url = https://github.com/tgiachi/Arrr
+	install = arrr-tray-bin.install
+	arch = x86_64
+	license = MIT
+	depends = dbus
+	depends = libnotify
+	depends = libx11
+	depends = libice
+	depends = libsm
+	depends = fontconfig
+	optdepends = arrr-bin: Arrr notification aggregator daemon (required for full functionality)
+	provides = arrr-tray
+	conflicts = arrr-tray
+	conflicts = arrr-tray-git
+	noextract = arrr-tray-1.8.0-1-x86_64.pkg.tar.zst
+	source = arrr-tray-1.8.0-1-x86_64.pkg.tar.zst::https://github.com/tgiachi/Arrr/releases/download/v1.8.0/arrr-tray-1.8.0-1-x86_64.pkg.tar.zst
+	source = arrr-tray.desktop
+	sha256sums = SKIP
+	sha256sums = SKIP
+
+pkgname = arrr-tray-bin
