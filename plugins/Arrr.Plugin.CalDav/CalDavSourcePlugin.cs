@@ -266,7 +266,10 @@ public class CalDavSourcePlugin : IPollingPlugin, IConfigurablePlugin, IDigestPr
 
     private HttpRequestMessage BuildRequest(CalDavCalendarConfig cal)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, cal.CalendarUrl);
+        var url = cal.CalendarUrl
+                     .Replace("webcals://", "https://", StringComparison.OrdinalIgnoreCase)
+                     .Replace("webcal://", "http://", StringComparison.OrdinalIgnoreCase);
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
 
         if (!string.IsNullOrEmpty(cal.Username) && !string.IsNullOrEmpty(cal.Password))
         {
