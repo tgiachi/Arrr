@@ -55,7 +55,7 @@ func main() {
 
 	ctx := context.Background()
 
-	container, err := sqlstore.New(ctx, "sqlite", "file:"+sessionPath+"?_pragma=foreign_keys(1)", log)
+	container, err := sqlstore.New(ctx, "sqlite", "file:"+sessionPath+"?_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)", log)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "store: %v\n", err)
 		os.Exit(1)
