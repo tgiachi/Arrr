@@ -1,3 +1,13 @@
+## [1.9.0](https://github.com/tgiachi/Arrr/compare/v1.8.0...v1.9.0) (2026-04-29)
+
+### Features
+
+* **aur:** add arrr-tray-git, fix arrr-tray-bin, ship tray in release ([d7bc4ae](https://github.com/tgiachi/Arrr/commit/d7bc4ae94c39a6ad3a6d28a1264306a4ba449457))
+
+### Bug Fixes
+
+* **scripts:** allow interactive SSH key path in all update-aur scripts ([4e59567](https://github.com/tgiachi/Arrr/commit/4e59567b653307e4989d5b9e62b1282441962901))
+
 ## [1.8.0](https://github.com/tgiachi/Arrr/compare/v1.7.0...v1.8.0) (2026-04-28)
 
 ### Features
