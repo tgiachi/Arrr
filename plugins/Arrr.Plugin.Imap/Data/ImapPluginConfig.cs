@@ -1,25 +1,12 @@
 using System.ComponentModel;
-using Arrr.Core.Attributes;
 
 namespace ImapPlugin.Data;
 
 public class ImapPluginConfig
 {
-    [Description("IMAP server hostname, e.g. imap.gmail.com")]
-    public string Host { get; set; } = "";
+    [Description("How often to poll all accounts for new messages, in minutes")]
+    public int PollIntervalMinutes { get; set; } = 2;
 
-    [Description("IMAP port — 993 for SSL (recommended), 143 for STARTTLS")]
-    public int Port { get; set; } = 993;
-
-    [Description("Use SSL/TLS connection (recommended)")]
-    public bool UseSsl { get; set; } = true;
-
-    [Description("Email address / login username")]
-    public string Username { get; set; } = "";
-
-    [Sensitive, Description("Account password or app-specific password (stored encrypted)")]
-    public string Password { get; set; } = "";
-
-    [Description("Mailbox folder to monitor, e.g. INBOX")]
-    public string Folder { get; set; } = "INBOX";
+    [Description("One entry per email account to monitor")]
+    public List<ImapAccountConfig> Accounts { get; set; } = [];
 }

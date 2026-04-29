@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using Serilog;
 using Tmds.DBus;
 
@@ -15,14 +17,21 @@ public interface IFreedesktopNotifications : IDBusObject
         string[] actions,
         IDictionary<string, object> hints,
         int expireTimeout);
+
+    Task<IDisposable> WatchActionInvokedAsync(
+        Action<(uint Id, string ActionKey)> handler,
+        Action<Exception>? onError = null);
 }
 
 internal sealed class DbusNotificationService : IAsyncDisposable
 {
     private static readonly HttpClient _http = new();
 
+    private readonly ConcurrentDictionary<uint, string> _pendingUrls = new();
+
     private Connection? _connection;
     private IFreedesktopNotifications? _proxy;
+    private IDisposable? _actionSub;
     private bool _available;
 
     private IReadOnlyDictionary<string, byte[]> _iconCache = new Dictionary<string, byte[]>();
@@ -30,14 +39,12 @@ internal sealed class DbusNotificationService : IAsyncDisposable
 
     public void SetIconCache(IReadOnlyDictionary<string, byte[]> cache)
     {
-        // Clean up old temp files before replacing the cache
         foreach (var path in _iconTempFiles.Values)
             try { File.Delete(path); } catch { /* best-effort */ }
 
         _iconTempFiles.Clear();
         _iconCache = cache;
 
-        // Pre-write all cached icons to temp files for fast D-Bus access
         foreach (var (id, bytes) in cache)
         {
             try
@@ -67,6 +74,33 @@ internal sealed class DbusNotificationService : IAsyncDisposable
             _proxy = _connection.CreateProxy<IFreedesktopNotifications>(
                 "org.freedesktop.Notifications",
                 "/org/freedesktop/Notifications");
+
+            _actionSub = await _proxy.WatchActionInvokedAsync(
+                e =>
+                {
+                    if (e.ActionKey != "default")
+                    {
+                        return;
+                    }
+
+                    if (!_pendingUrls.TryRemove(e.Id, out var url))
+                    {
+                        return;
+                    }
+
+                    try
+                    {
+                        Process.Start(new ProcessStartInfo("xdg-open", url) { UseShellExecute = false });
+                        Log.Debug("xdg-open: {Url}", url);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning(ex, "xdg-open failed for {Url}", url);
+                    }
+                },
+                ex => Log.Warning(ex, "ActionInvoked signal error")
+            );
+
             _available = true;
             Log.Information("D-Bus notification service ready");
         }
@@ -77,7 +111,7 @@ internal sealed class DbusNotificationService : IAsyncDisposable
         }
     }
 
-    public async Task ShowAsync(string title, string body, string? iconUrl = null, string? source = null)
+    public async Task ShowAsync(string title, string body, string? iconUrl = null, string? source = null, string? url = null)
     {
         if (!_available || _proxy is null)
         {
@@ -85,7 +119,6 @@ internal sealed class DbusNotificationService : IAsyncDisposable
             return;
         }
 
-        // If no explicit iconUrl but we have a cached icon for the source plugin, use it
         var effectiveIconUrl = iconUrl;
         if (string.IsNullOrEmpty(effectiveIconUrl) && source is not null && _iconTempFiles.TryGetValue(source, out var cachedPath))
             effectiveIconUrl = cachedPath;
@@ -93,12 +126,22 @@ internal sealed class DbusNotificationService : IAsyncDisposable
         var (appIcon, tempFile) = await ResolveIconAsync(effectiveIconUrl);
         try
         {
+            var actions = url is not null
+                ? new[] { "default", "Open" }
+                : Array.Empty<string>();
+
             Log.Debug("D-Bus: sending notification title={Title} icon={Icon}", title, appIcon);
-            await _proxy.NotifyAsync(
+            var id = await _proxy.NotifyAsync(
                 "Arrr", 0, appIcon,
                 title, body,
-                [], new Dictionary<string, object>(), 5000);
-            Log.Debug("D-Bus: notification sent");
+                actions, new Dictionary<string, object>(), 5000);
+
+            if (url is not null)
+            {
+                _pendingUrls[id] = url;
+            }
+
+            Log.Debug("D-Bus: notification sent id={Id}", id);
         }
         catch (Exception ex)
         {
@@ -116,12 +159,10 @@ internal sealed class DbusNotificationService : IAsyncDisposable
         if (string.IsNullOrWhiteSpace(iconUrl))
             return ("dialog-information", null);
 
-        // file URI or absolute path — pass directly
         if (iconUrl.StartsWith("file://", StringComparison.OrdinalIgnoreCase) ||
             Path.IsPathRooted(iconUrl))
             return (iconUrl, null);
 
-        // HTTP/HTTPS — download to a temp file
         if (iconUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
             iconUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
@@ -143,7 +184,6 @@ internal sealed class DbusNotificationService : IAsyncDisposable
             }
         }
 
-        // treat as icon theme name
         return (iconUrl, null);
     }
 
@@ -153,6 +193,8 @@ internal sealed class DbusNotificationService : IAsyncDisposable
             try { File.Delete(path); } catch { /* best-effort */ }
         _iconTempFiles.Clear();
 
+        _actionSub?.Dispose();
+        _actionSub = null;
         _connection?.Dispose();
         _connection = null;
         _proxy = null;

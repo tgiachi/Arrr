@@ -104,8 +104,8 @@ public class TelegramPlugin : ISourcePlugin, IConfigurablePlugin, ICallbackPlugi
                                         continue;
                                     }
 
-                                    var title = msg.message.Length > 80 ? msg.message[..80] + "…" : msg.message;
-                                    var body = string.IsNullOrEmpty(chatName) ? senderName : $"{senderName} → {chatName}";
+                                    var title = string.IsNullOrEmpty(chatName) ? senderName : $"{senderName} → {chatName}";
+                                    var body = msg.message.Length > 500 ? msg.message[..500] + "…" : msg.message;
 
                                     await context.EventBus.PublishAsync(
                                         new Notification(

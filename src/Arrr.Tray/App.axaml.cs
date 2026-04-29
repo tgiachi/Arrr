@@ -131,7 +131,7 @@ public partial class App : Application
             {
                 Log.Debug("Notification received from {Source}: {Title}", notif.Source, notif.Title);
                 if (!vm.DndEnabled)
-                    _ = dbus.ShowAsync(notif.Title, notif.Body, string.IsNullOrEmpty(notif.IconUrl) ? null : notif.IconUrl, notif.Source);
+                    _ = dbus.ShowAsync(notif.Title, notif.Body, string.IsNullOrEmpty(notif.IconUrl) ? null : notif.IconUrl, notif.Source, notif.Url);
             };
 
             _ = vm.InitializeAsync();

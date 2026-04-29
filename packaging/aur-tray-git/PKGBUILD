@@ -14,6 +14,7 @@ optdepends=(
 )
 provides=('arrr-tray')
 conflicts=('arrr-tray' 'arrr-tray-bin')
+options=('!strip')
 install=arrr-tray-git.install
 source=(
     "Arrr::git+https://github.com/tgiachi/Arrr.git"
@@ -45,6 +46,8 @@ package() {
     install -Dm755 "$srcdir/publish-tray/arrr-tray" "${pkgdir}/usr/bin/arrr-tray"
     install -Dm644 "$srcdir/arrr-tray.desktop" \
         "${pkgdir}/etc/xdg/autostart/arrr-tray.desktop"
+    install -Dm644 "$srcdir/arrr-tray.desktop" \
+        "${pkgdir}/usr/share/applications/arrr-tray.desktop"
     install -Dm644 "$srcdir/Arrr/src/Arrr.Tray/Assets/tray-icon.png" \
         "${pkgdir}/usr/share/icons/hicolor/256x256/apps/arrr-tray.png"
 }
