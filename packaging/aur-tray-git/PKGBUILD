@@ -14,6 +14,7 @@ optdepends=(
 )
 provides=('arrr-tray')
 conflicts=('arrr-tray' 'arrr-tray-bin')
+options=('!strip')
 install=arrr-tray-git.install
 source=(
     "Arrr::git+https://github.com/tgiachi/Arrr.git"

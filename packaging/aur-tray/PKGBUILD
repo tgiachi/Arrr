@@ -12,6 +12,7 @@ optdepends=(
 )
 provides=('arrr-tray')
 conflicts=('arrr-tray' 'arrr-tray-git')
+options=('!strip')
 install=arrr-tray-bin.install
 source=(
     "arrr-tray-${pkgver}-1-x86_64.pkg.tar.zst::https://github.com/tgiachi/Arrr/releases/download/v${pkgver}/arrr-tray-${pkgver}-1-x86_64.pkg.tar.zst"
