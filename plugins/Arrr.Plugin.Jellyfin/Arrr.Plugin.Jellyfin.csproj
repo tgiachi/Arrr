@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AssemblyName>Arrr.Plugin.Jellyfin</AssemblyName>
+        <RootNamespace>Arrr.Plugin.Jellyfin</RootNamespace>
+
+        <PackageId>Arrr.Plugin.Jellyfin</PackageId>
+        <Version>1.0.0</Version>
+        <Authors>Tom</Authors>
+        <Company>orivega.io</Company>
+        <Description>Jellyfin source for Arrr — receives webhook events (new media, playback) and publishes them as notifications.</Description>
+        <PackageTags>arrr;arrr-plugin;plugin;jellyfin;media;notifications;linux</PackageTags>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/tgiachi/Arrr</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/tgiachi/Arrr</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageIcon>arr_logo.png</PackageIcon>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Arrr.Core" Version="1.7.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="../../assets/arr_logo.png" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+
+</Project>
