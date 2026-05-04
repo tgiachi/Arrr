@@ -8,7 +8,7 @@
         <RootNamespace>Arrr.Sink.Gotify</RootNamespace>
 
         <PackageId>Arrr.Sink.Gotify</PackageId>
-        <Version>1.10.0</Version>
+        <Version>1.11.0</Version>
         <Authors>Tom</Authors>
         <Company>orivega.io</Company>
         <Description>Gotify sink for Arrr — publishes notifications to a self-hosted Gotify server.</Description>

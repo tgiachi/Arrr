@@ -9,7 +9,7 @@
         <RootNamespace>Arrr.Sink.WindowsNotify</RootNamespace>
 
         <PackageId>Arrr.Sink.WindowsNotify</PackageId>
-        <Version>1.10.0</Version>
+        <Version>1.11.0</Version>
         <Authors>Tom</Authors>
         <Company>orivega.io</Company>
         <Description>Windows notification sink for Arrr — delivers notifications as native Windows toast notifications.</Description>

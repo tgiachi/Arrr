@@ -1,3 +1,18 @@
+## [1.11.0](https://github.com/tgiachi/Arrr/compare/v1.10.0...v1.11.0) (2026-05-04)
+
+### Features
+
+* **digest:** add POST /api/digest/trigger endpoint ([0622e72](https://github.com/tgiachi/Arrr/commit/0622e72ccc328764c6823b6b6f7bef6de907d97e))
+* **jellyfin:** add Arrr.Plugin.Jellyfin ([067fa03](https://github.com/tgiachi/Arrr/commit/067fa030a6a7a3b56b85a2ed09914934dd6e2e73))
+* **switchbot:** add Arrr.Plugin.SwitchBot ([cf0fa95](https://github.com/tgiachi/Arrr/commit/cf0fa957bb7a6ee6c5b45e98c5a39e6e5537757e))
+* **tray:** pluggable notification provider (D-Bus / Avalonia) ([0e1036e](https://github.com/tgiachi/Arrr/commit/0e1036e516effad1c1779da2def800d69e7a4219))
+* **whatsapp:** add WhatsApp sink + bridge HTTP send server ([1db3fa7](https://github.com/tgiachi/Arrr/commit/1db3fa705eef74c8f1cedbcdd3258a2853df46e0))
+
+### Bug Fixes
+
+* **caldav:** normalise webcal:// and webcals:// URL schemes to http/https ([fe7775e](https://github.com/tgiachi/Arrr/commit/fe7775e67a875d942d9eb77c4064ee3422d1ddf1))
+* **packaging:** install tray .desktop launcher and icon ([afb6102](https://github.com/tgiachi/Arrr/commit/afb6102597adc78e5f4bb2af2ade9687b014fbbc))
+
 ## [1.10.0](https://github.com/tgiachi/Arrr/compare/v1.9.0...v1.10.0) (2026-04-29)
 
 ### Features

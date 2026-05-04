@@ -8,7 +8,7 @@
         <RootNamespace>Arrr.Sink.Smtp</RootNamespace>
 
         <PackageId>Arrr.Sink.Smtp</PackageId>
-        <Version>1.10.0</Version>
+        <Version>1.11.0</Version>
         <Authors>Tom</Authors>
         <Company>orivega.io</Company>
         <Description>SMTP sink for Arrr — delivers notifications via email, single or digest mode.</Description>

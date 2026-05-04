@@ -8,7 +8,7 @@
         <RootNamespace>Arrr.Plugin.Gitlab</RootNamespace>
 
         <PackageId>Arrr.Plugin.Gitlab</PackageId>
-        <Version>1.10.0</Version>
+        <Version>1.11.0</Version>
         <Authors>Tom</Authors>
         <Company>orivega.io</Company>
         <Description>GitLab source for Arrr — polls GitLab to-dos and publishes them to the event bus.</Description>

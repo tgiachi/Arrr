@@ -8,7 +8,7 @@
         <RootNamespace>Arrr.Plugin.CalDav</RootNamespace>
 
         <PackageId>Arrr.Plugin.CalDav</PackageId>
-        <Version>1.10.0</Version>
+        <Version>1.11.0</Version>
         <Authors>Tom</Authors>
         <Company>orivega.io</Company>
         <Description>CalDAV source for Arrr — polls ICS calendars and notifies for upcoming events.</Description>

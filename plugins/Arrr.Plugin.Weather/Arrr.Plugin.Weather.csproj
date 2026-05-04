@@ -8,7 +8,7 @@
         <RootNamespace>Arrr.Plugin.Weather</RootNamespace>
 
         <PackageId>Arrr.Plugin.Weather</PackageId>
-        <Version>1.0.0</Version>
+        <Version>1.11.0</Version>
         <Authors>Tom</Authors>
         <Company>orivega.io</Company>
         <Description>Weather source for Arrr — fetches forecasts from Open-Meteo, delivers push alerts for severe conditions, and contributes a daily digest section.</Description>
