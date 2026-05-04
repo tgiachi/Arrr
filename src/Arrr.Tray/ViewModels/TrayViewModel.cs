@@ -1,4 +1,5 @@
 using Arrr.Tray.Services;
+using Arrr.Tray.Types;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -20,6 +21,7 @@ public partial class TrayViewModel : ObservableObject
     public event Action<bool>? DndStateChanged;
     public event Action<string>? ServerVersionChanged;
     public event Action<bool>? ConnectionStateChanged;
+    public event Action<NotificationProviderType>? NotificationProviderChanged;
 
     public TrayViewModel(ArrrServiceClient client, SettingsService settingsService)
     {
@@ -108,6 +110,7 @@ public partial class TrayViewModel : ObservableObject
             {
                 var settings = _settingsService.Load();
                 var vm = new SettingsViewModel(settings, _settingsService, _client);
+                vm.NotificationProviderChanged += p => NotificationProviderChanged?.Invoke(p);
                 var window = new Views.SettingsWindow { DataContext = vm };
 
                 window.Closed += (_, _) =>

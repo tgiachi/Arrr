@@ -97,6 +97,12 @@ internal class SinkOrchestrator : BackgroundService, ISinkManager
             await builtIn.StartAsync(CreateContext(sinkId), ct);
             _running[sinkId] = builtIn;
             _logger.Information("Enabled built-in sink: {Id}", sinkId);
+            return;
+        }
+
+        if (!_running.ContainsKey(sinkId))
+        {
+            await StartExternalSinkByIdAsync(sinkId, ct);
         }
     }
 
@@ -249,7 +255,10 @@ internal class SinkOrchestrator : BackgroundService, ISinkManager
             await builtIn.StartAsync(CreateContext(sinkId), ct);
             _running[sinkId] = builtIn;
             _logger.Information("Reloaded sink: {Id}", sinkId);
+            return;
         }
+
+        await StartExternalSinkByIdAsync(sinkId, ct);
     }
 
     public async Task SaveSinkConfigAsync(string sinkId, JsonElement incoming, CancellationToken ct = default)
@@ -500,6 +509,37 @@ internal class SinkOrchestrator : BackgroundService, ISinkManager
             catch (Exception ex)
             {
                 _logger.Error(ex, "Failed to start built-in sink: {Id}", sink.Id);
+            }
+        }
+    }
+
+    private async Task StartExternalSinkByIdAsync(string sinkId, CancellationToken ct)
+    {
+        var pluginsPath = _directoriesConfig![DirectoryType.Plugins];
+
+        foreach (var dll in Directory.EnumerateFiles(pluginsPath, "*.dll"))
+        {
+            try
+            {
+                var loadCtx = new PluginLoadContext(dll);
+                var asm = loadCtx.LoadFromAssemblyPath(dll);
+                var sinkType = asm.GetTypes()
+                                  .FirstOrDefault(t => !t.IsAbstract && t.IsAssignableTo(typeof(ISinkPlugin)));
+
+                if (sinkType is null || Activator.CreateInstance(sinkType) is not ISinkPlugin sink || sink.Id != sinkId)
+                {
+                    loadCtx.Unload();
+                    continue;
+                }
+
+                await sink.StartAsync(CreateContext(sinkId), ct);
+                _running[sinkId] = sink;
+                _logger.Information("Started external sink: {Id}", sinkId);
+                return;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "Failed to start external sink {Id} from {Path}", sinkId, dll);
             }
         }
     }

@@ -149,6 +149,25 @@ internal class DigestService : BackgroundService
         }
     }
 
+    internal async Task TriggerAsync(DateOnly? forDate, CancellationToken ct)
+    {
+        var localNow = _timeProvider.GetLocalNow();
+        var date = forDate ?? DateOnly.FromDateTime(localNow.DateTime);
+        var body = await BuildBodyAsync(date, ct);
+
+        await _eventBus.PublishAsync(
+            new Notification(
+                Guid.NewGuid(),
+                "arrr.digest",
+                $"📋 Manual Digest",
+                body,
+                _timeProvider.GetUtcNow(),
+                null
+            ),
+            ct
+        );
+    }
+
     private async Task<string> BuildBodyAsync(DateOnly forDate, CancellationToken ct)
     {
         var providers = _pluginRegistry.GetAll().OfType<IDigestProvider>().ToList();

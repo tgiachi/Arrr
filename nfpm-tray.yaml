@@ -24,3 +24,9 @@ contents:
 
   - src: deploy/arrr-tray.desktop
     dst: /etc/xdg/autostart/arrr-tray.desktop
+
+  - src: deploy/arrr-tray.desktop
+    dst: /usr/share/applications/arrr-tray.desktop
+
+  - src: assets/arr_logo.png
+    dst: /usr/share/pixmaps/arrr-tray.png

@@ -1,5 +1,6 @@
 using Arrr.Tray.Models;
 using Arrr.Tray.Services;
+using Arrr.Tray.Types;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -16,7 +17,14 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _apiKey;
 
+    [ObservableProperty]
+    private NotificationProviderType _notificationProvider;
+
+    public IReadOnlyList<NotificationProviderType> NotificationProviders { get; } =
+        Enum.GetValues<NotificationProviderType>();
+
     public event Action? CloseRequested;
+    public event Action<NotificationProviderType>? NotificationProviderChanged;
 
     public SettingsViewModel(AppSettings settings, SettingsService settingsService, ArrrServiceClient client)
     {
@@ -24,12 +32,18 @@ public partial class SettingsViewModel : ObservableObject
         _client = client;
         _serverUrl = settings.ServerUrl;
         _apiKey = settings.ApiKey;
+        _notificationProvider = settings.NotificationProvider;
     }
 
     [RelayCommand]
     private void Save()
     {
-        var settings = new AppSettings { ServerUrl = ServerUrl, ApiKey = ApiKey };
+        var settings = new AppSettings
+        {
+            ServerUrl = ServerUrl,
+            ApiKey = ApiKey,
+            NotificationProvider = NotificationProvider
+        };
         _settingsService.Save(settings);
 
         try
@@ -42,6 +56,7 @@ public partial class SettingsViewModel : ObservableObject
             // Will retry via reconnect loop
         }
 
+        NotificationProviderChanged?.Invoke(NotificationProvider);
         CloseRequested?.Invoke();
     }
 

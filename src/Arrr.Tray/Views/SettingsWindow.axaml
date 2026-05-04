@@ -1,10 +1,11 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Arrr.Tray.ViewModels"
+        xmlns:types="using:Arrr.Tray.Types"
         x:Class="Arrr.Tray.Views.SettingsWindow"
         x:DataType="vm:SettingsViewModel"
         Title="Arrr Tray — Settings"
-        Width="420" Height="210"
+        Width="420" Height="260"
         CanResize="False"
         WindowStartupLocation="CenterScreen">
 
@@ -18,6 +19,13 @@
     <StackPanel Spacing="4">
       <TextBlock Text="API Key" FontWeight="SemiBold"/>
       <TextBox Text="{Binding ApiKey}" PasswordChar="•" PlaceholderText="leave empty if not set"/>
+    </StackPanel>
+
+    <StackPanel Spacing="4">
+      <TextBlock Text="Notification provider" FontWeight="SemiBold"/>
+      <ComboBox ItemsSource="{Binding NotificationProviders}"
+                SelectedItem="{Binding NotificationProvider}"
+                HorizontalAlignment="Stretch"/>
     </StackPanel>
 
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
